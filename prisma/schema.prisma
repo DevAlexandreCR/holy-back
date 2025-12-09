@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                  String         @id @default(uuid()) @db.Char(36)
+  name                String
+  email               String         @unique
+  passwordHash        String         @map("password_hash")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+  resetToken          String?        @map("reset_token")
+  resetTokenExpiresAt DateTime?      @map("reset_token_expires_at")
+  settings            UserSettings?
+
+  @@map("users")
+}
+
+model BibleVersion {
+  id        Int           @id @default(autoincrement())
+  apiCode   String        @unique @map("api_code")
+  name       String
+  language  String
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  settings  UserSettings[]
+  verses    DailyVerse[]
+
+  @@map("bible_versions")
+}
+
+model UserSettings {
+  id                 Int           @id @default(autoincrement())
+  userId             String        @map("user_id")
+  preferredVersionId Int?          @map("preferred_version_id")
+  timezone           String?
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+  user               User          @relation(fields: [userId], references: [id])
+  preferredVersion   BibleVersion? @relation(fields: [preferredVersionId], references: [id])
+
+  @@unique([userId])
+  @@map("user_settings")
+}
+
+model DailyVerse {
+  id                 Int          @id @default(autoincrement())
+  date               DateTime     @db.Date
+  versionId          Int          @map("version_id")
+  referenceBook      String       @map("reference_book")
+  referenceChapter   Int          @map("reference_chapter")
+  referenceFromVerse Int          @map("reference_from_verse")
+  referenceToVerse   Int?         @map("reference_to_verse")
+  text               String       @db.Text
+  meta               Json?
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+  version            BibleVersion @relation(fields: [versionId], references: [id])
+
+  @@unique([date, versionId])
+  @@map("daily_verses")
+}
