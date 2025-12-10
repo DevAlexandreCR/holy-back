@@ -1,4 +1,6 @@
 import express, { NextFunction, Request, Response, Router } from 'express';
+import authRouter from './modules/auth/auth.routes';
+import { isAppError } from './common/errors';
 
 export const app = express();
 
@@ -10,16 +12,23 @@ app.get('/health', (_req: Request, res: Response) => {
 
 const placeholderRouter = (): Router => Router();
 
-app.use('/auth', placeholderRouter());
+app.use('/auth', authRouter);
 app.use('/bible', placeholderRouter());
 app.use('/user', placeholderRouter());
 app.use('/verse', placeholderRouter());
 app.use('/widget', placeholderRouter());
 
-// Basic error handler to keep consistent error responses.
-// Replace with a richer implementation when modules are added.
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   // eslint-disable-next-line no-console
   console.error(err);
-  res.status(500).json({ message: 'Internal Server Error' });
+  const status = isAppError(err) ? err.statusCode : 500;
+  const code = isAppError(err) ? err.code : 'INTERNAL_ERROR';
+  const message = isAppError(err) ? err.message : 'Internal Server Error';
+
+  res.status(status).json({
+    error: {
+      message,
+      code,
+    },
+  });
 });
