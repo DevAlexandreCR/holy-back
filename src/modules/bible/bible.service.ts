@@ -13,6 +13,7 @@ export const syncBibleVersionsFromApi = async (): Promise<{
   total: number;
   created: number;
   updated: number;
+  skipped: number;
 }> => {
   const apiClient = new BibleApiClient();
   const versions = await apiClient.getVersions();
@@ -24,21 +25,33 @@ export const syncBibleVersionsFromApi = async (): Promise<{
 export const upsertBibleVersions = async (versions: BibleVersionApiModel[]) => {
   let created = 0;
   let updated = 0;
+  let skipped = 0;
 
   if (versions.length === 0) {
-    return { created, updated };
+    return { created, updated, skipped };
   }
 
   await prisma.$transaction(async (tx) => {
     for (const version of versions) {
-      const existing = await tx.bibleVersion.findUnique({ where: { apiCode: version.code } });
+      const code = version.code?.trim();
+      const name = version.name?.trim();
+      const language = version.language?.trim() ?? '';
+
+      if (!code || !name) {
+        skipped += 1;
+        // eslint-disable-next-line no-console
+        console.warn('[BibleVersionsSync] Skipping version with missing code or name', version);
+        continue;
+      }
+
+      const existing = await tx.bibleVersion.findUnique({ where: { apiCode: code } });
 
       if (existing) {
         await tx.bibleVersion.update({
           where: { id: existing.id },
           data: {
-            name: version.name,
-            language: version.language,
+            name,
+            language,
             isActive: true,
           },
         });
@@ -46,9 +59,9 @@ export const upsertBibleVersions = async (versions: BibleVersionApiModel[]) => {
       } else {
         await tx.bibleVersion.create({
           data: {
-            apiCode: version.code,
-            name: version.name,
-            language: version.language,
+            apiCode: code,
+            name,
+            language,
             isActive: true,
           },
         });
@@ -57,5 +70,5 @@ export const upsertBibleVersions = async (versions: BibleVersionApiModel[]) => {
     }
   });
 
-  return { created, updated };
+  return { created, updated, skipped };
 };

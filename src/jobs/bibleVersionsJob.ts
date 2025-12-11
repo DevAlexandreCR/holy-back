@@ -9,10 +9,10 @@ export const syncBibleVersionsOnce = async (): Promise<void> => {
   console.log('[BibleVersionsJob] Starting sync');
 
   try {
-    const { total, created, updated } = await syncBibleVersionsFromApi();
+    const { total, created, updated, skipped } = await syncBibleVersionsFromApi();
     // eslint-disable-next-line no-console
     console.log(
-      `[BibleVersionsJob] Sync finished: ${created} created, ${updated} updated (from ${total} upstream versions)`,
+      `[BibleVersionsJob] Sync finished: ${created} created, ${updated} updated, ${skipped} skipped (from ${total} upstream versions)`,
     );
   } catch (error) {
     // eslint-disable-next-line no-console

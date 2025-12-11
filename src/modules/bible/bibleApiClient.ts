@@ -31,8 +31,26 @@ export class BibleApiClient {
   async getVersions(): Promise<BibleVersionApiModel[]> {
     const path = '/versions';
     try {
-      const { data } = await this.client.get<BibleVersionApiModel[]>(path);
-      return data;
+      const { data } = await this.client.get<unknown>(path);
+      if (!Array.isArray(data)) {
+        throw new Error('Unexpected versions payload');
+      }
+
+      return data.map((item) => {
+        const record = item as Record<string, unknown>;
+        const code =
+          (record.code as string | undefined) ??
+          (record.version as string | undefined) ??
+          (record.abbrev as string | undefined) ??
+          '';
+        const name =
+          (record.name as string | undefined) ??
+          (record.title as string | undefined) ??
+          '';
+        const language = (record.language as string | undefined) ?? '';
+
+        return { code, name, language };
+      });
     } catch (error) {
       logAxiosError(path, error);
       throw new Error('Failed to fetch bible versions');
