@@ -1,6 +1,7 @@
 import express, { NextFunction, Request, Response, Router } from 'express';
 import authRouter from './modules/auth/auth.routes';
 import { isAppError } from './common/errors';
+import bibleRouter from './modules/bible/bible.routes';
 
 export const app = express();
 
@@ -10,10 +11,9 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' });
 });
 
-const placeholderRouter = (): Router => Router();
-
 app.use('/auth', authRouter);
-app.use('/bible', placeholderRouter());
+app.use('/bible', bibleRouter);
+const placeholderRouter = (): Router => Router();
 app.use('/user', placeholderRouter());
 app.use('/verse', placeholderRouter());
 app.use('/widget', placeholderRouter());
