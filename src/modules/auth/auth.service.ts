@@ -5,6 +5,7 @@ import { config } from '../../config/env';
 import { AppError } from '../../common/errors';
 import { hashPassword, verifyPassword } from './password';
 import { signAccessToken, signRefreshToken } from './jwt';
+import { ensureSettings } from '../user/userSettings.service';
 
 type RegisterInput = {
   name: string;
@@ -142,24 +143,19 @@ export const resetPassword = async (input: ResetPasswordInput) => {
 };
 
 export const getUserWithSettings = async (userId: string) => {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: {
-      settings: true,
-    },
-  });
+  const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user) {
     throw new AppError('User not found', 'USER_NOT_FOUND', 404);
   }
 
+  const settings = await ensureSettings(user.id);
+
   return {
     user: sanitizeUser(user),
-    settings: user.settings
-      ? {
-          preferred_version_id: user.settings.preferredVersionId,
-          timezone: user.settings.timezone,
-        }
-      : null,
+    settings: {
+      preferred_version_id: settings.preferredVersionId,
+      timezone: settings.timezone,
+    },
   };
 };
