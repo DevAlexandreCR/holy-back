@@ -1,8 +1,9 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { listActiveBibleVersions } from '../modules/bible/bible.service';
 import { fetchAndStoreDailyVerse, toUTCDateOnly } from '../modules/verse/dailyVerse.service';
+import { config } from '../config/env';
 
-const DAILY_VERSE_CRON_EXPRESSION = '5 0 * * *'; // 00:05 UTC daily
+const DAILY_VERSE_CRON_EXPRESSION = config.jobs.dailyVerseCron; // default 00:05 UTC daily
 
 export const runDailyVerseJobOnce = async (date: Date = new Date()): Promise<void> => {
   const targetDate = toUTCDateOnly(date);

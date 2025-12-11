@@ -3,52 +3,87 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-type RequiredKey = 'DATABASE_URL' | 'JWT_SECRET' | 'BIBLE_API_BASE_URL';
+type RequiredKey = 'JWT_SECRET' | 'BIBLE_API_BASE_URL';
 
-const requiredKeys: RequiredKey[] = ['DATABASE_URL', 'JWT_SECRET', 'BIBLE_API_BASE_URL'];
+const requiredKeys: RequiredKey[] = ['JWT_SECRET', 'BIBLE_API_BASE_URL'];
 
-const readEnv = (key: string, defaultValue?: string): string => {
-  const value = process.env[key] ?? defaultValue;
-  if (!value) {
-    throw new Error(`Missing required environment variable: ${key}`);
+const readEnvAny = (keys: string[], defaultValue?: string): string => {
+  for (const key of keys) {
+    const value = process.env[key];
+    if (value !== undefined) {
+      return value;
+    }
   }
-  return value;
+
+  if (defaultValue !== undefined) {
+    return defaultValue;
+  }
+
+  throw new Error(`Missing required environment variable: ${keys.join(' or ')}`);
 };
 
-const toNumber = (value: string, key: string): number => {
+const toNumber = (value: string, keyLabel: string): number => {
   const parsed = Number(value);
   if (Number.isNaN(parsed)) {
-    throw new Error(`Environment variable ${key} must be a number`);
+    throw new Error(`Environment variable ${keyLabel} must be a number`);
   }
   return parsed;
 };
 
 const ensureRequired = (): void => {
+  const missing: string[] = [];
+
   requiredKeys.forEach((key) => {
     if (!process.env[key]) {
-      throw new Error(`Missing required environment variable: ${key}`);
+      missing.push(key);
     }
   });
+
+  const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
+  const hasDbComponents =
+    process.env.DB_HOST && process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME;
+
+  if (!hasDatabaseUrl && !hasDbComponents) {
+    missing.push('DATABASE_URL or DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+  }
+
+  if (missing.length) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+};
+
+const buildDatabaseUrl = (): string => {
+  const directUrl = process.env.DATABASE_URL;
+  if (directUrl) return directUrl;
+
+  const host = readEnvAny(['DB_HOST']);
+  const port = toNumber(readEnvAny(['DB_PORT'], '3306'), 'DB_PORT');
+  const user = readEnvAny(['DB_USER']);
+  const password = readEnvAny(['DB_PASSWORD']);
+  const name = readEnvAny(['DB_NAME']);
+
+  return `mysql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
 };
 
 ensureRequired();
 
-const APP_PORT = toNumber(readEnv('PORT', '3000'), 'PORT');
-const JWT_SECRET = readEnv('JWT_SECRET');
+const APP_PORT = toNumber(readEnvAny(['APP_PORT', 'PORT'], '3000'), 'APP_PORT/PORT');
+const JWT_SECRET = readEnvAny(['JWT_SECRET']);
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? JWT_SECRET;
-const JWT_EXPIRES_IN = readEnv('JWT_EXPIRES_IN', '15m') as StringValue;
-const JWT_REFRESH_EXPIRES_IN = readEnv('JWT_REFRESH_EXPIRES_IN', '7d') as StringValue;
+const JWT_EXPIRES_IN = readEnvAny(['JWT_EXPIRES_IN'], '15m') as StringValue;
+const JWT_REFRESH_EXPIRES_IN = readEnvAny(['JWT_REFRESH_EXPIRES_IN'], '7d') as StringValue;
 const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
-  readEnv('RESET_TOKEN_EXPIRES_MINUTES', '30'),
+  readEnvAny(['RESET_TOKEN_EXPIRES_MINUTES'], '30'),
   'RESET_TOKEN_EXPIRES_MINUTES',
 );
+const DAILY_VERSE_CRON = readEnvAny(['CRON_SCHEDULE', 'VERSE_OF_DAY_CRON'], '5 0 * * *');
 
 export const config = {
   app: {
     port: APP_PORT,
   },
   db: {
-    url: readEnv('DATABASE_URL'),
+    url: buildDatabaseUrl(),
   },
   auth: {
     jwtSecret: JWT_SECRET,
@@ -58,7 +93,10 @@ export const config = {
     resetTokenTtlMinutes: RESET_TOKEN_EXPIRES_MINUTES,
   },
   external: {
-    bibleApiBaseUrl: readEnv('BIBLE_API_BASE_URL'),
+    bibleApiBaseUrl: readEnvAny(['BIBLE_API_BASE_URL']),
+  },
+  jobs: {
+    dailyVerseCron: DAILY_VERSE_CRON,
   },
 } as const;
 
