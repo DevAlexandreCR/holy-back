@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import { config } from '../../config/env';
-import { BibleVersionApiModel, BookApiModel } from './bible.types';
+import { BibleVersionApiModel, BookApiModel, GetVersesParams, VerseApiModel } from './bible.types';
 
 const logAxiosError = (context: string, error: unknown) => {
   if (axios.isAxiosError(error)) {
@@ -47,6 +47,21 @@ export class BibleApiClient {
     } catch (error) {
       logAxiosError(path, error);
       throw new Error('Failed to fetch bible books');
+    }
+  }
+
+  async getVerses(params: GetVersesParams): Promise<VerseApiModel[]> {
+    const { versionCode, book, chapter, fromVerse, toVerse } = params;
+    const range = toVerse && toVerse !== fromVerse ? `${fromVerse}-${toVerse}` : `${fromVerse}`;
+    const encodedBook = encodeURIComponent(book);
+    const encodedVersion = encodeURIComponent(versionCode);
+    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`;
+    try {
+      const { data } = await this.client.get<VerseApiModel[]>(path);
+      return data;
+    } catch (error) {
+      logAxiosError(path, error);
+      throw new Error('Failed to fetch bible verses');
     }
   }
 }
