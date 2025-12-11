@@ -77,6 +77,7 @@ const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
   'RESET_TOKEN_EXPIRES_MINUTES',
 );
 const DAILY_VERSE_CRON = readEnvAny(['CRON_SCHEDULE', 'VERSE_OF_DAY_CRON'], '5 0 * * *');
+const BIBLE_VERSIONS_CRON = readEnvAny(['BIBLE_VERSIONS_CRON'], '15 0 * * *');
 
 export const config = {
   app: {
@@ -97,6 +98,7 @@ export const config = {
   },
   jobs: {
     dailyVerseCron: DAILY_VERSE_CRON,
+    bibleVersionsCron: BIBLE_VERSIONS_CRON,
   },
 } as const;
 

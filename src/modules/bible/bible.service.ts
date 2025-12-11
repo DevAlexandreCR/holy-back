@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db';
+import BibleApiClient from './bibleApiClient';
 import { BibleVersionApiModel } from './bible.types';
 
 export const listActiveBibleVersions = async () => {
@@ -6,6 +7,18 @@ export const listActiveBibleVersions = async () => {
     where: { isActive: true },
     orderBy: { name: 'asc' },
   });
+};
+
+export const syncBibleVersionsFromApi = async (): Promise<{
+  total: number;
+  created: number;
+  updated: number;
+}> => {
+  const apiClient = new BibleApiClient();
+  const versions = await apiClient.getVersions();
+  const result = await upsertBibleVersions(versions);
+
+  return { total: versions.length, ...result };
 };
 
 export const upsertBibleVersions = async (versions: BibleVersionApiModel[]) => {

@@ -3,18 +3,22 @@ import { app } from './app';
 import { config } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './config/db';
 import { registerDailyVerseJob } from './jobs/dailyVerseJob';
+import { registerBibleVersionsJob, syncBibleVersionsOnce } from './jobs/bibleVersionsJob';
 
 const { port } = config.app;
 let server: Server | undefined;
 let dailyVerseJob: ReturnType<typeof registerDailyVerseJob> | undefined;
+let bibleVersionsJob: ReturnType<typeof registerBibleVersionsJob> | undefined;
 
 const start = async (): Promise<void> => {
   try {
     await connectToDatabase();
+    await syncBibleVersionsOnce();
     server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on port ${port}`);
     });
+    bibleVersionsJob = registerBibleVersionsJob();
     dailyVerseJob = registerDailyVerseJob();
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -29,6 +33,9 @@ const shutdown = async (signal: string): Promise<void> => {
   try {
     if (dailyVerseJob) {
       dailyVerseJob.stop();
+    }
+    if (bibleVersionsJob) {
+      bibleVersionsJob.stop();
     }
     if (server) {
       await new Promise<void>((resolve) => server?.close(() => resolve()));

@@ -4,7 +4,7 @@ Node.js + TypeScript + Express + Prisma backend that powers the Bible Widget app
 
 ## Setup
 - Install dependencies: `npm install`
-- Copy `.env.example` to `.env` and fill values (DB creds, JWT secrets, Bible API base URL, cron schedule).
+- Copy `.env.example` to `.env` and fill values (DB creds, JWT secrets, Bible API base URL, cron schedules).
 - Generate Prisma client (optional if already generated): `npm run prisma:generate`
 
 ## Database
@@ -20,8 +20,10 @@ Node.js + TypeScript + Express + Prisma backend that powers the Bible Widget app
 - Production start (uses compiled dist): `npm start`
 
 ## Cron Job
+- Bible versions sync runs once on startup and then daily.
+  - Schedule configured via `BIBLE_VERSIONS_CRON` (defaults to `15 0 * * *`, i.e., 00:15 UTC).
 - The verse-of-the-day cron registers on server start.
-- Schedule configured via `CRON_SCHEDULE` (defaults to `5 0 * * *`, i.e., 00:05 UTC).
+  - Schedule configured via `CRON_SCHEDULE` (defaults to `5 0 * * *`, i.e., 00:05 UTC).
 
 ## API Quickstart
 - Register:
