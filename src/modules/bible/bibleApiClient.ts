@@ -1,87 +1,88 @@
-import axios, { AxiosInstance } from 'axios';
-import { config } from '../../config/env';
-import { BibleVersionApiModel, BookApiModel, GetVersesParams, VerseApiModel } from './bible.types';
+import axios, { AxiosInstance } from 'axios'
+import { config } from '../../config/env'
+import { BibleVersionApiModel, BookApiModel, GetVersesParams, VerseApiModel } from './bible.types'
 
 const logAxiosError = (context: string, error: unknown) => {
   if (axios.isAxiosError(error)) {
-    const { response, message, code } = error;
+    const { response, message, code } = error
     // eslint-disable-next-line no-console
     console.error(`[BibleApiClient] ${context} failed`, {
       status: response?.status,
       data: response?.data,
       message,
       code,
-    });
+    })
   } else {
     // eslint-disable-next-line no-console
-    console.error(`[BibleApiClient] ${context} failed`, error);
+    console.error(`[BibleApiClient] ${context} failed`, error)
   }
-};
+}
 
 export class BibleApiClient {
-  private client: AxiosInstance;
+  private client: AxiosInstance
 
   constructor(baseUrl = config.external.bibleApiBaseUrl) {
     this.client = axios.create({
       baseURL: baseUrl,
       timeout: 10000,
-    });
+    })
   }
 
   async getVersions(): Promise<BibleVersionApiModel[]> {
-    const path = '/versions';
+    const path = '/versions'
     try {
-      const { data } = await this.client.get<unknown>(path);
+      const { data } = await this.client.get<unknown>(path)
       if (!Array.isArray(data)) {
-        throw new Error('Unexpected versions payload');
+        throw new Error('Unexpected versions payload')
       }
 
       return data.map((item) => {
-        const record = item as Record<string, unknown>;
+        const record = item as Record<string, unknown>
         const code =
           (record.code as string | undefined) ??
           (record.version as string | undefined) ??
           (record.abbrev as string | undefined) ??
-          '';
+          ''
         const name =
           (record.name as string | undefined) ??
           (record.title as string | undefined) ??
-          '';
-        const language = (record.language as string | undefined) ?? '';
+          ''
+        const language = (record.language as string | undefined) ?? ''
 
-        return { code, name, language };
-      });
+        return { code, name, language }
+      })
     } catch (error) {
-      logAxiosError(path, error);
-      throw new Error('Failed to fetch bible versions');
+      logAxiosError(path, error)
+      throw new Error('Failed to fetch bible versions')
     }
   }
 
   async getBooks(): Promise<BookApiModel[]> {
-    const path = '/books';
+    const path = '/books'
     try {
-      const { data } = await this.client.get<BookApiModel[]>(path);
-      return data;
+      const { data } = await this.client.get<BookApiModel[]>(path)
+      return data
     } catch (error) {
-      logAxiosError(path, error);
-      throw new Error('Failed to fetch bible books');
+      logAxiosError(path, error)
+      throw new Error('Failed to fetch bible books')
     }
   }
 
   async getVerses(params: GetVersesParams): Promise<VerseApiModel[]> {
-    const { versionCode, book, chapter, fromVerse, toVerse } = params;
-    const range = toVerse && toVerse !== fromVerse ? `${fromVerse}-${toVerse}` : `${fromVerse}`;
-    const encodedBook = encodeURIComponent(book);
-    const encodedVersion = encodeURIComponent(versionCode);
-    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`;
+    const { versionCode, book, chapter, fromVerse, toVerse } = params
+    const range = toVerse && toVerse !== fromVerse ? `${fromVerse}-${toVerse}` : `${fromVerse}`
+    const encodedBook = encodeURIComponent(book)
+    const encodedVersion = encodeURIComponent(versionCode)
+    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`
     try {
-      const { data } = await this.client.get<VerseApiModel[]>(path);
-      return data;
+      const { data } = await this.client.get<VerseApiModel[] | VerseApiModel>(path)
+      // La API devuelve un objeto cuando es un solo versículo, un array cuando es un rango
+      return Array.isArray(data) ? data : [data]
     } catch (error) {
-      logAxiosError(path, error);
-      throw new Error('Failed to fetch bible verses');
+      logAxiosError(path, error)
+      throw new Error('Failed to fetch bible verses')
     }
   }
 }
 
-export default BibleApiClient;
+export default BibleApiClient
