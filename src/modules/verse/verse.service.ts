@@ -4,11 +4,171 @@ import { prisma } from '../../config/db';
 import { ensureSettings } from '../user/userSettings.service';
 import BibleApiClient from '../bible/bibleApiClient';
 import { VerseApiModel } from '../bible/bible.types';
-import { createSeedHash, fetchRandomSeed, parseReference } from '../bible/bibleRandomSeedClient';
+import { createSeedHash, fetchRandomSeed, normalizeRandomSeed } from '../bible/bibleRandomSeedClient';
 
 const bibleApiClient = new BibleApiClient();
 
 const composeVerseText = (verses: VerseApiModel[]): string => verses.map((verse) => verse.verse.trim()).join(' ');
+
+const normalizeBookKey = (value: string): string => {
+  const romanPrefix = value.trim().replace(/^iii\b/i, '3 ').replace(/^ii\b/i, '2 ').replace(/^i\b/i, '1 ');
+  return romanPrefix
+    .toLowerCase()
+    .replace(/[.'`]/g, '')
+    .replace(/-/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+const BOOK_ABBREVIATIONS: Record<string, string> = {
+  genesis: 'GN',
+  génesis: 'GN',
+  exodo: 'EX',
+  éxodo: 'EX',
+  exodus: 'EX',
+  levitico: 'LV',
+  levítico: 'LV',
+  leviticus: 'LV',
+  numeros: 'NM',
+  números: 'NM',
+  numbers: 'NM',
+  deuteronomio: 'DT',
+  deuteronomy: 'DT',
+  josue: 'JOS',
+  josué: 'JOS',
+  joshua: 'JOS',
+  jueces: 'JUE',
+  judges: 'JUE',
+  rut: 'RT',
+  ruth: 'RT',
+  '1 samuel': '1S',
+  '2 samuel': '2S',
+  '1 kings': '1R',
+  '2 kings': '2R',
+  '1 reyes': '1R',
+  '2 reyes': '2R',
+  '1 cronicas': '1CR',
+  '1 crónicas': '1CR',
+  '1 chronicles': '1CR',
+  '2 cronicas': '2CR',
+  '2 crónicas': '2CR',
+  '2 chronicles': '2CR',
+  esdras: 'ESD',
+  ezra: 'ESD',
+  nehemias: 'NEH',
+  nehemías: 'NEH',
+  nehemiah: 'NEH',
+  ester: 'EST',
+  esther: 'EST',
+  job: 'JOB',
+  salmos: 'SAL',
+  psalms: 'SAL',
+  psalm: 'SAL',
+  proverbios: 'PR',
+  proverbs: 'PR',
+  eclesiastes: 'EC',
+  ecclesiastes: 'EC',
+  cantares: 'CNT',
+  'song of solomon': 'CNT',
+  'song of songs': 'CNT',
+  isaías: 'IS',
+  isaias: 'IS',
+  isaiah: 'IS',
+  jeremias: 'JER',
+  jeremías: 'JER',
+  jeremiah: 'JER',
+  lamentaciones: 'LM',
+  lamentations: 'LM',
+  ezequiel: 'EZ',
+  ezekiel: 'EZ',
+  daniel: 'DN',
+  oseas: 'OS',
+  hosea: 'OS',
+  joel: 'JL',
+  amos: 'AM',
+  amós: 'AM',
+  obadias: 'ABD',
+  abdias: 'ABD',
+  obadiah: 'ABD',
+  jonas: 'JON',
+  jonás: 'JON',
+  jonah: 'JON',
+  miqueas: 'MI',
+  micah: 'MI',
+  nahum: 'NAH',
+  habacuc: 'HAB',
+  habakkuk: 'HAB',
+  sofonias: 'SOF',
+  zephaniah: 'SOF',
+  hageo: 'HAG',
+  haggai: 'HAG',
+  zacarias: 'ZAC',
+  zacarías: 'ZAC',
+  zechariah: 'ZAC',
+  malaquias: 'MAL',
+  malachi: 'MAL',
+  mateo: 'MT',
+  matthew: 'MT',
+  marcos: 'MR',
+  mark: 'MR',
+  lucas: 'LC',
+  luke: 'LC',
+  juan: 'JN',
+  john: 'JN',
+  hechos: 'HCH',
+  acts: 'HCH',
+  romanos: 'RO',
+  romans: 'RO',
+  '1 corintios': '1CO',
+  '1 corinthians': '1CO',
+  '2 corintios': '2CO',
+  '2 corinthians': '2CO',
+  galatas: 'GA',
+  gálatas: 'GA',
+  galatians: 'GA',
+  efesios: 'EF',
+  ephesians: 'EF',
+  filipenses: 'FIL',
+  philippians: 'FIL',
+  colosenses: 'COL',
+  colossians: 'COL',
+  '1 tesalonicenses': '1TS',
+  '1 thessalonians': '1TS',
+  '2 tesalonicenses': '2TS',
+  '2 thessalonians': '2TS',
+  '1 timoteo': '1TI',
+  '1 timothy': '1TI',
+  '2 timoteo': '2TI',
+  '2 timothy': '2TI',
+  tito: 'TIT',
+  titus: 'TIT',
+  filemon: 'FLM',
+  filémon: 'FLM',
+  philemon: 'FLM',
+  hebreos: 'HE',
+  hebrews: 'HE',
+  santiago: 'STG',
+  james: 'STG',
+  '1 pedro': '1P',
+  '1 peter': '1P',
+  '2 pedro': '2P',
+  '2 peter': '2P',
+  '1 juan': '1JN',
+  '1 john': '1JN',
+  '2 juan': '2JN',
+  '2 john': '2JN',
+  '3 juan': '3JN',
+  '3 john': '3JN',
+  judas: 'JUD',
+  jude: 'JUD',
+  apocalipsis: 'AP',
+  revelation: 'AP',
+};
+
+const mapBookToApiCode = (book: string): string => {
+  const key = normalizeBookKey(book);
+  return BOOK_ABBREVIATIONS[key] ?? book;
+};
 
 const findActiveVersionOrThrow = async (versionId: number): Promise<BibleVersion> => {
   const version = await prisma.bibleVersion.findFirst({
@@ -72,23 +232,23 @@ const findUnseenSeedForUser = async (userId: string): Promise<VerseSeed | null> 
 
 const upsertRandomSeed = async (): Promise<VerseSeed> => {
   const randomSeed = await fetchRandomSeed();
-  const parsed = parseReference(randomSeed.reference);
-  const seedHash = createSeedHash(randomSeed.reference);
-  const bookName = (randomSeed.verses?.[0]?.book_name ?? parsed.bookName).trim();
+  const normalized = normalizeRandomSeed(randomSeed);
+  const sourceTranslation = normalized.translationId ?? 'web';
+  const seedHash = createSeedHash(normalized.reference, sourceTranslation);
 
   const seedData = {
     seedHash,
-    sourceTranslation: 'web',
-    reference: randomSeed.reference.trim(),
-    referenceBook: bookName,
-    referenceChapter: parsed.chapter,
-    referenceFromVerse: parsed.fromVerse,
-    referenceToVerse: parsed.toVerse ?? null,
-    textEn: randomSeed.text.trim(),
+    sourceTranslation,
+    reference: normalized.reference.trim(),
+    referenceBook: normalized.bookName.trim(),
+    referenceChapter: normalized.chapter,
+    referenceFromVerse: normalized.fromVerse,
+    referenceToVerse: normalized.toVerse ?? null,
+    textEn: normalized.textEn,
     meta: {
-      translation_name: randomSeed.translation_name,
-      translation_note: randomSeed.translation_note,
-      book_id: randomSeed.verses?.[0]?.book_id,
+      translation_name: normalized.translationName,
+      translation_note: normalized.translationNote,
+      book_id: normalized.bookId,
     },
   };
 
@@ -135,7 +295,7 @@ const getOrCreateTranslation = async (
   try {
     const verses = await bibleApiClient.getVerses({
       versionCode: version.apiCode,
-      book: seed.referenceBook,
+      book: mapBookToApiCode(seed.referenceBook),
       chapter: seed.referenceChapter,
       fromVerse: seed.referenceFromVerse,
       toVerse: seed.referenceToVerse ?? undefined,
