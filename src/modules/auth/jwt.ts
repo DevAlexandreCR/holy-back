@@ -11,7 +11,13 @@ type TokenType = 'access' | 'refresh';
 const signToken = (payload: AuthTokenPayload, type: TokenType): string => {
   const secret = type === 'access' ? config.auth.jwtSecret : config.auth.jwtRefreshSecret;
   const expiresIn = type === 'access' ? config.auth.accessTokenTtl : config.auth.refreshTokenTtl;
-  const options: SignOptions = { expiresIn };
+  const options: SignOptions = {};
+
+  // When ttl is set to "never" we omit the expiresIn option so the token does not expire.
+  if (expiresIn !== 'never') {
+    options.expiresIn = expiresIn;
+  }
+
   return jwt.sign(payload, secret, options);
 };
 

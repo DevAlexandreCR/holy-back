@@ -70,8 +70,8 @@ ensureRequired();
 const APP_PORT = toNumber(readEnvAny(['APP_PORT', 'PORT'], '3000'), 'APP_PORT/PORT');
 const JWT_SECRET = readEnvAny(['JWT_SECRET']);
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? JWT_SECRET;
-const JWT_EXPIRES_IN = readEnvAny(['JWT_EXPIRES_IN'], '15m') as StringValue;
-const JWT_REFRESH_EXPIRES_IN = readEnvAny(['JWT_REFRESH_EXPIRES_IN'], '7d') as StringValue;
+const JWT_EXPIRES_IN = readEnvAny(['JWT_EXPIRES_IN'], 'never') as StringValue;
+const JWT_REFRESH_EXPIRES_IN = readEnvAny(['JWT_REFRESH_EXPIRES_IN'], 'never') as StringValue;
 const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
   readEnvAny(['RESET_TOKEN_EXPIRES_MINUTES'], '30'),
   'RESET_TOKEN_EXPIRES_MINUTES',
