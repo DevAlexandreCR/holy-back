@@ -2,12 +2,10 @@ import { Server } from 'http';
 import { app } from './app';
 import { config } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './config/db';
-import { registerDailyVerseJob } from './jobs/dailyVerseJob';
 import { registerBibleVersionsJob, syncBibleVersionsOnce } from './jobs/bibleVersionsJob';
 
 const { port } = config.app;
 let server: Server | undefined;
-let dailyVerseJob: ReturnType<typeof registerDailyVerseJob> | undefined;
 let bibleVersionsJob: ReturnType<typeof registerBibleVersionsJob> | undefined;
 
 const start = async (): Promise<void> => {
@@ -19,7 +17,6 @@ const start = async (): Promise<void> => {
       console.log(`Backend running on port ${port}`);
     });
     bibleVersionsJob = registerBibleVersionsJob();
-    dailyVerseJob = registerDailyVerseJob();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to start server', error);
@@ -31,9 +28,6 @@ const shutdown = async (signal: string): Promise<void> => {
   // eslint-disable-next-line no-console
   console.log(`Received ${signal}, shutting down gracefully...`);
   try {
-    if (dailyVerseJob) {
-      dailyVerseJob.stop();
-    }
     if (bibleVersionsJob) {
       bibleVersionsJob.stop();
     }

@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 type RequiredKey = 'JWT_SECRET' | 'BIBLE_API_BASE_URL';
+type JwtTtl = StringValue | 'never';
 
 const requiredKeys: RequiredKey[] = ['JWT_SECRET', 'BIBLE_API_BASE_URL'];
 
@@ -70,13 +71,12 @@ ensureRequired();
 const APP_PORT = toNumber(readEnvAny(['APP_PORT', 'PORT'], '3000'), 'APP_PORT/PORT');
 const JWT_SECRET = readEnvAny(['JWT_SECRET']);
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET ?? JWT_SECRET;
-const JWT_EXPIRES_IN = readEnvAny(['JWT_EXPIRES_IN'], 'never') as StringValue;
-const JWT_REFRESH_EXPIRES_IN = readEnvAny(['JWT_REFRESH_EXPIRES_IN'], 'never') as StringValue;
+const JWT_EXPIRES_IN = readEnvAny(['JWT_EXPIRES_IN'], 'never') as JwtTtl;
+const JWT_REFRESH_EXPIRES_IN = readEnvAny(['JWT_REFRESH_EXPIRES_IN'], 'never') as JwtTtl;
 const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
   readEnvAny(['RESET_TOKEN_EXPIRES_MINUTES'], '30'),
   'RESET_TOKEN_EXPIRES_MINUTES',
 );
-const DAILY_VERSE_CRON = readEnvAny(['CRON_SCHEDULE', 'VERSE_OF_DAY_CRON'], '5 0 * * *');
 const BIBLE_VERSIONS_CRON = readEnvAny(['BIBLE_VERSIONS_CRON'], '15 0 * * *');
 
 export const config = {
@@ -97,7 +97,6 @@ export const config = {
     bibleApiBaseUrl: readEnvAny(['BIBLE_API_BASE_URL']),
   },
   jobs: {
-    dailyVerseCron: DAILY_VERSE_CRON,
     bibleVersionsCron: BIBLE_VERSIONS_CRON,
   },
 } as const;

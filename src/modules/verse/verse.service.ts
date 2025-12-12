@@ -1,42 +1,16 @@
-import { BibleVersion, DailyVerse } from '@prisma/client';
+import { BibleVersion, Prisma, VerseSeed, VerseTranslation } from '@prisma/client';
 import { AppError } from '../../common/errors';
 import { prisma } from '../../config/db';
 import { ensureSettings } from '../user/userSettings.service';
-import { VerseReference, buildReferenceLabel, fetchAndStoreDailyVerse, toUTCDateOnly } from './dailyVerse.service';
+import BibleApiClient from '../bible/bibleApiClient';
+import { VerseApiModel } from '../bible/bible.types';
+import { createSeedHash, fetchRandomSeed, parseReference } from '../bible/bibleRandomSeedClient';
 
-type DailyVerseWithVersion = DailyVerse & { version: BibleVersion };
+const bibleApiClient = new BibleApiClient();
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+const composeVerseText = (verses: VerseApiModel[]): string => verses.map((verse) => verse.verse.trim()).join(' ');
 
-const getDateForTimezone = (timezone?: string, now: Date = new Date()): Date => {
-  if (!timezone) {
-    return toUTCDateOnly(now);
-  }
-
-  try {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).formatToParts(now);
-
-    const year = Number(parts.find((p) => p.type === 'year')?.value);
-    const month = Number(parts.find((p) => p.type === 'month')?.value);
-    const day = Number(parts.find((p) => p.type === 'day')?.value);
-
-    if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) {
-      throw new Error('Invalid date components resolved from timezone');
-    }
-
-    return new Date(Date.UTC(year, month - 1, day));
-  } catch (error) {
-    throw new AppError('Invalid timezone', 'INVALID_TIMEZONE', 400, error);
-  }
-};
-
-const getActiveVersionOrThrow = async (versionId: number): Promise<BibleVersion> => {
+const findActiveVersionOrThrow = async (versionId: number): Promise<BibleVersion> => {
   const version = await prisma.bibleVersion.findFirst({
     where: { id: versionId, isActive: true },
   });
@@ -49,105 +23,201 @@ const getActiveVersionOrThrow = async (versionId: number): Promise<BibleVersion>
 };
 
 const pickDefaultVersion = async (): Promise<BibleVersion> => {
-  const version = await prisma.bibleVersion.findFirst({
+  const spanish = await prisma.bibleVersion.findFirst({
+    where: {
+      isActive: true,
+      OR: [{ language: { contains: 'spa' } }, { language: { startsWith: 'es' } }],
+    },
+    orderBy: { name: 'asc' },
+  });
+  if (spanish) return spanish;
+
+  const web = await prisma.bibleVersion.findFirst({
+    where: { isActive: true, apiCode: 'web' },
+  });
+  if (web) return web;
+
+  const fallback = await prisma.bibleVersion.findFirst({
     where: { isActive: true },
     orderBy: { name: 'asc' },
   });
 
-  if (!version) {
+  if (!fallback) {
     throw new AppError('No active bible version available', 'NO_ACTIVE_BIBLE_VERSION', 404);
   }
 
-  return version;
+  return fallback;
 };
 
-const resolveVersion = async (
-  requestedVersionId: number | undefined,
-  preferredVersionId: number | null,
-): Promise<BibleVersion> => {
+const resolveVersionForUser = async (userId: string, requestedVersionId?: number): Promise<BibleVersion> => {
+  const settings = await ensureSettings(userId);
+
   if (requestedVersionId) {
-    return getActiveVersionOrThrow(requestedVersionId);
+    return findActiveVersionOrThrow(requestedVersionId);
   }
 
-  if (preferredVersionId) {
-    return getActiveVersionOrThrow(preferredVersionId);
+  if (settings.preferredVersionId) {
+    return findActiveVersionOrThrow(settings.preferredVersionId);
   }
 
   return pickDefaultVersion();
 };
 
-const findDailyVerseWithVersion = async (
-  versionId: number,
-  date: Date,
-): Promise<DailyVerseWithVersion | null> => {
-  return prisma.dailyVerse.findUnique({
-    where: { date_versionId: { date, versionId } },
-    include: { version: true },
+const findUnseenSeedForUser = async (userId: string): Promise<VerseSeed | null> => {
+  return prisma.verseSeed.findFirst({
+    where: { userHistory: { none: { userId } } },
+    orderBy: { id: 'asc' },
   });
 };
 
-const ensureDailyVerse = async (
+const upsertRandomSeed = async (): Promise<VerseSeed> => {
+  const randomSeed = await fetchRandomSeed();
+  const parsed = parseReference(randomSeed.reference);
+  const seedHash = createSeedHash(randomSeed.reference);
+  const bookName = (randomSeed.verses?.[0]?.book_name ?? parsed.bookName).trim();
+
+  const seedData = {
+    seedHash,
+    sourceTranslation: 'web',
+    reference: randomSeed.reference.trim(),
+    referenceBook: bookName,
+    referenceChapter: parsed.chapter,
+    referenceFromVerse: parsed.fromVerse,
+    referenceToVerse: parsed.toVerse ?? null,
+    textEn: randomSeed.text.trim(),
+    meta: {
+      translation_name: randomSeed.translation_name,
+      translation_note: randomSeed.translation_note,
+      book_id: randomSeed.verses?.[0]?.book_id,
+    },
+  };
+
+  return prisma.verseSeed.upsert({
+    where: { seedHash },
+    create: seedData,
+    update: seedData,
+  });
+};
+
+const pickSeedForUser = async (userId: string): Promise<VerseSeed> => {
+  const cached = await findUnseenSeedForUser(userId);
+  if (cached) return cached;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const seeded = await upsertRandomSeed();
+      const unseen = await prisma.verseSeed.findFirst({
+        where: { id: seeded.id, userHistory: { none: { userId } } },
+      });
+      if (unseen) return unseen;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('[VerseService] Random seed fetch failed', error);
+    }
+  }
+
+  throw new AppError('Unable to fetch a verse right now', 'VERSE_SEED_UNAVAILABLE', 503);
+};
+
+const findTranslation = async (seedId: number, versionId: number): Promise<VerseTranslation | null> => {
+  return prisma.verseTranslation.findUnique({
+    where: { seedId_versionId: { seedId, versionId } },
+  });
+};
+
+const getOrCreateTranslation = async (
+  seed: VerseSeed,
   version: BibleVersion,
-  date: Date,
-): Promise<DailyVerseWithVersion> => {
-  const targetDate = toUTCDateOnly(date);
-  const existing = await findDailyVerseWithVersion(version.id, targetDate);
+): Promise<VerseTranslation | null> => {
+  const existing = await findTranslation(seed.id, version.id);
   if (existing) return existing;
 
   try {
-    await fetchAndStoreDailyVerse(version, targetDate);
+    const verses = await bibleApiClient.getVerses({
+      versionCode: version.apiCode,
+      book: seed.referenceBook,
+      chapter: seed.referenceChapter,
+      fromVerse: seed.referenceFromVerse,
+      toVerse: seed.referenceToVerse ?? undefined,
+    });
+
+    if (!verses.length) {
+      throw new Error('Bible API returned no verses for the requested reference');
+    }
+
+    const text = composeVerseText(verses);
+
+    return await prisma.verseTranslation.create({
+      data: {
+        seedId: seed.id,
+        versionId: version.id,
+        translationCode: version.apiCode,
+        text,
+        meta: {
+          fetchedVerses: verses.length,
+        },
+      },
+    });
   } catch (error) {
-    throw new AppError('Failed to fetch verse of the day', 'VERSE_FETCH_FAILED', 502, error);
-  }
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return findTranslation(seed.id, version.id);
+    }
 
-  const created = await findDailyVerseWithVersion(version.id, targetDate);
-  if (!created) {
-    throw new AppError('Verse of the day not found', 'VERSE_NOT_FOUND', 404);
+    // eslint-disable-next-line no-console
+    console.error(
+      `[VerseService] Translation fetch failed for seed ${seed.id} (${seed.reference}) and version ${version.apiCode}`,
+      error,
+    );
+    return null;
   }
-
-  return created;
 };
 
-const buildReferenceFromRow = (verse: DailyVerse): string => {
-  const metaReference =
-    isRecord(verse.meta) && typeof verse.meta.reference === 'string' ? verse.meta.reference : undefined;
-
-  if (metaReference?.trim()) {
-    return metaReference;
+const markSeedAsSeen = async (userId: string, seedId: number): Promise<void> => {
+  try {
+    await prisma.userVerseHistory.create({
+      data: { userId, seedId },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return;
+    }
+    // eslint-disable-next-line no-console
+    console.error(`[VerseService] Failed to mark seed ${seedId} as seen for user ${userId}`, error);
   }
-
-  const reference: VerseReference = {
-    book: verse.referenceBook,
-    chapter: verse.referenceChapter,
-    fromVerse: verse.referenceFromVerse,
-    toVerse: verse.referenceToVerse ?? undefined,
-  };
-
-  return buildReferenceLabel(reference);
 };
 
 export type VersePayload = {
-  date: string;
-  version_code: string;
-  version_name: string;
   reference: string;
   text: string;
+  version_code: string;
+  version_name: string;
+  source_seed_translation: string;
 };
 
 export const getDailyVerseForUser = async (
   userId: string,
-  options?: { versionId?: number; now?: Date },
+  options?: { versionId?: number },
 ): Promise<VersePayload> => {
-  const settings = await ensureSettings(userId);
-  const targetDate = getDateForTimezone(settings.timezone ?? undefined, options?.now ?? new Date());
-  const version = await resolveVersion(options?.versionId, settings.preferredVersionId);
-  const verse = await ensureDailyVerse(version, targetDate);
+  const version = await resolveVersionForUser(userId, options?.versionId);
+  const seed = await pickSeedForUser(userId);
+  const translation = await getOrCreateTranslation(seed, version);
+
+  await markSeedAsSeen(userId, seed.id);
+
+  const text = translation?.text ?? seed.textEn;
+
+  if (!translation) {
+    // eslint-disable-next-line no-console
+    console.error(
+      `[VerseService] Falling back to English seed text for seed ${seed.id} (${seed.reference}) and version ${version.apiCode}`,
+    );
+  }
 
   return {
-    date: verse.date.toISOString().slice(0, 10),
-    version_code: verse.version.apiCode,
-    version_name: verse.version.name,
-    reference: buildReferenceFromRow(verse),
-    text: verse.text,
+    reference: seed.reference,
+    text,
+    version_code: version.apiCode,
+    version_name: version.name,
+    source_seed_translation: seed.sourceTranslation,
   };
 };

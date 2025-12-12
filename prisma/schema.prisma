@@ -17,6 +17,7 @@ model User {
   resetToken          String?        @map("reset_token")
   resetTokenExpiresAt DateTime?      @map("reset_token_expires_at")
   settings            UserSettings?
+  verseHistory        UserVerseHistory[]
 
   @@map("users")
 }
@@ -30,7 +31,7 @@ model BibleVersion {
   createdAt DateTime      @default(now()) @map("created_at")
   updatedAt DateTime      @updatedAt @map("updated_at")
   settings  UserSettings[]
-  verses    DailyVerse[]
+  translations VerseTranslation[]
 
   @@map("bible_versions")
 }
@@ -49,20 +50,55 @@ model UserSettings {
   @@map("user_settings")
 }
 
-model DailyVerse {
-  id                 Int          @id @default(autoincrement())
-  date               DateTime     @db.Date
-  versionId          Int          @map("version_id")
-  referenceBook      String       @map("reference_book")
-  referenceChapter   Int          @map("reference_chapter")
-  referenceFromVerse Int          @map("reference_from_verse")
-  referenceToVerse   Int?         @map("reference_to_verse")
-  text               String       @db.Text
+model VerseSeed {
+  id                 Int                 @id @default(autoincrement())
+  seedHash           String              @unique @map("seed_hash")
+  sourceTranslation  String              @default("web") @map("source_translation")
+  reference          String
+  referenceBook      String              @map("reference_book")
+  referenceChapter   Int                 @map("reference_chapter")
+  referenceFromVerse Int                 @map("reference_from_verse")
+  referenceToVerse   Int?                @map("reference_to_verse")
+  textEn             String              @db.Text @map("text_en")
   meta               Json?
-  createdAt          DateTime     @default(now()) @map("created_at")
-  updatedAt          DateTime     @updatedAt @map("updated_at")
-  version            BibleVersion @relation(fields: [versionId], references: [id])
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
 
-  @@unique([date, versionId])
-  @@map("daily_verses")
+  translations       VerseTranslation[]
+  userHistory        UserVerseHistory[]
+
+  @@index([sourceTranslation])
+  @@map("verse_seeds")
+}
+
+model VerseTranslation {
+  id               Int          @id @default(autoincrement())
+  seedId           Int          @map("seed_id")
+  versionId        Int          @map("version_id")
+  translationCode  String       @map("translation_code")
+  text             String       @db.Text
+  meta             Json?
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+
+  seed             VerseSeed    @relation(fields: [seedId], references: [id])
+  version          BibleVersion @relation(fields: [versionId], references: [id])
+
+  @@unique([seedId, versionId])
+  @@index([versionId])
+  @@map("verse_translations")
+}
+
+model UserVerseHistory {
+  id        Int       @id @default(autoincrement())
+  userId    String    @map("user_id")
+  seedId    Int       @map("seed_id")
+  shownAt   DateTime  @default(now()) @map("shown_at")
+
+  seed      VerseSeed @relation(fields: [seedId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, seedId])
+  @@index([userId])
+  @@map("user_verse_history")
 }
