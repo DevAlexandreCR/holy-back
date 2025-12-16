@@ -1,7 +1,7 @@
 {
   "name": "holyverso-backend",
   "version": "1.0.0",
-  "description": "Holyverso Bible Widget backend",
+  "description": "Holyverso HolyVerso backend",
   "private": true,
   "type": "commonjs",
   "main": "dist/server.js",
