@@ -1,12 +1,13 @@
-import { Router } from 'express';
-import { requireAuth } from '../auth/auth.middleware';
-import { getSettings, updatePreferredVersion, updateTimezone } from './user.controller';
+import { Router } from 'express'
+import { requireAuth } from '../auth/auth.middleware'
+import { getSettings, updatePreferredVersion, updateTimezone, updateWidgetFontSize } from './user.controller'
 
-const router = Router();
+const router = Router()
 
-router.use(requireAuth);
-router.get('/settings', getSettings);
-router.put('/settings/version', updatePreferredVersion);
-router.put('/settings/timezone', updateTimezone);
+router.use(requireAuth)
+router.get('/settings', getSettings)
+router.put('/settings/version', updatePreferredVersion)
+router.put('/settings/timezone', updateTimezone)
+router.put('/settings/widget-font-size', updateWidgetFontSize)
 
-export default router;
+export default router

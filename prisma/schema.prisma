@@ -41,6 +41,7 @@ model UserSettings {
   userId             String        @map("user_id")
   preferredVersionId Int?          @map("preferred_version_id")
   timezone           String?
+  widgetFontSize     String?       @default("large") @map("widget_font_size")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   user               User          @relation(fields: [userId], references: [id])
