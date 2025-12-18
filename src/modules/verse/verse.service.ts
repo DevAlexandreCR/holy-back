@@ -1,24 +1,25 @@
-import { BibleVersion, Prisma, VerseSeed, VerseTranslation } from '@prisma/client';
-import { AppError } from '../../common/errors';
-import { prisma } from '../../config/db';
-import { ensureSettings } from '../user/userSettings.service';
-import BibleApiClient from '../bible/bibleApiClient';
-import { VerseApiModel } from '../bible/bible.types';
-import { createSeedHash, fetchRandomSeed, normalizeRandomSeed } from '../bible/bibleRandomSeedClient';
+import { BibleVersion, Prisma, VerseSeed, VerseTranslation } from '@prisma/client'
+import { AppError } from '../../common/errors'
+import { prisma } from '../../config/db'
+import { ensureSettings } from '../user/userSettings.service'
+import BibleApiClient from '../bible/bibleApiClient'
+import { VerseApiModel } from '../bible/bible.types'
+import { createSeedHash, fetchRandomSeed, normalizeRandomSeed } from '../bible/bibleRandomSeedClient'
+import { translateReference } from '../bible/bookTranslations'
 
-const bibleApiClient = new BibleApiClient();
+const bibleApiClient = new BibleApiClient()
 
-const composeVerseText = (verses: VerseApiModel[]): string => verses.map((verse) => verse.verse.trim()).join(' ');
+const composeVerseText = (verses: VerseApiModel[]): string => verses.map((verse) => verse.verse.trim()).join(' ')
 
 const normalizeBookKey = (value: string): string => {
-  const romanPrefix = value.trim().replace(/^iii\b/i, '3 ').replace(/^ii\b/i, '2 ').replace(/^i\b/i, '1 ');
+  const romanPrefix = value.trim().replace(/^iii\b/i, '3 ').replace(/^ii\b/i, '2 ').replace(/^i\b/i, '1 ')
   return romanPrefix
     .toLowerCase()
     .replace(/[.'`]/g, '')
     .replace(/-/g, ' ')
     .replace(/\s+/g, ' ')
-    .trim();
-};
+    .trim()
+}
 
 const BOOK_ABBREVIATIONS: Record<string, string> = {
   genesis: 'GN',
@@ -163,24 +164,24 @@ const BOOK_ABBREVIATIONS: Record<string, string> = {
   jude: 'JUD',
   apocalipsis: 'AP',
   revelation: 'AP',
-};
+}
 
 const mapBookToApiCode = (book: string): string => {
-  const key = normalizeBookKey(book);
-  return BOOK_ABBREVIATIONS[key] ?? book;
-};
+  const key = normalizeBookKey(book)
+  return BOOK_ABBREVIATIONS[key] ?? book
+}
 
 const findActiveVersionOrThrow = async (versionId: number): Promise<BibleVersion> => {
   const version = await prisma.bibleVersion.findFirst({
     where: { id: versionId, isActive: true },
-  });
+  })
 
   if (!version) {
-    throw new AppError('Bible version not found or inactive', 'BIBLE_VERSION_NOT_FOUND', 404);
+    throw new AppError('Bible version not found or inactive', 'BIBLE_VERSION_NOT_FOUND', 404)
   }
 
-  return version;
-};
+  return version
+}
 
 const pickDefaultVersion = async (): Promise<BibleVersion> => {
   const spanish = await prisma.bibleVersion.findFirst({
@@ -189,52 +190,52 @@ const pickDefaultVersion = async (): Promise<BibleVersion> => {
       OR: [{ language: { contains: 'spa' } }, { language: { startsWith: 'es' } }],
     },
     orderBy: { name: 'asc' },
-  });
-  if (spanish) return spanish;
+  })
+  if (spanish) return spanish
 
   const web = await prisma.bibleVersion.findFirst({
     where: { isActive: true, apiCode: 'web' },
-  });
-  if (web) return web;
+  })
+  if (web) return web
 
   const fallback = await prisma.bibleVersion.findFirst({
     where: { isActive: true },
     orderBy: { name: 'asc' },
-  });
+  })
 
   if (!fallback) {
-    throw new AppError('No active bible version available', 'NO_ACTIVE_BIBLE_VERSION', 404);
+    throw new AppError('No active bible version available', 'NO_ACTIVE_BIBLE_VERSION', 404)
   }
 
-  return fallback;
-};
+  return fallback
+}
 
 const resolveVersionForUser = async (userId: string, requestedVersionId?: number): Promise<BibleVersion> => {
-  const settings = await ensureSettings(userId);
+  const settings = await ensureSettings(userId)
 
   if (requestedVersionId) {
-    return findActiveVersionOrThrow(requestedVersionId);
+    return findActiveVersionOrThrow(requestedVersionId)
   }
 
   if (settings.preferredVersionId) {
-    return findActiveVersionOrThrow(settings.preferredVersionId);
+    return findActiveVersionOrThrow(settings.preferredVersionId)
   }
 
-  return pickDefaultVersion();
-};
+  return pickDefaultVersion()
+}
 
 const findUnseenSeedForUser = async (userId: string): Promise<VerseSeed | null> => {
   return prisma.verseSeed.findFirst({
     where: { userHistory: { none: { userId } } },
     orderBy: { id: 'asc' },
-  });
-};
+  })
+}
 
 const upsertRandomSeed = async (): Promise<VerseSeed> => {
-  const randomSeed = await fetchRandomSeed();
-  const normalized = normalizeRandomSeed(randomSeed);
-  const sourceTranslation = normalized.translationId ?? 'web';
-  const seedHash = createSeedHash(normalized.reference, sourceTranslation);
+  const randomSeed = await fetchRandomSeed()
+  const normalized = normalizeRandomSeed(randomSeed)
+  const sourceTranslation = normalized.translationId ?? 'web'
+  const seedHash = createSeedHash(normalized.reference, sourceTranslation)
 
   const seedData = {
     seedHash,
@@ -250,47 +251,47 @@ const upsertRandomSeed = async (): Promise<VerseSeed> => {
       translation_note: normalized.translationNote,
       book_id: normalized.bookId,
     },
-  };
+  }
 
   return prisma.verseSeed.upsert({
     where: { seedHash },
     create: seedData,
     update: seedData,
-  });
-};
+  })
+}
 
 const pickSeedForUser = async (userId: string): Promise<VerseSeed> => {
-  const cached = await findUnseenSeedForUser(userId);
-  if (cached) return cached;
+  const cached = await findUnseenSeedForUser(userId)
+  if (cached) return cached
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      const seeded = await upsertRandomSeed();
+      const seeded = await upsertRandomSeed()
       const unseen = await prisma.verseSeed.findFirst({
         where: { id: seeded.id, userHistory: { none: { userId } } },
-      });
-      if (unseen) return unseen;
+      })
+      if (unseen) return unseen
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('[VerseService] Random seed fetch failed', error);
+      console.error('[VerseService] Random seed fetch failed', error)
     }
   }
 
-  throw new AppError('Unable to fetch a verse right now', 'VERSE_SEED_UNAVAILABLE', 503);
-};
+  throw new AppError('Unable to fetch a verse right now', 'VERSE_SEED_UNAVAILABLE', 503)
+}
 
 const findTranslation = async (seedId: number, versionId: number): Promise<VerseTranslation | null> => {
   return prisma.verseTranslation.findUnique({
     where: { seedId_versionId: { seedId, versionId } },
-  });
-};
+  })
+}
 
 const getOrCreateTranslation = async (
   seed: VerseSeed,
   version: BibleVersion,
 ): Promise<VerseTranslation | null> => {
-  const existing = await findTranslation(seed.id, version.id);
-  if (existing) return existing;
+  const existing = await findTranslation(seed.id, version.id)
+  if (existing) return existing
 
   try {
     const verses = await bibleApiClient.getVerses({
@@ -299,13 +300,13 @@ const getOrCreateTranslation = async (
       chapter: seed.referenceChapter,
       fromVerse: seed.referenceFromVerse,
       toVerse: seed.referenceToVerse ?? undefined,
-    });
+    })
 
     if (!verses.length) {
-      throw new Error('Bible API returned no verses for the requested reference');
+      throw new Error('Bible API returned no verses for the requested reference')
     }
 
-    const text = composeVerseText(verses);
+    const text = composeVerseText(verses)
 
     return await prisma.verseTranslation.create({
       data: {
@@ -317,67 +318,67 @@ const getOrCreateTranslation = async (
           fetchedVerses: verses.length,
         },
       },
-    });
+    })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return findTranslation(seed.id, version.id);
+      return findTranslation(seed.id, version.id)
     }
 
     // eslint-disable-next-line no-console
     console.error(
       `[VerseService] Translation fetch failed for seed ${seed.id} (${seed.reference}) and version ${version.apiCode}`,
       error,
-    );
-    return null;
+    )
+    return null
   }
-};
+}
 
 const markSeedAsSeen = async (userId: string, seedId: number): Promise<void> => {
   try {
     await prisma.userVerseHistory.create({
       data: { userId, seedId },
-    });
+    })
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return;
+      return
     }
     // eslint-disable-next-line no-console
-    console.error(`[VerseService] Failed to mark seed ${seedId} as seen for user ${userId}`, error);
+    console.error(`[VerseService] Failed to mark seed ${seedId} as seen for user ${userId}`, error)
   }
-};
+}
 
 export type VersePayload = {
-  reference: string;
-  text: string;
-  version_code: string;
-  version_name: string;
-  source_seed_translation: string;
-};
+  reference: string
+  text: string
+  version_code: string
+  version_name: string
+  source_seed_translation: string
+}
 
 export const getDailyVerseForUser = async (
   userId: string,
   options?: { versionId?: number },
 ): Promise<VersePayload> => {
-  const version = await resolveVersionForUser(userId, options?.versionId);
-  const seed = await pickSeedForUser(userId);
-  const translation = await getOrCreateTranslation(seed, version);
+  const version = await resolveVersionForUser(userId, options?.versionId)
+  const seed = await pickSeedForUser(userId)
+  const translation = await getOrCreateTranslation(seed, version)
 
-  await markSeedAsSeen(userId, seed.id);
+  await markSeedAsSeen(userId, seed.id)
 
-  const text = translation?.text ?? seed.textEn;
+  const text = translation?.text ?? seed.textEn
 
   if (!translation) {
     // eslint-disable-next-line no-console
     console.error(
       `[VerseService] Falling back to English seed text for seed ${seed.id} (${seed.reference}) and version ${version.apiCode}`,
-    );
+    )
   }
 
   return {
-    reference: seed.reference,
+    reference: translateReference(seed.reference),
     text,
     version_code: version.apiCode,
     version_name: version.name,
     source_seed_translation: seed.sourceTranslation,
-  };
-};
+  }
+}
