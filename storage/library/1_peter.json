@@ -1,0 +1,44 @@
+[
+  {
+    "book": "1 Peter",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 5,
+    "theme": "esperanza"
+  },
+  {
+    "book": "1 Peter",
+    "chapter": 1,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "fe"
+  },
+  {
+    "book": "1 Peter",
+    "chapter": 2,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "identidad"
+  },
+  {
+    "book": "1 Peter",
+    "chapter": 3,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "amor"
+  },
+  {
+    "book": "1 Peter",
+    "chapter": 5,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "confianza"
+  },
+  {
+    "book": "1 Peter",
+    "chapter": 5,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "restauración"
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "book": "2 John",
+    "chapter": 1,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "obediencia"
+  },
+  {
+    "book": "2 John",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "2 John",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "doctrina"
+  }
+]

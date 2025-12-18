@@ -1,0 +1,37 @@
+[
+  {
+    "book": "1 John",
+    "chapter": 1,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "luz"
+  },
+  {
+    "book": "1 John",
+    "chapter": 2,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "perdón"
+  },
+  {
+    "book": "1 John",
+    "chapter": 3,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "amor"
+  },
+  {
+    "book": "1 John",
+    "chapter": 4,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "amor"
+  },
+  {
+    "book": "1 John",
+    "chapter": 5,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "confianza"
+  }
+]

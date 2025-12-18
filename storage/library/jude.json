@@ -1,0 +1,30 @@
+[
+  {
+    "book": "Jude",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "fe"
+  },
+  {
+    "book": "Jude",
+    "chapter": 1,
+    "verseFrom": 20,
+    "verseTo": 21,
+    "theme": "edificación"
+  },
+  {
+    "book": "Jude",
+    "chapter": 1,
+    "verseFrom": 22,
+    "verseTo": 23,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Jude",
+    "chapter": 1,
+    "verseFrom": 24,
+    "verseTo": 25,
+    "theme": "protección"
+  }
+]

@@ -1,0 +1,44 @@
+[
+  {
+    "book": "James",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 4,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "James",
+    "chapter": 1,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "James",
+    "chapter": 1,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "esperanza"
+  },
+  {
+    "book": "James",
+    "chapter": 2,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "fe"
+  },
+  {
+    "book": "James",
+    "chapter": 4,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "humildad"
+  },
+  {
+    "book": "James",
+    "chapter": 5,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "paciencia"
+  }
+]

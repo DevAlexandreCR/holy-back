@@ -1,0 +1,44 @@
+[
+  {
+    "book": "2 Peter",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "propósito"
+  },
+  {
+    "book": "2 Peter",
+    "chapter": 1,
+    "verseFrom": 5,
+    "verseTo": 7,
+    "theme": "crecimiento"
+  },
+  {
+    "book": "2 Peter",
+    "chapter": 1,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "2 Peter",
+    "chapter": 3,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "paciencia"
+  },
+  {
+    "book": "2 Peter",
+    "chapter": 3,
+    "verseFrom": 11,
+    "verseTo": 13,
+    "theme": "santidad"
+  },
+  {
+    "book": "2 Peter",
+    "chapter": 3,
+    "verseFrom": 17,
+    "verseTo": 18,
+    "theme": "firmeza"
+  }
+]

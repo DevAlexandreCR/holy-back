@@ -1,0 +1,86 @@
+[
+  {
+    "book": "Revelation",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "bendición"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "confianza"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 1,
+    "verseFrom": 17,
+    "verseTo": 18,
+    "theme": "fuerza"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 2,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 3,
+    "verseFrom": 20,
+    "verseTo": 20,
+    "theme": "amor"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 7,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "consuelo"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 12,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "victoria"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 14,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 21,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "consuelo"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 21,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "renovación"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 22,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "propósito"
+  },
+  {
+    "book": "Revelation",
+    "chapter": 22,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "invitación"
+  }
+]

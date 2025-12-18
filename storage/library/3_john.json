@@ -1,0 +1,23 @@
+[
+  {
+    "book": "3 John",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "bienestar"
+  },
+  {
+    "book": "3 John",
+    "chapter": 1,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "gozo"
+  },
+  {
+    "book": "3 John",
+    "chapter": 1,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "bondad"
+  }
+]
