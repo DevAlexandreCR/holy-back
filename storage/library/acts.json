@@ -1,0 +1,128 @@
+[
+  {
+    "book": "Acts",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "misión"
+  },
+  {
+    "book": "Acts",
+    "chapter": 2,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "salvación"
+  },
+  {
+    "book": "Acts",
+    "chapter": 2,
+    "verseFrom": 38,
+    "verseTo": 38,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Acts",
+    "chapter": 2,
+    "verseFrom": 42,
+    "verseTo": 42,
+    "theme": "comunidad"
+  },
+  {
+    "book": "Acts",
+    "chapter": 3,
+    "verseFrom": 19,
+    "verseTo": 19,
+    "theme": "restauración"
+  },
+  {
+    "book": "Acts",
+    "chapter": 4,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "salvación"
+  },
+  {
+    "book": "Acts",
+    "chapter": 4,
+    "verseFrom": 31,
+    "verseTo": 31,
+    "theme": "poder"
+  },
+  {
+    "book": "Acts",
+    "chapter": 5,
+    "verseFrom": 29,
+    "verseTo": 29,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Acts",
+    "chapter": 9,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "propósito"
+  },
+  {
+    "book": "Acts",
+    "chapter": 9,
+    "verseFrom": 34,
+    "verseTo": 35,
+    "theme": "sanidad"
+  },
+  {
+    "book": "Acts",
+    "chapter": 10,
+    "verseFrom": 34,
+    "verseTo": 35,
+    "theme": "imparcialidad"
+  },
+  {
+    "book": "Acts",
+    "chapter": 11,
+    "verseFrom": 26,
+    "verseTo": 26,
+    "theme": "identidad"
+  },
+  {
+    "book": "Acts",
+    "chapter": 13,
+    "verseFrom": 38,
+    "verseTo": 39,
+    "theme": "perdón"
+  },
+  {
+    "book": "Acts",
+    "chapter": 16,
+    "verseFrom": 31,
+    "verseTo": 31,
+    "theme": "fe"
+  },
+  {
+    "book": "Acts",
+    "chapter": 17,
+    "verseFrom": 27,
+    "verseTo": 28,
+    "theme": "vida"
+  },
+  {
+    "book": "Acts",
+    "chapter": 20,
+    "verseFrom": 24,
+    "verseTo": 24,
+    "theme": "llamado"
+  },
+  {
+    "book": "Acts",
+    "chapter": 26,
+    "verseFrom": 16,
+    "verseTo": 18,
+    "theme": "misión"
+  },
+  {
+    "book": "Acts",
+    "chapter": 28,
+    "verseFrom": 31,
+    "verseTo": 31,
+    "theme": "perseverancia"
+  }
+]

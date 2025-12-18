@@ -1,0 +1,30 @@
+[
+  {
+    "book": "Daniel",
+    "chapter": 2,
+    "verseFrom": 20,
+    "verseTo": 21,
+    "theme": "sabiduria"
+  },
+  {
+    "book": "Daniel",
+    "chapter": 4,
+    "verseFrom": 34,
+    "verseTo": 35,
+    "theme": "soberania"
+  },
+  {
+    "book": "Daniel",
+    "chapter": 6,
+    "verseFrom": 26,
+    "verseTo": 27,
+    "theme": "confianza"
+  },
+  {
+    "book": "Daniel",
+    "chapter": 12,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "esperanza"
+  }
+]

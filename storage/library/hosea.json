@@ -1,0 +1,30 @@
+[
+  {
+    "book": "Hosea",
+    "chapter": 6,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "restauracion"
+  },
+  {
+    "book": "Hosea",
+    "chapter": 10,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Hosea",
+    "chapter": 11,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "amor"
+  },
+  {
+    "book": "Hosea",
+    "chapter": 14,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "perdon"
+  }
+]

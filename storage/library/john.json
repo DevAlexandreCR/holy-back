@@ -1,0 +1,219 @@
+[
+  {
+    "book": "John",
+    "chapter": 1,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "divinidad"
+  },
+  {
+    "book": "John",
+    "chapter": 1,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "adopción"
+  },
+  {
+    "book": "John",
+    "chapter": 1,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "gracia"
+  },
+  {
+    "book": "John",
+    "chapter": 3,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "renovación"
+  },
+  {
+    "book": "John",
+    "chapter": 3,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "vida"
+  },
+  {
+    "book": "John",
+    "chapter": 3,
+    "verseFrom": 16,
+    "verseTo": 16,
+    "theme": "amor"
+  },
+  {
+    "book": "John",
+    "chapter": 3,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "salvación"
+  },
+  {
+    "book": "John",
+    "chapter": 3,
+    "verseFrom": 36,
+    "verseTo": 36,
+    "theme": "fe"
+  },
+  {
+    "book": "John",
+    "chapter": 4,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "satisfacción"
+  },
+  {
+    "book": "John",
+    "chapter": 4,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "adoración"
+  },
+  {
+    "book": "John",
+    "chapter": 6,
+    "verseFrom": 35,
+    "verseTo": 35,
+    "theme": "vida"
+  },
+  {
+    "book": "John",
+    "chapter": 6,
+    "verseFrom": 40,
+    "verseTo": 40,
+    "theme": "esperanza"
+  },
+  {
+    "book": "John",
+    "chapter": 8,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "luz"
+  },
+  {
+    "book": "John",
+    "chapter": 8,
+    "verseFrom": 31,
+    "verseTo": 32,
+    "theme": "verdad"
+  },
+  {
+    "book": "John",
+    "chapter": 8,
+    "verseFrom": 36,
+    "verseTo": 36,
+    "theme": "libertad"
+  },
+  {
+    "book": "John",
+    "chapter": 10,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "vida"
+  },
+  {
+    "book": "John",
+    "chapter": 10,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "amor"
+  },
+  {
+    "book": "John",
+    "chapter": 10,
+    "verseFrom": 27,
+    "verseTo": 28,
+    "theme": "seguridad"
+  },
+  {
+    "book": "John",
+    "chapter": 11,
+    "verseFrom": 25,
+    "verseTo": 26,
+    "theme": "esperanza"
+  },
+  {
+    "book": "John",
+    "chapter": 14,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "confianza"
+  },
+  {
+    "book": "John",
+    "chapter": 14,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "camino"
+  },
+  {
+    "book": "John",
+    "chapter": 14,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "consuelo"
+  },
+  {
+    "book": "John",
+    "chapter": 14,
+    "verseFrom": 27,
+    "verseTo": 27,
+    "theme": "paz"
+  },
+  {
+    "book": "John",
+    "chapter": 15,
+    "verseFrom": 4,
+    "verseTo": 5,
+    "theme": "dependencia"
+  },
+  {
+    "book": "John",
+    "chapter": 15,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "fruto"
+  },
+  {
+    "book": "John",
+    "chapter": 15,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "amor"
+  },
+  {
+    "book": "John",
+    "chapter": 15,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "amor"
+  },
+  {
+    "book": "John",
+    "chapter": 16,
+    "verseFrom": 33,
+    "verseTo": 33,
+    "theme": "ánimo"
+  },
+  {
+    "book": "John",
+    "chapter": 17,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "vida"
+  },
+  {
+    "book": "John",
+    "chapter": 17,
+    "verseFrom": 20,
+    "verseTo": 21,
+    "theme": "unidad"
+  },
+  {
+    "book": "John",
+    "chapter": 20,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "misión"
+  }
+]

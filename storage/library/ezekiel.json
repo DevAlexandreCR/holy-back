@@ -1,0 +1,30 @@
+[
+  {
+    "book": "Ezekiel",
+    "chapter": 18,
+    "verseFrom": 21,
+    "verseTo": 23,
+    "theme": "perdon"
+  },
+  {
+    "book": "Ezekiel",
+    "chapter": 34,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "proteccion"
+  },
+  {
+    "book": "Ezekiel",
+    "chapter": 36,
+    "verseFrom": 26,
+    "verseTo": 27,
+    "theme": "transformacion"
+  },
+  {
+    "book": "Ezekiel",
+    "chapter": 37,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "esperanza"
+  }
+]

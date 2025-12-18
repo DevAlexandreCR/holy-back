@@ -1,0 +1,23 @@
+[
+  {
+    "book": "Micah",
+    "chapter": 6,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Micah",
+    "chapter": 7,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Micah",
+    "chapter": 7,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "perdon"
+  }
+]

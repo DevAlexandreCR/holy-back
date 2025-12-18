@@ -1,0 +1,72 @@
+[
+  {
+    "book": "Numbers",
+    "chapter": 6,
+    "verseFrom": 24,
+    "verseTo": 26,
+    "theme": "bendición"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 10,
+    "verseFrom": 35,
+    "verseTo": 36,
+    "theme": "protección"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 11,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "poder de Dios"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 14,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 23,
+    "verseFrom": 19,
+    "verseTo": 19,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 23,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "favor"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 24,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 27,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "liderazgo"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 30,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "integridad"
+  },
+  {
+    "book": "Numbers",
+    "chapter": 32,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "responsabilidad"
+  }
+]

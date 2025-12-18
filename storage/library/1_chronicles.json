@@ -1,0 +1,58 @@
+[
+  {
+    "book": "First Chronicles",
+    "chapter": 4,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "oración"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 16,
+    "verseFrom": 8,
+    "verseTo": 11,
+    "theme": "gratitud"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 16,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "alabanza"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 16,
+    "verseFrom": 34,
+    "verseTo": 34,
+    "theme": "bondad"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 17,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "humildad"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 22,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 28,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "propósito"
+  },
+  {
+    "book": "First Chronicles",
+    "chapter": 29,
+    "verseFrom": 11,
+    "verseTo": 13,
+    "theme": "soberanía"
+  }
+]

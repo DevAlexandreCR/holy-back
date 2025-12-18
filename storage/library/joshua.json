@@ -1,0 +1,121 @@
+[
+  {
+    "book": "Joshua",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 5,
+    "theme": "promesa"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 1,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "fortaleza"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "ánimo"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 3,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "consagración"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 4,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "testimonio"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 5,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "reverencia"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 6,
+    "verseFrom": 16,
+    "verseTo": 16,
+    "theme": "victoria"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 8,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "confianza"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 10,
+    "verseFrom": 25,
+    "verseTo": 25,
+    "theme": "valentía"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 21,
+    "verseFrom": 43,
+    "verseTo": 45,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 22,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "amor a Dios"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 23,
+    "verseFrom": 6,
+    "verseTo": 8,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 23,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "confianza"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 24,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "decisión"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 24,
+    "verseFrom": 19,
+    "verseTo": 20,
+    "theme": "santidad"
+  },
+  {
+    "book": "Joshua",
+    "chapter": 24,
+    "verseFrom": 24,
+    "verseTo": 24,
+    "theme": "compromiso"
+  }
+]

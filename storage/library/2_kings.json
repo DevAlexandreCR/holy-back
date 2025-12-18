@@ -1,0 +1,128 @@
+[
+  {
+    "book": "Second Kings",
+    "chapter": 2,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "doble porción"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 2,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "gloria"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 4,
+    "verseFrom": 2,
+    "verseTo": 4,
+    "theme": "provisión"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 4,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "abundancia"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 4,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "promesa"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 5,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 5,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "sanidad"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 6,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "protección"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 6,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 7,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "responsabilidad"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 7,
+    "verseFrom": 16,
+    "verseTo": 16,
+    "theme": "cumplimiento"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 17,
+    "verseFrom": 39,
+    "verseTo": 39,
+    "theme": "libertad"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 18,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "confianza"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 19,
+    "verseFrom": 15,
+    "verseTo": 19,
+    "theme": "oración"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 19,
+    "verseFrom": 30,
+    "verseTo": 31,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 20,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "restauración"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 22,
+    "verseFrom": 19,
+    "verseTo": 20,
+    "theme": "humildad"
+  },
+  {
+    "book": "Second Kings",
+    "chapter": 23,
+    "verseFrom": 25,
+    "verseTo": 25,
+    "theme": "obediencia"
+  }
+]

@@ -1,0 +1,261 @@
+[
+  {
+    "book": "Proverbs",
+    "chapter": 1,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 2,
+    "verseFrom": 6,
+    "verseTo": 9,
+    "theme": "entendimiento"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 3,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "confianza"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 3,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "humildad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 3,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "honra"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 4,
+    "verseFrom": 5,
+    "verseTo": 7,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 4,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "corazón"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 6,
+    "verseFrom": 6,
+    "verseTo": 8,
+    "theme": "diligencia"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 8,
+    "verseFrom": 17,
+    "verseTo": 21,
+    "theme": "búsqueda"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 9,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "temor de Dios"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 10,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "bendición"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 11,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "humildad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 11,
+    "verseFrom": 25,
+    "verseTo": 25,
+    "theme": "generosidad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 12,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "consejo"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 13,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 14,
+    "verseFrom": 26,
+    "verseTo": 27,
+    "theme": "seguridad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 15,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "mansedumbre"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 15,
+    "verseFrom": 33,
+    "verseTo": 33,
+    "theme": "humildad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 16,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "encomendar"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 16,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "dirección"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 16,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "humildad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 17,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "ánimo"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 18,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "refugio"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 18,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "palabras"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 19,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "propósito"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 20,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "integridad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 21,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "justicia"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 22,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "temor de Dios"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 22,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "formación"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 23,
+    "verseFrom": 17,
+    "verseTo": 18,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 27,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "prudencia"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 27,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "amistad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 28,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "perdón"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 29,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "dirección"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 30,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "verdad"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 31,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "justicia"
+  },
+  {
+    "book": "Proverbs",
+    "chapter": 31,
+    "verseFrom": 30,
+    "verseTo": 30,
+    "theme": "temor de Dios"
+  }
+]

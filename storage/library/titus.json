@@ -1,0 +1,30 @@
+[
+  {
+    "book": "Titus",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 3,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Titus",
+    "chapter": 2,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "ejemplo"
+  },
+  {
+    "book": "Titus",
+    "chapter": 2,
+    "verseFrom": 11,
+    "verseTo": 14,
+    "theme": "gracia"
+  },
+  {
+    "book": "Titus",
+    "chapter": 3,
+    "verseFrom": 4,
+    "verseTo": 7,
+    "theme": "misericordia"
+  }
+]

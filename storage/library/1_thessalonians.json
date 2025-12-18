@@ -1,0 +1,58 @@
+[
+  {
+    "book": "1 Thessalonians",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "fe"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "esperanza"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 2,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "propósito"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 4,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "santidad"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 4,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "esperanza"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 5,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "ánimo"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 5,
+    "verseFrom": 16,
+    "verseTo": 18,
+    "theme": "gratitud"
+  },
+  {
+    "book": "1 Thessalonians",
+    "chapter": 5,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "fidelidad"
+  }
+]

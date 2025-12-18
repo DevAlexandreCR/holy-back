@@ -1,0 +1,86 @@
+[
+  {
+    "book": "Colossians",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 1,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "redención"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 1,
+    "verseFrom": 15,
+    "verseTo": 17,
+    "theme": "soberanía"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 1,
+    "verseFrom": 21,
+    "verseTo": 22,
+    "theme": "reconciliación"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 2,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "fe"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 2,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "plenitud"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 3,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "vida"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 3,
+    "verseFrom": 12,
+    "verseTo": 14,
+    "theme": "amor"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 3,
+    "verseFrom": 15,
+    "verseTo": 17,
+    "theme": "paz"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 3,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "excelencia"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 4,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "oración"
+  },
+  {
+    "book": "Colossians",
+    "chapter": 4,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "sabiduría"
+  }
+]

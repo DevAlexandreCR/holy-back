@@ -1,0 +1,86 @@
+[
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "prioridades"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 5,
+    "verseTo": 7,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 11,
+    "theme": "advertencia"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "consuelo"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 1,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "ánimo"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 4,
+    "verseTo": 5,
+    "theme": "fuerza"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "provisión"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "santidad"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "bendición"
+  },
+  {
+    "book": "Haggai",
+    "chapter": 2,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "propósito"
+  }
+]

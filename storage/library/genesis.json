@@ -1,0 +1,226 @@
+[
+  {
+    "book": "Exodus",
+    "chapter": 1,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "fuerza"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 2,
+    "verseFrom": 24,
+    "verseTo": 25,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 3,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "liberación"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 3,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "misión"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 3,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "identidad_de_Dios"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 4,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "confianza"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 14,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "fe"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 14,
+    "verseFrom": 21,
+    "verseTo": 22,
+    "theme": "milagro"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 15,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "alabanza"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 15,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "adoración"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 15,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 15,
+    "verseFrom": 26,
+    "verseTo": 26,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 19,
+    "verseFrom": 4,
+    "verseTo": 6,
+    "theme": "propósito"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 20,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "adoración"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 20,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "familia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 23,
+    "verseFrom": 25,
+    "verseTo": 26,
+    "theme": "bendición"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 23,
+    "verseFrom": 27,
+    "verseTo": 27,
+    "theme": "protección"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 24,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "ley"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 29,
+    "verseFrom": 45,
+    "verseTo": 46,
+    "theme": "presencia_de_Dios"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 31,
+    "verseFrom": 2,
+    "verseTo": 3,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 33,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "paz"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 33,
+    "verseFrom": 19,
+    "verseTo": 19,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 34,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "carácter_de_Dios"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 34,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "pacto"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 34,
+    "verseFrom": 29,
+    "verseTo": 29,
+    "theme": "gloria"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 35,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "generosidad"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 35,
+    "verseFrom": 29,
+    "verseTo": 29,
+    "theme": "ofrenda"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 36,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "abundancia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 39,
+    "verseFrom": 32,
+    "verseTo": 32,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 39,
+    "verseFrom": 43,
+    "verseTo": 43,
+    "theme": "aprobación"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 40,
+    "verseFrom": 34,
+    "verseTo": 35,
+    "theme": "gloria"
+  },
+  {
+    "book": "Exodus",
+    "chapter": 40,
+    "verseFrom": 36,
+    "verseTo": 38,
+    "theme": "guía"
+  }
+]

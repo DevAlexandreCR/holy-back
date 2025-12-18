@@ -1,0 +1,163 @@
+[
+  {
+    "book": "Mark",
+    "chapter": 1,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Mark",
+    "chapter": 1,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "propósito"
+  },
+  {
+    "book": "Mark",
+    "chapter": 1,
+    "verseFrom": 40,
+    "verseTo": 41,
+    "theme": "compasión"
+  },
+  {
+    "book": "Mark",
+    "chapter": 2,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "fe"
+  },
+  {
+    "book": "Mark",
+    "chapter": 2,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Mark",
+    "chapter": 4,
+    "verseFrom": 39,
+    "verseTo": 39,
+    "theme": "paz"
+  },
+  {
+    "book": "Mark",
+    "chapter": 4,
+    "verseFrom": 40,
+    "verseTo": 40,
+    "theme": "fe"
+  },
+  {
+    "book": "Mark",
+    "chapter": 4,
+    "verseFrom": 20,
+    "verseTo": 20,
+    "theme": "fruto"
+  },
+  {
+    "book": "Mark",
+    "chapter": 4,
+    "verseFrom": 26,
+    "verseTo": 29,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Mark",
+    "chapter": 4,
+    "verseFrom": 30,
+    "verseTo": 32,
+    "theme": "crecimiento"
+  },
+  {
+    "book": "Mark",
+    "chapter": 8,
+    "verseFrom": 34,
+    "verseTo": 35,
+    "theme": "entrega"
+  },
+  {
+    "book": "Mark",
+    "chapter": 8,
+    "verseFrom": 36,
+    "verseTo": 37,
+    "theme": "prioridades"
+  },
+  {
+    "book": "Mark",
+    "chapter": 9,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "fe"
+  },
+  {
+    "book": "Mark",
+    "chapter": 9,
+    "verseFrom": 35,
+    "verseTo": 35,
+    "theme": "servicio"
+  },
+  {
+    "book": "Mark",
+    "chapter": 11,
+    "verseFrom": 22,
+    "verseTo": 24,
+    "theme": "fe"
+  },
+  {
+    "book": "Mark",
+    "chapter": 11,
+    "verseFrom": 25,
+    "verseTo": 25,
+    "theme": "perdón"
+  },
+  {
+    "book": "Mark",
+    "chapter": 12,
+    "verseFrom": 29,
+    "verseTo": 31,
+    "theme": "amor"
+  },
+  {
+    "book": "Mark",
+    "chapter": 12,
+    "verseFrom": 41,
+    "verseTo": 44,
+    "theme": "generosidad"
+  },
+  {
+    "book": "Mark",
+    "chapter": 13,
+    "verseFrom": 31,
+    "verseTo": 31,
+    "theme": "confianza"
+  },
+  {
+    "book": "Mark",
+    "chapter": 13,
+    "verseFrom": 33,
+    "verseTo": 33,
+    "theme": "vigilancia"
+  },
+  {
+    "book": "Mark",
+    "chapter": 10,
+    "verseFrom": 45,
+    "verseTo": 45,
+    "theme": "servicio"
+  },
+  {
+    "book": "Mark",
+    "chapter": 16,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Mark",
+    "chapter": 16,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "misión"
+  }
+]

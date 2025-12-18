@@ -1,0 +1,37 @@
+[
+  {
+    "book": "Ezra",
+    "chapter": 7,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Ezra",
+    "chapter": 8,
+    "verseFrom": 21,
+    "verseTo": 23,
+    "theme": "ayuno"
+  },
+  {
+    "book": "Ezra",
+    "chapter": 8,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "confianza"
+  },
+  {
+    "book": "Ezra",
+    "chapter": 9,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "gracia"
+  },
+  {
+    "book": "Ezra",
+    "chapter": 10,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "valentía"
+  }
+]

@@ -1,0 +1,296 @@
+[
+  {
+    "book": "Psalms",
+    "chapter": 1,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "bendición"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 3,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "protección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 4,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "paz"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 5,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "alegría"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 9,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "refugio"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 16,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "confianza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 16,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 18,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "protección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 19,
+    "verseFrom": 7,
+    "verseTo": 9,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 23,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "consuelo"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 23,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "confianza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 24,
+    "verseFrom": 3,
+    "verseTo": 5,
+    "theme": "pureza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 27,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "fuerza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 32,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "dirección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 33,
+    "verseFrom": 20,
+    "verseTo": 22,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 34,
+    "verseFrom": 8,
+    "verseTo": 10,
+    "theme": "confianza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 37,
+    "verseFrom": 3,
+    "verseTo": 5,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 40,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "paciencia"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 42,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "ánimo"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 46,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "refugio"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 51,
+    "verseFrom": 10,
+    "verseTo": 12,
+    "theme": "perdón"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 55,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "confianza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 57,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "protección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 62,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "descanso"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 62,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "seguridad"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 71,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 73,
+    "verseFrom": 25,
+    "verseTo": 26,
+    "theme": "devoción"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 84,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "adoración"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 91,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "protección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 91,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "seguridad"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 94,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "consuelo"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 95,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "reverencia"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 103,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "gratitud"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 103,
+    "verseFrom": 4,
+    "verseTo": 5,
+    "theme": "restauración"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 107,
+    "verseFrom": 13,
+    "verseTo": 15,
+    "theme": "liberación"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 119,
+    "verseFrom": 105,
+    "verseTo": 105,
+    "theme": "dirección"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 121,
+    "verseFrom": 1,
+    "verseTo": 4,
+    "theme": "ayuda"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 127,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "dependencia"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 139,
+    "verseFrom": 1,
+    "verseTo": 3,
+    "theme": "propósito"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 139,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "examinación"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 143,
+    "verseFrom": 8,
+    "verseTo": 10,
+    "theme": "guía"
+  },
+  {
+    "book": "Psalms",
+    "chapter": 145,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "oración"
+  }
+]

@@ -1,0 +1,58 @@
+[
+  {
+    "book": "Second Chronicles",
+    "chapter": 1,
+    "verseFrom": 10,
+    "verseTo": 12,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 7,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 15,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "esfuerzo"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 16,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 20,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "oración"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 20,
+    "verseFrom": 15,
+    "verseTo": 17,
+    "theme": "confianza"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 26,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "dirección"
+  },
+  {
+    "book": "Second Chronicles",
+    "chapter": 30,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "misericordia"
+  }
+]

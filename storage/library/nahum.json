@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Nahum",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 3,
+    "theme": "justicia"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "paciencia"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 1,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "protección"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 1,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "paz"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 2,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "restauración"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 2,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "justicia"
+  },
+  {
+    "book": "Nahum",
+    "chapter": 3,
+    "verseFrom": 19,
+    "verseTo": 19,
+    "theme": "advertencia"
+  }
+]

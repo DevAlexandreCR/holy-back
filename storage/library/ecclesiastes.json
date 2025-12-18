@@ -1,0 +1,79 @@
+[
+  {
+    "book": "Ecclesiastes",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "vanidad"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 2,
+    "verseFrom": 24,
+    "verseTo": 25,
+    "theme": "disfrute"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 3,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "tiempo"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 3,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "propósito"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 4,
+    "verseFrom": 9,
+    "verseTo": 12,
+    "theme": "compañía"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 5,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "reverencia"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 7,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "paciencia"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 9,
+    "verseFrom": 7,
+    "verseTo": 9,
+    "theme": "gozo"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 11,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "juventud"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 12,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "memoria"
+  },
+  {
+    "book": "Ecclesiastes",
+    "chapter": 12,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "temor de Dios"
+  }
+]

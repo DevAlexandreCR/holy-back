@@ -1,0 +1,23 @@
+[
+  {
+    "book": "Joel",
+    "chapter": 2,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Joel",
+    "chapter": 2,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "restauracion"
+  },
+  {
+    "book": "Joel",
+    "chapter": 2,
+    "verseFrom": 28,
+    "verseTo": 29,
+    "theme": "esperanza"
+  }
+]

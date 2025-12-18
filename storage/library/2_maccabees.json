@@ -1,0 +1,37 @@
+[
+  {
+    "book": "2 Maccabees",
+    "chapter": 6,
+    "verseFrom": 30,
+    "verseTo": 31,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "2 Maccabees",
+    "chapter": 7,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "esperanza"
+  },
+  {
+    "book": "2 Maccabees",
+    "chapter": 7,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "resurrección"
+  },
+  {
+    "book": "2 Maccabees",
+    "chapter": 7,
+    "verseFrom": 36,
+    "verseTo": 36,
+    "theme": "justicia"
+  },
+  {
+    "book": "2 Maccabees",
+    "chapter": 12,
+    "verseFrom": 45,
+    "verseTo": 46,
+    "theme": "intercesión"
+  }
+]

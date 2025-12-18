@@ -1,0 +1,86 @@
+[
+  {
+    "book": "Tobit",
+    "chapter": 4,
+    "verseFrom": 5,
+    "verseTo": 11,
+    "theme": "generosidad"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 4,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "pureza"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 4,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "justicia"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 4,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 5,
+    "verseFrom": 4,
+    "verseTo": 6,
+    "theme": "confianza"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 6,
+    "verseFrom": 16,
+    "verseTo": 18,
+    "theme": "matrimonio"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 8,
+    "verseFrom": 5,
+    "verseTo": 8,
+    "theme": "oración"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 12,
+    "verseFrom": 6,
+    "verseTo": 10,
+    "theme": "alabanza"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 12,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "protección"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 13,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "gratitud"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 13,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Tobit",
+    "chapter": 14,
+    "verseFrom": 5,
+    "verseTo": 7,
+    "theme": "fidelidad"
+  }
+]

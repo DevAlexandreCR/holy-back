@@ -1,0 +1,44 @@
+[
+  {
+    "book": "Esther",
+    "chapter": 4,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "propósito"
+  },
+  {
+    "book": "Esther",
+    "chapter": 4,
+    "verseFrom": 15,
+    "verseTo": 17,
+    "theme": "ayuno"
+  },
+  {
+    "book": "Esther",
+    "chapter": 5,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "favor"
+  },
+  {
+    "book": "Esther",
+    "chapter": 8,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "gozo"
+  },
+  {
+    "book": "Esther",
+    "chapter": 9,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "gratitud"
+  },
+  {
+    "book": "Esther",
+    "chapter": 10,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "liderazgo"
+  }
+]

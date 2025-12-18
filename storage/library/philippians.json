@@ -1,0 +1,100 @@
+[
+  {
+    "book": "Philippians",
+    "chapter": 1,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "confianza"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 1,
+    "verseFrom": 9,
+    "verseTo": 11,
+    "theme": "amor"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 1,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "propósito"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 1,
+    "verseFrom": 27,
+    "verseTo": 27,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 2,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "humildad"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 2,
+    "verseFrom": 5,
+    "verseTo": 7,
+    "theme": "humildad"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 2,
+    "verseFrom": 9,
+    "verseTo": 11,
+    "theme": "exaltación"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 3,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "prioridades"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 3,
+    "verseFrom": 12,
+    "verseTo": 14,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 4,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "gozo"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 4,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "paz"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 4,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "pureza"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 4,
+    "verseFrom": 11,
+    "verseTo": 13,
+    "theme": "fortaleza"
+  },
+  {
+    "book": "Philippians",
+    "chapter": 4,
+    "verseFrom": 19,
+    "verseTo": 19,
+    "theme": "provisión"
+  }
+]

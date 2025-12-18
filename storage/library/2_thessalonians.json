@@ -1,0 +1,44 @@
+[
+  {
+    "book": "2 Thessalonians",
+    "chapter": 1,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "2 Thessalonians",
+    "chapter": 1,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "propósito"
+  },
+  {
+    "book": "2 Thessalonians",
+    "chapter": 2,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "consuelo"
+  },
+  {
+    "book": "2 Thessalonians",
+    "chapter": 3,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "protección"
+  },
+  {
+    "book": "2 Thessalonians",
+    "chapter": 3,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "amor"
+  },
+  {
+    "book": "2 Thessalonians",
+    "chapter": 3,
+    "verseFrom": 16,
+    "verseTo": 16,
+    "theme": "paz"
+  }
+]

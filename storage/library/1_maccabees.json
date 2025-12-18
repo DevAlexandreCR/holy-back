@@ -1,0 +1,37 @@
+[
+  {
+    "book": "1 Maccabees",
+    "chapter": 2,
+    "verseFrom": 49,
+    "verseTo": 50,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "1 Maccabees",
+    "chapter": 2,
+    "verseFrom": 61,
+    "verseTo": 64,
+    "theme": "confianza"
+  },
+  {
+    "book": "1 Maccabees",
+    "chapter": 3,
+    "verseFrom": 18,
+    "verseTo": 22,
+    "theme": "fe"
+  },
+  {
+    "book": "1 Maccabees",
+    "chapter": 4,
+    "verseFrom": 58,
+    "verseTo": 58,
+    "theme": "gratitud"
+  },
+  {
+    "book": "1 Maccabees",
+    "chapter": 9,
+    "verseFrom": 46,
+    "verseTo": 47,
+    "theme": "valentía"
+  }
+]

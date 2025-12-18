@@ -1,0 +1,100 @@
+[
+  {
+    "book": "First Kings",
+    "chapter": 2,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "obediencia"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 3,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 3,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 8,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 8,
+    "verseFrom": 27,
+    "verseTo": 28,
+    "theme": "oración"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 8,
+    "verseFrom": 56,
+    "verseTo": 56,
+    "theme": "promesa"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 9,
+    "verseFrom": 4,
+    "verseTo": 5,
+    "theme": "integridad"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 11,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "advertencia"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 17,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "provisión"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 18,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "decisión"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 18,
+    "verseFrom": 36,
+    "verseTo": 37,
+    "theme": "fe"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 19,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "cansancio"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 19,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "dirección"
+  },
+  {
+    "book": "First Kings",
+    "chapter": 19,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "esperanza"
+  }
+]

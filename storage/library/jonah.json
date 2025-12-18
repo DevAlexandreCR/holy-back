@@ -1,0 +1,23 @@
+[
+  {
+    "book": "Jonah",
+    "chapter": 2,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "oracion"
+  },
+  {
+    "book": "Jonah",
+    "chapter": 3,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Jonah",
+    "chapter": 4,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "compasion"
+  }
+]

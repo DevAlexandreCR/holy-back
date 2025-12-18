@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Zephaniah",
+    "chapter": 1,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "reverencia"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 2,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "humildad"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 3,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "restauración"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 3,
+    "verseFrom": 12,
+    "verseTo": 13,
+    "theme": "confianza"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 3,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "gozo"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 3,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "amor"
+  },
+  {
+    "book": "Zephaniah",
+    "chapter": 3,
+    "verseFrom": 19,
+    "verseTo": 20,
+    "theme": "restauración"
+  }
+]

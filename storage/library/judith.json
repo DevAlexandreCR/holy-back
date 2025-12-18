@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Judith",
+    "chapter": 8,
+    "verseFrom": 25,
+    "verseTo": 27,
+    "theme": "confianza"
+  },
+  {
+    "book": "Judith",
+    "chapter": 8,
+    "verseFrom": 32,
+    "verseTo": 35,
+    "theme": "valentía"
+  },
+  {
+    "book": "Judith",
+    "chapter": 9,
+    "verseFrom": 11,
+    "verseTo": 14,
+    "theme": "oración"
+  },
+  {
+    "book": "Judith",
+    "chapter": 9,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "humildad"
+  },
+  {
+    "book": "Judith",
+    "chapter": 13,
+    "verseFrom": 14,
+    "verseTo": 16,
+    "theme": "liberación"
+  },
+  {
+    "book": "Judith",
+    "chapter": 16,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "gratitud"
+  },
+  {
+    "book": "Judith",
+    "chapter": 16,
+    "verseFrom": 15,
+    "verseTo": 17,
+    "theme": "alabanza"
+  }
+]

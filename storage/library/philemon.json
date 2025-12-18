@@ -1,0 +1,23 @@
+[
+  {
+    "book": "Philemon",
+    "chapter": 1,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "amor"
+  },
+  {
+    "book": "Philemon",
+    "chapter": 1,
+    "verseFrom": 15,
+    "verseTo": 16,
+    "theme": "restauración"
+  },
+  {
+    "book": "Philemon",
+    "chapter": 1,
+    "verseFrom": 20,
+    "verseTo": 21,
+    "theme": "confianza"
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "book": "Romans",
+    "chapter": 1,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "fe"
+  },
+  {
+    "book": "Romans",
+    "chapter": 3,
+    "verseFrom": 23,
+    "verseTo": 24,
+    "theme": "gracia"
+  },
+  {
+    "book": "Romans",
+    "chapter": 5,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "paz"
+  },
+  {
+    "book": "Romans",
+    "chapter": 5,
+    "verseFrom": 8,
+    "verseTo": 8,
+    "theme": "amor"
+  },
+  {
+    "book": "Romans",
+    "chapter": 6,
+    "verseFrom": 4,
+    "verseTo": 4,
+    "theme": "vida"
+  },
+  {
+    "book": "Romans",
+    "chapter": 6,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "salvación"
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "libertad"
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "vida"
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verseFrom": 28,
+    "verseTo": 28,
+    "theme": "propósito"
+  },
+  {
+    "book": "Romans",
+    "chapter": 8,
+    "verseFrom": 31,
+    "verseTo": 32,
+    "theme": "confianza"
+  },
+  {
+    "book": "Romans",
+    "chapter": 10,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "salvación"
+  },
+  {
+    "book": "Romans",
+    "chapter": 12,
+    "verseFrom": 1,
+    "verseTo": 2,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Romans",
+    "chapter": 12,
+    "verseFrom": 9,
+    "verseTo": 10,
+    "theme": "amor"
+  },
+  {
+    "book": "Romans",
+    "chapter": 12,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "Romans",
+    "chapter": 13,
+    "verseFrom": 8,
+    "verseTo": 10,
+    "theme": "amor"
+  },
+  {
+    "book": "Romans",
+    "chapter": 14,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "paz"
+  },
+  {
+    "book": "Romans",
+    "chapter": 15,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "esperanza"
+  }
+]

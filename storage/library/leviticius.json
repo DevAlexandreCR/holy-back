@@ -1,0 +1,135 @@
+[
+  {
+    "book": "Leviticus",
+    "chapter": 11,
+    "verseFrom": 44,
+    "verseTo": 45,
+    "theme": "santidad"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 18,
+    "verseFrom": 2,
+    "verseTo": 5,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "santidad"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 11,
+    "verseTo": 13,
+    "theme": "integridad"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 15,
+    "verseTo": 16,
+    "theme": "justicia"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 17,
+    "verseTo": 18,
+    "theme": "amor"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 32,
+    "verseTo": 32,
+    "theme": "respeto"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 19,
+    "verseFrom": 33,
+    "verseTo": 34,
+    "theme": "compasión"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 20,
+    "verseFrom": 7,
+    "verseTo": 8,
+    "theme": "consagración"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 22,
+    "verseFrom": 31,
+    "verseTo": 33,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 23,
+    "verseFrom": 22,
+    "verseTo": 22,
+    "theme": "justicia"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 25,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "temor de Dios"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 25,
+    "verseFrom": 35,
+    "verseTo": 36,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 25,
+    "verseFrom": 38,
+    "verseTo": 38,
+    "theme": "provisión"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 26,
+    "verseFrom": 3,
+    "verseTo": 5,
+    "theme": "bendición"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 26,
+    "verseFrom": 6,
+    "verseTo": 6,
+    "theme": "paz"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 26,
+    "verseFrom": 11,
+    "verseTo": 13,
+    "theme": "presencia de Dios"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 26,
+    "verseFrom": 40,
+    "verseTo": 42,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Leviticus",
+    "chapter": 26,
+    "verseFrom": 44,
+    "verseTo": 45,
+    "theme": "fidelidad"
+  }
+]

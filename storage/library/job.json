@@ -1,0 +1,107 @@
+[
+  {
+    "book": "Job",
+    "chapter": 1,
+    "verseFrom": 21,
+    "verseTo": 21,
+    "theme": "humildad"
+  },
+  {
+    "book": "Job",
+    "chapter": 2,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Job",
+    "chapter": 5,
+    "verseFrom": 17,
+    "verseTo": 18,
+    "theme": "disciplina"
+  },
+  {
+    "book": "Job",
+    "chapter": 8,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "esperanza"
+  },
+  {
+    "book": "Job",
+    "chapter": 11,
+    "verseFrom": 18,
+    "verseTo": 19,
+    "theme": "confianza"
+  },
+  {
+    "book": "Job",
+    "chapter": 13,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "fe"
+  },
+  {
+    "book": "Job",
+    "chapter": 19,
+    "verseFrom": 25,
+    "verseTo": 27,
+    "theme": "redención"
+  },
+  {
+    "book": "Job",
+    "chapter": 22,
+    "verseFrom": 21,
+    "verseTo": 23,
+    "theme": "reconciliación"
+  },
+  {
+    "book": "Job",
+    "chapter": 23,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "propósito"
+  },
+  {
+    "book": "Job",
+    "chapter": 27,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "sabiduría"
+  },
+  {
+    "book": "Job",
+    "chapter": 28,
+    "verseFrom": 28,
+    "verseTo": 28,
+    "theme": "temor de Dios"
+  },
+  {
+    "book": "Job",
+    "chapter": 33,
+    "verseFrom": 27,
+    "verseTo": 28,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Job",
+    "chapter": 36,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "obediencia"
+  },
+  {
+    "book": "Job",
+    "chapter": 42,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "soberanía"
+  },
+  {
+    "book": "Job",
+    "chapter": 42,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "humildad"
+  }
+]

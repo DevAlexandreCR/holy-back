@@ -1,0 +1,128 @@
+[
+  {
+    "book": "1 Corinthians",
+    "chapter": 1,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "salvación"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 1,
+    "verseFrom": 27,
+    "verseTo": 29,
+    "theme": "humildad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 1,
+    "verseFrom": 30,
+    "verseTo": 31,
+    "theme": "gracia"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 3,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "santidad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 6,
+    "verseFrom": 19,
+    "verseTo": 20,
+    "theme": "santidad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 7,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "libertad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 9,
+    "verseFrom": 24,
+    "verseTo": 25,
+    "theme": "disciplina"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 10,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 11,
+    "verseFrom": 1,
+    "verseTo": 1,
+    "theme": "ejemplo"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 12,
+    "verseFrom": 4,
+    "verseTo": 6,
+    "theme": "unidad"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 12,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "servicio"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 13,
+    "verseFrom": 4,
+    "verseTo": 6,
+    "theme": "amor"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 13,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "amor"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 13,
+    "verseFrom": 13,
+    "verseTo": 13,
+    "theme": "amor"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 15,
+    "verseFrom": 3,
+    "verseTo": 4,
+    "theme": "evangelio"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 15,
+    "verseFrom": 19,
+    "verseTo": 20,
+    "theme": "esperanza"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 15,
+    "verseFrom": 57,
+    "verseTo": 58,
+    "theme": "victoria"
+  },
+  {
+    "book": "1 Corinthians",
+    "chapter": 16,
+    "verseFrom": 13,
+    "verseTo": 14,
+    "theme": "firmeza"
+  }
+]

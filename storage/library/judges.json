@@ -1,0 +1,93 @@
+[
+  {
+    "book": "Judges",
+    "chapter": 2,
+    "verseFrom": 10,
+    "verseTo": 12,
+    "theme": "fidelidad"
+  },
+  {
+    "book": "Judges",
+    "chapter": 2,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "misericordia"
+  },
+  {
+    "book": "Judges",
+    "chapter": 3,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "liberación"
+  },
+  {
+    "book": "Judges",
+    "chapter": 5,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "alabanza"
+  },
+  {
+    "book": "Judges",
+    "chapter": 5,
+    "verseFrom": 31,
+    "verseTo": 31,
+    "theme": "amor a Dios"
+  },
+  {
+    "book": "Judges",
+    "chapter": 6,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "identidad"
+  },
+  {
+    "book": "Judges",
+    "chapter": 6,
+    "verseFrom": 14,
+    "verseTo": 16,
+    "theme": "fortaleza"
+  },
+  {
+    "book": "Judges",
+    "chapter": 7,
+    "verseFrom": 2,
+    "verseTo": 2,
+    "theme": "dependencia"
+  },
+  {
+    "book": "Judges",
+    "chapter": 8,
+    "verseFrom": 23,
+    "verseTo": 23,
+    "theme": "reinado de Dios"
+  },
+  {
+    "book": "Judges",
+    "chapter": 10,
+    "verseFrom": 15,
+    "verseTo": 16,
+    "theme": "arrepentimiento"
+  },
+  {
+    "book": "Judges",
+    "chapter": 13,
+    "verseFrom": 24,
+    "verseTo": 25,
+    "theme": "propósito"
+  },
+  {
+    "book": "Judges",
+    "chapter": 16,
+    "verseFrom": 28,
+    "verseTo": 30,
+    "theme": "clamor"
+  },
+  {
+    "book": "Judges",
+    "chapter": 21,
+    "verseFrom": 25,
+    "verseTo": 25,
+    "theme": "dirección"
+  }
+]

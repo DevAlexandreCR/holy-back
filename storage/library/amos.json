@@ -1,0 +1,23 @@
+[
+  {
+    "book": "Amos",
+    "chapter": 5,
+    "verseFrom": 4,
+    "verseTo": 6,
+    "theme": "busqueda"
+  },
+  {
+    "book": "Amos",
+    "chapter": 5,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "justicia"
+  },
+  {
+    "book": "Amos",
+    "chapter": 9,
+    "verseFrom": 13,
+    "verseTo": 15,
+    "theme": "restauracion"
+  }
+]

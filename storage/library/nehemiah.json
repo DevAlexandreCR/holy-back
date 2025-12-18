@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Nehemiah",
+    "chapter": 1,
+    "verseFrom": 5,
+    "verseTo": 6,
+    "theme": "oración"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 1,
+    "verseFrom": 11,
+    "verseTo": 11,
+    "theme": "favor"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 2,
+    "verseFrom": 4,
+    "verseTo": 5,
+    "theme": "dependencia"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 2,
+    "verseFrom": 18,
+    "verseTo": 18,
+    "theme": "ánimo"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 4,
+    "verseFrom": 14,
+    "verseTo": 14,
+    "theme": "valentía"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 6,
+    "verseFrom": 9,
+    "verseTo": 9,
+    "theme": "fortaleza"
+  },
+  {
+    "book": "Nehemiah",
+    "chapter": 8,
+    "verseFrom": 10,
+    "verseTo": 10,
+    "theme": "gozo"
+  }
+]

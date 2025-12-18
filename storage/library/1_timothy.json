@@ -1,0 +1,44 @@
+[
+  {
+    "book": "1 Timothy",
+    "chapter": 1,
+    "verseFrom": 5,
+    "verseTo": 5,
+    "theme": "amor"
+  },
+  {
+    "book": "1 Timothy",
+    "chapter": 1,
+    "verseFrom": 15,
+    "verseTo": 15,
+    "theme": "gracia"
+  },
+  {
+    "book": "1 Timothy",
+    "chapter": 4,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "ejemplo"
+  },
+  {
+    "book": "1 Timothy",
+    "chapter": 6,
+    "verseFrom": 6,
+    "verseTo": 8,
+    "theme": "contentamiento"
+  },
+  {
+    "book": "1 Timothy",
+    "chapter": 6,
+    "verseFrom": 11,
+    "verseTo": 12,
+    "theme": "perseverancia"
+  },
+  {
+    "book": "1 Timothy",
+    "chapter": 6,
+    "verseFrom": 17,
+    "verseTo": 19,
+    "theme": "esperanza"
+  }
+]

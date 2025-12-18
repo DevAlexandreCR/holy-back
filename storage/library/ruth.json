@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Ruth",
+    "chapter": 1,
+    "verseFrom": 16,
+    "verseTo": 17,
+    "theme": "lealtad"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 1,
+    "verseFrom": 8,
+    "verseTo": 9,
+    "theme": "bondad"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 2,
+    "verseFrom": 12,
+    "verseTo": 12,
+    "theme": "recompensa"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 2,
+    "verseFrom": 20,
+    "verseTo": 20,
+    "theme": "providencia"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 3,
+    "verseFrom": 10,
+    "verseTo": 11,
+    "theme": "virtud"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 4,
+    "verseFrom": 14,
+    "verseTo": 15,
+    "theme": "redención"
+  },
+  {
+    "book": "Ruth",
+    "chapter": 4,
+    "verseFrom": 17,
+    "verseTo": 17,
+    "theme": "restauración"
+  }
+]

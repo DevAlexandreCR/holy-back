@@ -1,0 +1,51 @@
+[
+  {
+    "book": "Song of Solomon",
+    "chapter": 1,
+    "verseFrom": 2,
+    "verseTo": 4,
+    "theme": "amor"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 2,
+    "verseFrom": 10,
+    "verseTo": 13,
+    "theme": "llamado"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 2,
+    "verseFrom": 16,
+    "verseTo": 16,
+    "theme": "pertenencia"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 3,
+    "verseFrom": 1,
+    "verseTo": 4,
+    "theme": "búsqueda"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 4,
+    "verseFrom": 7,
+    "verseTo": 7,
+    "theme": "valor"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 6,
+    "verseFrom": 3,
+    "verseTo": 3,
+    "theme": "compromiso"
+  },
+  {
+    "book": "Song of Solomon",
+    "chapter": 8,
+    "verseFrom": 6,
+    "verseTo": 7,
+    "theme": "amor fiel"
+  }
+]
