@@ -1,85 +1,87 @@
+import { translateBookName } from './bookTranslations'
+
 /**
  * Map from normalized database book names to Bible API book codes
  * Database uses: "2_peter", "second_kings", etc.
- * API expects: "2peter", "2kings", etc.
+ * API expects abbreviations: "2P", "2R", etc.
+ * Based on https://bible-api.deno.dev/api/books
  */
 const BOOK_API_CODE_MAP: Record<string, string> = {
-  // New Testament - numbered books
-  '1_corinthians': '1corinthians',
-  '1_john': '1john',
-  '1_peter': '1peter',
-  '1_thessalonians': '1thessalonians',
-  '1_timothy': '1timothy',
-  '2_corinthians': '2corinthians',
-  '2_john': '2john',
-  '2_peter': '2peter',
-  '2_thessalonians': '2thessalonians',
-  '2_timothy': '2timothy',
-  '3_john': '3john',
+  // Old Testament
+  'genesis': 'GN',
+  'exodus': 'EX',
+  'leviticus': 'LV',
+  'numbers': 'NM',
+  'deuteronomy': 'DT',
+  'joshua': 'JOS',
+  'judges': 'JUE',
+  'ruth': 'RT',
+  '1_samuel': '1S',
+  '2_samuel': '2S',
+  '1_kings': '1R',
+  '2_kings': '2R',
+  'first_kings': '1R',
+  'second_kings': '2R',
+  '1_chronicles': '1CR',
+  '2_chronicles': '2CR',
+  'first_chronicles': '1CR',
+  'second_chronicles': '2CR',
+  'ezra': 'ESD',
+  'nehemiah': 'NEH',
+  'esther': 'EST',
+  'job': 'JOB',
+  'psalms': 'SAL',
+  'psalm': 'SAL',
+  'proverbs': 'PR',
+  'ecclesiastes': 'EC',
+  'song_of_solomon': 'CNT',
+  'song_of_songs': 'CNT',
+  'isaiah': 'IS',
+  'jeremiah': 'JER',
+  'lamentations': 'LM',
+  'ezekiel': 'EZ',
+  'daniel': 'DN',
+  'hosea': 'OS',
+  'joel': 'JL',
+  'amos': 'AM',
+  'obadiah': 'ABD',
+  'jonah': 'JON',
+  'micah': 'MI',
+  'nahum': 'NAH',
+  'habakkuk': 'HAB',
+  'zephaniah': 'SOF',
+  'haggai': 'HAG',
+  'zechariah': 'ZAC',
+  'malachi': 'MAL',
 
-  // Old Testament - numbered books
-  '1_samuel': '1samuel',
-  '2_samuel': '2samuel',
-  'first_kings': '1kings',
-  'second_kings': '2kings',
-  'first_chronicles': '1chronicles',
-  'second_chronicles': '2chronicles',
-
-  // Apocrypha
-  '1_maccabees': '1maccabees',
-  '2_maccabees': '2maccabees',
-
-  // Song of Solomon variations
-  'song_of_solomon': 'songofsolomon',
-
-  // Books that need underscore removed
-  'acts': 'acts',
-  'amos': 'amos',
-  'colossians': 'colossians',
-  'daniel': 'daniel',
-  'deuteronomy': 'deuteronomy',
-  'ecclesiastes': 'ecclesiastes',
-  'ephesians': 'ephesians',
-  'esther': 'esther',
-  'exodus': 'exodus',
-  'ezekiel': 'ezekiel',
-  'ezra': 'ezra',
-  'galatians': 'galatians',
-  'habakkuk': 'habakkuk',
-  'haggai': 'haggai',
-  'hebrews': 'hebrews',
-  'hosea': 'hosea',
-  'isaiah': 'isaiah',
-  'james': 'james',
-  'jeremiah': 'jeremiah',
-  'job': 'job',
-  'joel': 'joel',
-  'john': 'john',
-  'jonah': 'jonah',
-  'joshua': 'joshua',
-  'jude': 'jude',
-  'judges': 'judges',
-  'judith': 'judith',
-  'lamentations': 'lamentations',
-  'leviticus': 'leviticus',
-  'luke': 'luke',
-  'mark': 'mark',
-  'matthew': 'matthew',
-  'micah': 'micah',
-  'nahum': 'nahum',
-  'nehemiah': 'nehemiah',
-  'numbers': 'numbers',
-  'obadiah': 'obadiah',
-  'philemon': 'philemon',
-  'philippians': 'philippians',
-  'proverbs': 'proverbs',
-  'psalms': 'psalms',
-  'revelation': 'revelation',
-  'romans': 'romans',
-  'ruth': 'ruth',
-  'titus': 'titus',
-  'tobit': 'tobit',
-  'zephaniah': 'zephaniah',
+  // New Testament
+  'matthew': 'MT',
+  'mark': 'MR',
+  'luke': 'LC',
+  'john': 'JN',
+  'acts': 'HCH',
+  'romans': 'RO',
+  '1_corinthians': '1CO',
+  '2_corinthians': '2CO',
+  'galatians': 'GA',
+  'ephesians': 'EF',
+  'philippians': 'FIL',
+  'colossians': 'COL',
+  '1_thessalonians': '1TS',
+  '2_thessalonians': '2TS',
+  '1_timothy': '1TI',
+  '2_timothy': '2TI',
+  'titus': 'TIT',
+  'philemon': 'FLM',
+  'hebrews': 'HE',
+  'james': 'STG',
+  '1_peter': '1P',
+  '2_peter': '2P',
+  '1_john': '1JN',
+  '2_john': '2JN',
+  '3_john': '3JN',
+  'jude': 'JUD',
+  'revelation': 'AP',
 }
 
 /**
@@ -101,10 +103,10 @@ export const convertBookToApiCode = (dbBookName: string): string => {
 }
 
 /**
- * Get display name for a database book name
+ * Get display name for a database book name in English
  * Converts "2_peter" to "2 Peter", "song_of_solomon" to "Song of Solomon"
  */
-export const getBookDisplayName = (dbBookName: string): string => {
+export const getBookDisplayNameEnglish = (dbBookName: string): string => {
   // Replace underscores with spaces and capitalize words
   return dbBookName
     .split('_')
@@ -121,4 +123,21 @@ export const getBookDisplayName = (dbBookName: string): string => {
       return word.charAt(0).toUpperCase() + word.slice(1)
     })
     .join(' ')
+}
+
+/**
+ * Get display name for a database book name (in Spanish by default)
+ * Converts "john" to "Juan", "2_peter" to "2 Pedro"
+ * @param dbBookName - Normalized book name from database
+ * @param language - Target language ('es' for Spanish, 'en' for English)
+ */
+export const getBookDisplayName = (dbBookName: string, language: 'es' | 'en' = 'es'): string => {
+  const englishName = getBookDisplayNameEnglish(dbBookName)
+
+  if (language === 'en') {
+    return englishName
+  }
+
+  // Translate to Spanish
+  return translateBookName(englishName)
 }

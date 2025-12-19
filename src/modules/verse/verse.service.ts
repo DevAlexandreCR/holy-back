@@ -269,8 +269,9 @@ async function fetchVerseFromApi(
   // Concatenate verse texts (the API uses 'verse' property for text)
   const text = apiResponse.map(v => v.verse?.trim() || '').filter(Boolean).join(' ')
 
-  // Get display name for the book
-  const bookDisplayName = getBookDisplayName(libraryVerse.book)
+  // Get display name for the book in the appropriate language
+  const language = version.language === 'en' ? 'en' : 'es'
+  const bookDisplayName = getBookDisplayName(libraryVerse.book, language)
 
   // Format reference
   const reference = formatReference(
