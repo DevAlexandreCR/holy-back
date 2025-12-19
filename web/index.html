@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HolyVerso - Luz y Palabra para cada día. Recibe versículos bíblicos inspiradores diariamente en tu móvil.">
+    <meta name="keywords" content="biblia, versículos, devocional, diario, widget, iOS, Android">
+    <title>HolyVerso - Luz y Palabra para cada día</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" type="image/png" href="assets/logo.png">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero" id="hero">
+        <div class="hero-background">
+            <div class="light-rays"></div>
+            <div class="floating-particles"></div>
+        </div>
+        
+        <nav class="navbar">
+            <div class="container">
+                <div class="nav-content">
+                    <div class="logo">
+                        <img src="assets/logo.png" alt="HolyVerso" width="40" height="40" class="logo-image">
+                        <span class="logo-text">HolyVerso</span>
+                    </div>
+                    <div class="nav-links">
+                        <a href="#features">Características</a>
+                        <a href="#widgets">Widgets</a>
+                        <a href="#download">Descargar</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container hero-container">
+            <div class="hero-content">
+                <div class="badge">✨ Disponible en iOS y Android</div>
+                <h1 class="hero-title">
+                    <span class="gradient-text">Luz y Palabra</span>
+                    <br>para cada día
+                </h1>
+                <p class="hero-subtitle">
+                    Recibe versículos inspiradores de la Biblia directamente en tu pantalla de inicio. 
+                    Una guía espiritual diaria que ilumina tu camino.
+                </p>
+                <div class="hero-buttons">
+                    <a href="#download" class="btn btn-primary">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 14L5 9H15L10 14Z" fill="currentColor"/>
+                            <path d="M10 2V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M3 18H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Descargar App
+                    </a>
+                    <a href="#widgets" class="btn btn-secondary">
+                        Ver Widgets
+                    </a>
+                </div>
+            </div>
+            
+            <div class="hero-visual">
+                <div class="phone-mockup">
+                    <div class="phone-screen">
+                        <div class="verse-card animate-float">
+                            <div class="verse-header">
+                                <span class="verse-date">Hoy</span>
+                                <div class="verse-icon">📖</div>
+                            </div>
+                            <p class="verse-text">
+                                "Lámpara es a mis pies tu palabra, y lumbrera a mi camino."
+                            </p>
+                            <p class="verse-reference">— Salmos 119:105</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Una experiencia espiritual única</h2>
+                <p class="section-subtitle">Todo lo que necesitas para mantener tu conexión diaria con la Palabra</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" data-aos="fade-up" data-delay="0">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <circle cx="24" cy="24" r="20" stroke="#F4D27A" stroke-width="2" opacity="0.3"/>
+                            <path d="M24 14V24L30 30" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Versículo Diario</h3>
+                    <p class="feature-description">
+                        Cada día un nuevo versículo cuidadosamente seleccionado para inspirar tu jornada espiritual.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="100">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <rect x="12" y="12" width="24" height="24" rx="4" stroke="#7EA9E1" stroke-width="2"/>
+                            <path d="M12 20H36M20 12V36" stroke="#7EA9E1" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Widgets Personalizables</h3>
+                    <p class="feature-description">
+                        Coloca la Palabra de Dios directamente en tu pantalla de inicio con widgets elegantes y minimalistas.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="200">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 8L18 28H30L24 40" stroke="#F4D27A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Múltiples Versiones</h3>
+                    <p class="feature-description">
+                        Accede a diferentes traducciones de la Biblia para profundizar en tu estudio y comprensión.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="300">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 34C29.5228 34 34 29.5228 34 24C34 18.4772 29.5228 14 24 14C18.4772 14 14 18.4772 14 24C14 29.5228 18.4772 34 24 34Z" stroke="#7EA9E1" stroke-width="2"/>
+                            <path d="M24 18V24L28 28" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Sin Distracciones</h3>
+                    <p class="feature-description">
+                        Una experiencia limpia y enfocada. Sin anuncios, sin ruido. Solo tú y la Palabra.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="400">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M16 20L24 28L32 20" stroke="#F4D27A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Modo Oscuro</h3>
+                    <p class="feature-description">
+                        Cambia entre temas claro y oscuro para una lectura cómoda en cualquier momento del día.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="500">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 14L28 22H36L30 28L32 36L24 30L16 36L18 28L12 22H20L24 14Z" stroke="#7EA9E1" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Favoritos</h3>
+                    <p class="feature-description">
+                        Guarda tus versículos preferidos y créate una biblioteca personal de pasajes inspiradores.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Widgets Section -->
+    <section class="widgets" id="widgets">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Widgets para tu pantalla de inicio</h2>
+                <p class="section-subtitle">Mantén la Palabra siempre visible con widgets hermosos y funcionales</p>
+            </div>
+
+            <div class="widgets-showcase">
+                <div class="widget-platform" data-aos="fade-right">
+                    <div class="platform-header">
+                        <div class="platform-icon ios-icon">
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <path d="M28.5 8.5C27.3 9.8 25.2 10.8 23.5 10.8C23.3 8.9 24.2 6.9 25.3 5.6C26.5 4.2 28.7 3.2 30.3 3C30.5 5 29.7 7.1 28.5 8.5Z" fill="currentColor"/>
+                                <path d="M30.2 11C27.3 11 25.8 12.5 24 12.5C22.1 12.5 20.3 11 17.8 11C14.8 11 11.9 13 10.2 16C7.8 20.2 8.4 27.5 12.5 33.5C13.9 35.5 15.7 37.8 18 37.8C20.1 37.8 20.8 36.5 23.5 36.5C26.3 36.5 26.8 37.8 29 37.8C31.3 37.8 33.1 35.8 34.5 33.8C36.1 31.5 36.7 29.3 36.8 29.2C36.7 29.2 31.8 27.3 31.7 21.8C31.7 17.3 35.5 15.2 35.7 15C33.6 12.2 30.5 11 30.2 11Z" fill="currentColor"/>
+                            </svg>
+                        </div>
+                        <h3>iOS Widget</h3>
+                    </div>
+                    <div class="widget-preview ios-widget">
+                        <div class="widget-content">
+                            <div class="widget-header">
+                                <span class="widget-app">HolyVerso</span>
+                                <span class="widget-time">Hoy</span>
+                            </div>
+                            <p class="widget-verse">"Encomienda a Jehová tu camino, y confía en él"</p>
+                            <p class="widget-ref">Salmos 37:5</p>
+                        </div>
+                    </div>
+                    <div class="widget-steps">
+                        <h4>Cómo agregar en iOS:</h4>
+                        <ol>
+                            <li>Mantén presionada la pantalla de inicio</li>
+                            <li>Toca el botón <strong>+</strong> en la esquina superior</li>
+                            <li>Busca <strong>HolyVerso</strong></li>
+                            <li>Selecciona el tamaño del widget</li>
+                            <li>Toca <strong>Agregar Widget</strong></li>
+                            <li>Colócalo donde prefieras</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="widget-platform" data-aos="fade-left">
+                    <div class="platform-header">
+                        <div class="platform-icon android-icon">
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <path d="M8 12H32V28H8V12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <circle cx="13" cy="18" r="1.5" fill="currentColor"/>
+                                <circle cx="27" cy="18" r="1.5" fill="currentColor"/>
+                                <path d="M11 8L14 12M29 8L26 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M12 28V34M28 28V34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M5 14V26M35 14V26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <h3>Android Widget</h3>
+                    </div>
+                    <div class="widget-preview android-widget">
+                        <div class="widget-content">
+                            <div class="widget-header">
+                                <span class="widget-app">HolyVerso</span>
+                                <span class="widget-time">Hoy</span>
+                            </div>
+                            <p class="widget-verse">"Encomienda a Jehová tu camino, y confía en él"</p>
+                            <p class="widget-ref">Salmos 37:5</p>
+                        </div>
+                    </div>
+                    <div class="widget-steps">
+                        <h4>Cómo agregar en Android:</h4>
+                        <ol>
+                            <li>Mantén presionada la pantalla de inicio</li>
+                            <li>Toca <strong>Widgets</strong></li>
+                            <li>Busca y mantén presionado <strong>HolyVerso</strong></li>
+                            <li>Arrastra el widget a la pantalla</li>
+                            <li>Ajusta el tamaño si es necesario</li>
+                            <li>Suelta para colocarlo</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-tips" data-aos="fade-up">
+                <h3>💡 Consejos para widgets</h3>
+                <div class="tips-grid">
+                    <div class="tip">
+                        <span class="tip-icon">🔄</span>
+                        <p>Los widgets se actualizan automáticamente cada día con un nuevo versículo</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">📱</span>
+                        <p>Puedes agregar múltiples widgets con diferentes tamaños</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">🎨</span>
+                        <p>Los widgets se adaptan al tema claro u oscuro de tu dispositivo</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">👆</span>
+                        <p>Toca el widget para abrir la app y ver más detalles del versículo</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Download Section -->
+    <section class="download" id="download">
+        <div class="container">
+            <div class="download-content" data-aos="zoom-in">
+                <div class="download-icon">
+                    <img src="assets/logo.png" alt="HolyVerso" width="80" height="80" class="logo-image-large">
+                </div>
+                <h2 class="download-title">Comienza tu jornada espiritual hoy</h2>
+                <p class="download-subtitle">Descarga HolyVerso y recibe inspiración divina cada día</p>
+                
+                <div class="download-buttons">
+                    <a href="#" class="store-button">
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                            <path d="M21.5 6.5C20.6 7.4 19.1 8.1 17.8 8.1C17.7 6.7 18.4 5.2 19.2 4.2C20.1 3.2 21.5 2.4 22.7 2.3C22.9 3.8 22.3 5.3 21.5 6.5Z" fill="currentColor"/>
+                            <path d="M22.7 8.3C20.5 8.3 19.4 9.4 18 9.4C16.6 9.4 15.2 8.3 13.4 8.3C11.1 8.3 8.9 9.8 7.7 12C5.8 15.2 6.3 20.6 9.4 25.1C10.4 26.6 11.8 28.4 13.5 28.4C15.1 28.4 15.6 27.4 17.6 27.4C19.7 27.4 20.1 28.4 21.8 28.4C23.5 28.4 24.8 26.8 25.9 25.4C27.1 23.6 27.5 21.9 27.6 21.9C27.5 21.9 23.8 20.5 23.8 16.3C23.8 13 26.6 11.4 26.8 11.3C25.2 9.2 22.9 8.3 22.7 8.3Z" fill="currentColor"/>
+                        </svg>
+                        <div class="store-text">
+                            <span class="store-available">Disponible en</span>
+                            <span class="store-name">App Store</span>
+                        </div>
+                    </a>
+                    
+                    <a href="#" class="store-button">
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                            <path d="M4 4.5L16.5 15L4 25.5V4.5Z" fill="currentColor"/>
+                            <path d="M16.5 15L20.5 11L26 14L16.5 15Z" fill="currentColor" opacity="0.8"/>
+                            <path d="M16.5 15L20.5 19L26 16L16.5 15Z" fill="currentColor" opacity="0.6"/>
+                            <path d="M4 4.5L16.5 15L20.5 11L7 4L4 4.5Z" fill="currentColor" opacity="0.4"/>
+                            <path d="M4 25.5L16.5 15L20.5 19L7 26L4 25.5Z" fill="currentColor" opacity="0.4"/>
+                        </svg>
+                        <div class="store-text">
+                            <span class="store-available">Disponible en</span>
+                            <span class="store-name">Google Play</span>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="download-stats">
+                    <div class="stat">
+                        <div class="stat-number">10K+</div>
+                        <div class="stat-label">Descargas</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">4.8★</div>
+                        <div class="stat-label">Calificación</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">365</div>
+                        <div class="stat-label">Versículos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <img src="assets/logo.png" alt="HolyVerso" width="36" height="36" class="logo-image">
+                        <span class="logo-text">HolyVerso</span>
+                    </div>
+                    <p class="footer-tagline">Luz y Palabra para cada día</p>
+                </div>
+                
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h4>Producto</h4>
+                        <a href="#features">Características</a>
+                        <a href="#widgets">Widgets</a>
+                        <a href="#download">Descargar</a>
+                    </div>
+                    
+                    <div class="link-group">
+                        <h4>Soporte</h4>
+                        <a href="#">Preguntas frecuentes</a>
+                        <a href="#">Contacto</a>
+                        <a href="#">Ayuda</a>
+                    </div>
+                    
+                    <div class="link-group">
+                        <h4>Legal</h4>
+                        <a href="#">Privacidad</a>
+                        <a href="#">Términos</a>
+                        <a href="#">Licencias</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2024 HolyVerso. Todos los derechos reservados.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 0C4.477 0 0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.879V12.89h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.989C16.343 19.129 20 14.99 20 10c0-5.523-4.477-10-10-10z"/>
+                        </svg>
+                    </a>
+                    <a href="#" aria-label="Instagram">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 0C7.284 0 6.944.012 5.877.06 4.813.109 4.086.278 3.45.525a4.92 4.92 0 00-1.772 1.153A4.92 4.92 0 00.525 3.45C.278 4.086.109 4.813.06 5.877.012 6.944 0 7.284 0 10s.012 3.056.06 4.123c.049 1.064.218 1.791.465 2.427a4.92 4.92 0 001.153 1.772 4.92 4.92 0 001.772 1.153c.636.247 1.363.416 2.427.465C6.944 19.988 7.284 20 10 20s3.056-.012 4.123-.06c1.064-.049 1.791-.218 2.427-.465a4.92 4.92 0 001.772-1.153 4.92 4.92 0 001.153-1.772c.247-.636.416-1.363.465-2.427.048-1.067.06-1.407.06-4.123s-.012-3.056-.06-4.123c-.049-1.064-.218-1.791-.465-2.427a4.92 4.92 0 00-1.153-1.772A4.92 4.92 0 0016.55.525C15.914.278 15.187.109 14.123.06 13.056.012 12.716 0 10 0zm0 1.802c2.67 0 2.986.01 4.04.058.975.045 1.504.207 1.857.344.467.181.8.398 1.15.748.35.35.567.683.748 1.15.137.353.3.882.344 1.857.048 1.054.058 1.37.058 4.04 0 2.67-.01 2.986-.058 4.04-.045.975-.207 1.504-.344 1.857-.181.467-.398.8-.748 1.15-.35.35-.683.567-1.15.748-.353.137-.882.3-1.857.344-1.054.048-1.37.058-4.04.058-2.67 0-2.986-.01-4.04-.058-.975-.045-1.504-.207-1.857-.344a3.097 3.097 0 01-1.15-.748 3.097 3.097 0 01-.748-1.15c-.137-.353-.3-.882-.344-1.857-.048-1.054-.058-1.37-.058-4.04 0-2.67.01-2.986.058-4.04.045-.975.207-1.504.344-1.857.181-.467.398-.8.748-1.15.35-.35.683-.567 1.15-.748.353-.137.882-.3 1.857-.344 1.054-.048 1.37-.058 4.04-.058z"/>
+                            <path d="M10 13.333a3.333 3.333 0 110-6.666 3.333 3.333 0 010 6.666zM10 5a5 5 0 100 10 5 5 0 000-10zm6.406-1.845a1.44 1.44 0 11-2.88 0 1.44 1.44 0 012.88 0z"/>
+                        </svg>
+                    </a>
+                    <a href="#" aria-label="Twitter">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
