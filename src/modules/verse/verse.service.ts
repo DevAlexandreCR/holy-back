@@ -359,20 +359,48 @@ async function markVerseAsSeen(
 }
 
 /**
- * Get today's date in YYYY-MM-DD format (UTC)
+ * Get today's date in YYYY-MM-DD format
+ * @param timezone - User's timezone (e.g., 'America/Bogota', 'America/New_York')
+ * If no timezone provided, uses UTC
  */
-function getTodayDate(): string {
+function getTodayDate(timezone?: string | null): string {
   const now = new Date()
-  return now.toISOString().split('T')[0] // YYYY-MM-DD
+
+  if (!timezone) {
+    // Fallback to UTC if no timezone
+    return now.toISOString().split('T')[0] // YYYY-MM-DD
+  }
+
+  try {
+    // Use Intl.DateTimeFormat to get date in user's timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+
+    const parts = formatter.formatToParts(now)
+    const year = parts.find(p => p.type === 'year')?.value
+    const month = parts.find(p => p.type === 'month')?.value
+    const day = parts.find(p => p.type === 'day')?.value
+
+    return `${year}-${month}-${day}` // YYYY-MM-DD
+  } catch (error) {
+    console.error(`⚠️  Invalid timezone '${timezone}', falling back to UTC:`, error)
+    return now.toISOString().split('T')[0]
+  }
 }
 
 /**
  * Check if user already received their verse today
+ * Uses user's timezone to determine "today"
  */
 async function getTodaysVerseIfExists(
-  userId: string
+  userId: string,
+  timezone?: string | null
 ): Promise<UserVerseHistoryWithRelations | null> {
-  const today = getTodayDate()
+  const today = getTodayDate(timezone)
 
   const history = await prisma.userVerseHistory.findUnique({
     where: {
@@ -391,13 +419,27 @@ async function getTodaysVerseIfExists(
  * Main function: Get daily verse for user
  */
 export async function getDailyVerseForUser(userId: string): Promise<DailyVerseResponse> {
-  const today = getTodayDate()
+  // 0. Get user's timezone from settings
+  const userSettings = await prisma.userSettings.findUnique({
+    where: { userId },
+    select: { timezone: true },
+  })
+
+  const timezone = userSettings?.timezone
+  const today = getTodayDate(timezone)
+
+  // Log timezone info for debugging
+  if (timezone) {
+    console.log(`🌍 Using timezone '${timezone}' for user ${userId}, today is ${today}`)
+  } else {
+    console.log(`⚠️  No timezone set for user ${userId}, using UTC. Today is ${today}`)
+  }
 
   // 1. Resolve user's preferred version first
   const version = await resolveUserVersion(userId)
 
-  // 0. Check if user already got their verse today
-  const existingVerse = await getTodaysVerseIfExists(userId)
+  // 2. Check if user already got their verse today (in their timezone)
+  const existingVerse = await getTodaysVerseIfExists(userId, timezone)
 
   if (existingVerse) {
     // Check if the existing verse is in the user's current preferred version
