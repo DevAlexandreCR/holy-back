@@ -37,7 +37,7 @@ export const getTodayVerse = async (
       })
     }
 
-    next(error)
+    return next(error)
   }
 }
 
@@ -77,7 +77,7 @@ export const getWidgetVerse = async (
       })
     }
 
-    next(error)
+    return next(error)
   }
 }
 
@@ -110,7 +110,7 @@ export const likeVerseHandler = async (
     })
   } catch (error) {
     console.error('Error liking verse:', error)
-    next(error)
+    return next(error)
   }
 }
 
@@ -143,7 +143,7 @@ export const shareVerseHandler = async (
     })
   } catch (error) {
     console.error('Error sharing verse:', error)
-    next(error)
+    return next(error)
   }
 }
 
