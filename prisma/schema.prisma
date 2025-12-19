@@ -8,30 +8,32 @@ datasource db {
 }
 
 model User {
-  id                  String         @id @default(uuid()) @db.Char(36)
+  id                  String                @id @default(uuid()) @db.Char(36)
   name                String
-  email               String         @unique
-  passwordHash        String         @map("password_hash")
-  createdAt           DateTime       @default(now()) @map("created_at")
-  updatedAt           DateTime       @updatedAt @map("updated_at")
-  resetToken          String?        @map("reset_token")
-  resetTokenExpiresAt DateTime?      @map("reset_token_expires_at")
+  email               String                @unique
+  passwordHash        String                @map("password_hash")
+  createdAt           DateTime              @default(now()) @map("created_at")
+  updatedAt           DateTime              @updatedAt @map("updated_at")
+  resetToken          String?               @map("reset_token")
+  resetTokenExpiresAt DateTime?             @map("reset_token_expires_at")
   settings            UserSettings?
   verseHistory        UserVerseHistory[]
+  themePreferences    UserThemePreference[]
 
   @@map("users")
 }
 
 model BibleVersion {
-  id        Int           @id @default(autoincrement())
-  apiCode   String        @unique @map("api_code")
-  name       String
-  language  String
-  isActive  Boolean       @default(true) @map("is_active")
-  createdAt DateTime      @default(now()) @map("created_at")
-  updatedAt DateTime      @updatedAt @map("updated_at")
-  settings  UserSettings[]
-  translations VerseTranslation[]
+  id           Int                @id @default(autoincrement())
+  apiCode      String             @unique @map("api_code")
+  name         String
+  language     String
+  isActive     Boolean            @default(true) @map("is_active")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  settings     UserSettings[]
+  cachedTexts  CachedVerseText[]
+  userHistory  UserVerseHistory[]
 
   @@map("bible_versions")
 }
@@ -51,55 +53,82 @@ model UserSettings {
   @@map("user_settings")
 }
 
-model VerseSeed {
-  id                 Int                 @id @default(autoincrement())
-  seedHash           String              @unique @map("seed_hash")
-  sourceTranslation  String              @default("web") @map("source_translation")
-  reference          String
-  referenceBook      String              @map("reference_book")
-  referenceChapter   Int                 @map("reference_chapter")
-  referenceFromVerse Int                 @map("reference_from_verse")
-  referenceToVerse   Int?                @map("reference_to_verse")
-  textEn             String              @db.Text @map("text_en")
-  meta               Json?
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
+model LibraryVerse {
+  id           Int                @id @default(autoincrement())
+  book         String
+  chapter      Int
+  verseFrom    Int                @map("verse_from")
+  verseTo      Int                @map("verse_to")
+  theme        String
+  referenceKey String             @unique @map("reference_key")
+  createdAt    DateTime           @default(now()) @map("created_at")
 
-  translations       VerseTranslation[]
-  userHistory        UserVerseHistory[]
+  cachedVerses CachedVerseText[]
+  userHistory  UserVerseHistory[]
 
-  @@index([sourceTranslation])
-  @@map("verse_seeds")
+  @@unique([book, chapter, verseFrom, verseTo])
+  @@index([book])
+  @@map("library_verses")
 }
 
-model VerseTranslation {
-  id               Int          @id @default(autoincrement())
-  seedId           Int          @map("seed_id")
-  versionId        Int          @map("version_id")
-  translationCode  String       @map("translation_code")
-  text             String       @db.Text
-  meta             Json?
-  createdAt        DateTime     @default(now()) @map("created_at")
-  updatedAt        DateTime     @updatedAt @map("updated_at")
+model CachedVerseText {
+  id             Int           @id @default(autoincrement())
+  libraryVerseId Int           @map("library_verse_id")
+  versionId      Int           @map("version_id")
+  text           String        @db.Text
+  reference      String
+  apiMetadata    Json?         @map("api_metadata")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
-  seed             VerseSeed    @relation(fields: [seedId], references: [id])
-  version          BibleVersion @relation(fields: [versionId], references: [id])
+  libraryVerse   LibraryVerse  @relation(fields: [libraryVerseId], references: [id])
+  version        BibleVersion  @relation(fields: [versionId], references: [id])
 
-  @@unique([seedId, versionId])
+  @@unique([libraryVerseId, versionId])
   @@index([versionId])
-  @@map("verse_translations")
+  @@index([createdAt])
+  @@map("cached_verse_texts")
 }
 
 model UserVerseHistory {
-  id        Int       @id @default(autoincrement())
-  userId    String    @map("user_id")
-  seedId    Int       @map("seed_id")
-  shownAt   DateTime  @default(now()) @map("shown_at")
+  id             Int           @id @default(autoincrement())
+  userId         String        @map("user_id")
+  libraryVerseId Int           @map("library_verse_id")
+  versionId      Int           @map("version_id")
+  date           String
+  shownAt        DateTime      @default(now()) @map("shown_at")
+  liked          Boolean       @default(false)
+  likedAt        DateTime?     @map("liked_at")
+  shared         Boolean       @default(false)
+  sharedAt       DateTime?     @map("shared_at")
 
-  seed      VerseSeed @relation(fields: [seedId], references: [id])
-  user      User      @relation(fields: [userId], references: [id])
+  user           User          @relation(fields: [userId], references: [id])
+  libraryVerse   LibraryVerse  @relation(fields: [libraryVerseId], references: [id])
+  version        BibleVersion  @relation(fields: [versionId], references: [id])
 
-  @@unique([userId, seedId])
+  @@unique([userId, libraryVerseId])
+  @@unique([userId, date])
   @@index([userId])
+  @@index([shownAt])
+  @@index([userId, liked])
+  @@index([userId, shared])
   @@map("user_verse_history")
+}
+
+model UserThemePreference {
+  id              Int      @id @default(autoincrement())
+  userId          String   @map("user_id")
+  theme           String
+  likeCount       Int      @default(0) @map("like_count")
+  shareCount      Int      @default(0) @map("share_count")
+  score           Float    @default(0)
+  lastInteraction DateTime @default(now()) @map("last_interaction")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, theme])
+  @@index([userId, score])
+  @@map("user_theme_preferences")
 }

@@ -1,10 +1,9 @@
-import { Router } from 'express';
-import { requireAuth } from '../auth/auth.middleware';
-import { getWidgetVerse } from '../verse/verse.controller';
+import { Router } from 'express'
+import { requireAuth } from '../auth/auth.middleware'
+import { getWidgetVerse } from '../verse/verse.controller'
 
-const router = Router();
+const router = Router()
 
-router.use(requireAuth);
-router.get('/verse', getWidgetVerse);
+router.get('/verse', requireAuth, getWidgetVerse)
 
-export default router;
+export default router
