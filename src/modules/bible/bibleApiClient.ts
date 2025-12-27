@@ -1,6 +1,14 @@
 import axios, { AxiosInstance } from 'axios'
 import { config } from '../../config/env'
-import { BibleVersionApiModel, BookApiModel, GetVersesParams, VerseApiModel } from './bible.types'
+import {
+  BibleVersionApiModel,
+  BookApiModel,
+  Chapter,
+  ChapterApiModel,
+  GetChapterParams,
+  GetVersesParams,
+  VerseApiModel,
+} from './bible.types'
 
 const logAxiosError = (context: string, error: unknown) => {
   if (axios.isAxiosError(error)) {
@@ -81,6 +89,52 @@ export class BibleApiClient {
     } catch (error) {
       logAxiosError(path, error)
       throw new Error('Failed to fetch bible verses')
+    }
+  }
+
+  async getChapter(params: GetChapterParams): Promise<Chapter> {
+    const { versionCode, book, chapter } = params
+    const normalizedBook = book.trim()
+    const normalizedVersion = versionCode.trim()
+
+    if (!normalizedBook) {
+      throw new Error('Book is required to fetch a chapter')
+    }
+
+    if (!normalizedVersion) {
+      throw new Error('Version code is required to fetch a chapter')
+    }
+
+    if (!Number.isInteger(chapter) || chapter <= 0) {
+      throw new Error('Chapter must be greater than 0')
+    }
+
+    const encodedBook = encodeURIComponent(normalizedBook)
+    const encodedVersion = encodeURIComponent(normalizedVersion)
+    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}`
+
+    try {
+      const { data } = await this.client.get<ChapterApiModel>(path)
+
+      if (!data || !Array.isArray(data.vers)) {
+        throw new Error('Unexpected chapter payload')
+      }
+
+      return {
+        testament: data.testament,
+        name: data.name,
+        numChapters: data.num_chapters,
+        chapter: data.chapter,
+        verses: data.vers.map(verse => ({
+          number: verse.number,
+          text: verse.verse,
+          study: verse.study,
+          id: verse.id,
+        })),
+      }
+    } catch (error) {
+      logAxiosError(path, error)
+      throw new Error('Failed to fetch bible chapter')
     }
   }
 }

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { requireAuth } from '../auth/auth.middleware'
 import {
   getTodayVerse,
+  getTodayVerseChapter,
   likeVerseHandler,
   shareVerseHandler,
   getThemePreferences,
@@ -13,6 +14,7 @@ const router = Router()
 // All verse endpoints require authentication
 router.use(requireAuth)
 
+router.get('/today/chapter', getTodayVerseChapter)
 router.get('/today', getTodayVerse)
 router.post('/:libraryVerseId/like', likeVerseHandler)
 router.post('/:libraryVerseId/share', shareVerseHandler)

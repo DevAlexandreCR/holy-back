@@ -6,6 +6,7 @@ import {
   shareVerse,
   getUserThemeStats,
 } from './verse.service'
+import { getChapterForDailyVerse } from './chapter.service'
 
 /**
  * GET /verse/today
@@ -28,6 +29,39 @@ export const getTodayVerse = async (
     console.error('Error fetching today verse:', error)
 
     // Handle specific error for no Bible version selected
+    if (error.code === 'NO_VERSION_SELECTED') {
+      return res.status(error.statusCode || 400).json({
+        error: {
+          message: error.message,
+          code: error.code,
+        },
+      })
+    }
+
+    return next(error)
+  }
+}
+
+/**
+ * GET /verse/today/chapter
+ * Returns the full chapter for today's verse in the user's preferred version
+ */
+export const getTodayVerseChapter = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const userId = req.user!.sub
+
+    const chapter = await getChapterForDailyVerse(userId)
+
+    res.json({
+      data: chapter,
+    })
+  } catch (error: any) {
+    console.error('Error fetching today verse chapter:', error)
+
     if (error.code === 'NO_VERSION_SELECTED') {
       return res.status(error.statusCode || 400).json({
         error: {
