@@ -3,6 +3,7 @@ import { BibleApiClient } from '../bible/bibleApiClient'
 import { formatReference } from './libraryLoader.service'
 import { convertBookToApiCode, getBookDisplayName } from '../bible/bookApiMapping'
 import { config } from '../../config/env'
+import { isVerseSaved } from './savedVerse.service'
 
 const prisma = new PrismaClient()
 const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
@@ -18,6 +19,7 @@ interface DailyVerseResponse {
   versionName: string
   source: 'cache' | 'api'
   libraryVerseId: number
+  is_saved: boolean
 }
 
 interface UserVerseHistoryWithRelations {
@@ -456,6 +458,8 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
 
       console.log(`♻️  Returning today's verse for user ${userId}: ${cachedText.reference}`)
 
+      const isSaved = await isVerseSaved(userId, existingVerse.libraryVerseId)
+
       return {
         reference: cachedText.reference,
         text: cachedText.text,
@@ -464,6 +468,7 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
         versionName: existingVerse.version.name,
         source: 'cache',
         libraryVerseId: existingVerse.libraryVerse.id,
+        is_saved: isSaved,
       }
     }
 
@@ -498,6 +503,8 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
 
     console.log(`✅ Returned same verse in new version: ${cachedText.reference}`)
 
+    const isSaved = await isVerseSaved(userId, libraryVerse.id)
+
     return {
       reference: cachedText.reference,
       text: cachedText.text,
@@ -506,6 +513,7 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
       versionName: version.name,
       source: cachedText.id === existingVerse.id ? 'cache' : 'api',
       libraryVerseId: libraryVerse.id,
+      is_saved: isSaved,
     }
   }
 
@@ -584,6 +592,8 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
   await markVerseAsSeen(userId, libraryVerse.id, version.id, today)
 
   // 7. Return formatted response
+  const isSaved = await isVerseSaved(userId, libraryVerse.id)
+
   return {
     reference,
     text: verseText,
@@ -592,6 +602,7 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
     versionName: version.name,
     source,
     libraryVerseId: libraryVerse.id,
+    is_saved: isSaved,
   }
 }
 

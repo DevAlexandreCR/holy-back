@@ -6,7 +6,11 @@ import {
   likeVerseHandler,
   shareVerseHandler,
   getThemePreferences,
-  resetHistory
+  resetHistory,
+  listSavedVersesHandler,
+  saveVerseHandler,
+  removeSavedVerseHandler,
+  getSavedVerseChapter,
 } from './verse.controller'
 
 const router = Router()
@@ -16,6 +20,10 @@ router.use(requireAuth)
 
 router.get('/today/chapter', getTodayVerseChapter)
 router.get('/today', getTodayVerse)
+router.get('/saved', listSavedVersesHandler)
+router.post('/:libraryVerseId/save', saveVerseHandler)
+router.delete('/:libraryVerseId/save', removeSavedVerseHandler)
+router.get('/:libraryVerseId/chapter', getSavedVerseChapter)
 router.post('/:libraryVerseId/like', likeVerseHandler)
 router.post('/:libraryVerseId/share', shareVerseHandler)
 router.get('/preferences', getThemePreferences)
