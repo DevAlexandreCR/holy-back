@@ -84,7 +84,7 @@ export class BibleApiClient {
     const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`
     try {
       const { data } = await this.client.get<VerseApiModel[] | VerseApiModel>(path)
-      // La API devuelve un objeto cuando es un solo versículo, un array cuando es un rango
+      // API returns an object for a single verse and an array for a range
       return Array.isArray(data) ? data : [data]
     } catch (error) {
       logAxiosError(path, error)
