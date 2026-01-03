@@ -114,15 +114,11 @@ export const forgotPassword = async (email: string) => {
     });
 
     if (token) {
-      try {
-        await sendResetPasswordEmail(user.email, token);
-      } catch (error) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { resetToken: null, resetTokenExpiresAt: null },
-        });
-        throw error;
-      }
+      // Send email in the background to avoid blocking the HTTP response
+      void sendResetPasswordEmail(user.email, token).catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error('[forgotPassword] Failed to send reset email', error);
+      });
     }
   }
 
