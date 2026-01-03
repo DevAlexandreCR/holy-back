@@ -110,6 +110,7 @@ const MAIL_PASSWORD = readEnvOptional(['MAIL_PASSWORD']);
 const MAIL_SECURE = toOptionalBoolean(readEnvOptional(['MAIL_SECURE']), 'MAIL_SECURE');
 const MAIL_FROM = readEnvOptional(['MAIL_FROM']);
 const PASSWORD_RESET_BASE_URL = readEnvOptional(['PASSWORD_RESET_BASE_URL']);
+const PASSWORD_RESET_DEEP_LINK = readEnvOptional(['PASSWORD_RESET_DEEP_LINK']);
 
 export const config = {
   app: {
@@ -141,6 +142,7 @@ export const config = {
     secure: MAIL_SECURE ?? false,
     from: MAIL_FROM,
     passwordResetBaseUrl: PASSWORD_RESET_BASE_URL,
+    passwordResetDeepLink: PASSWORD_RESET_DEEP_LINK ?? 'holyverso://app/reset-password',
     isConfigured: Boolean(MAIL_HOST && MAIL_PORT && MAIL_FROM && PASSWORD_RESET_BASE_URL),
   },
 } as const;
