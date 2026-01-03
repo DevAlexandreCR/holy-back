@@ -24,10 +24,16 @@ const forgotSchema = z.object({
   email: z.string().email(),
 });
 
-const resetSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-  new_password: z.string().min(8, 'Password must be at least 8 characters'),
-});
+const resetSchema = z
+  .object({
+    token: z.string().min(1, 'Token is required'),
+    new_password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+    password: z.string().min(8, 'Password must be at least 8 characters').optional(),
+  })
+  .refine((value) => value.new_password || value.password, {
+    message: 'Password is required',
+    path: ['new_password'],
+  });
 
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {
   try {
@@ -68,7 +74,7 @@ export const reset = async (req: Request, res: Response) => {
   const body = parseOrThrow(resetSchema, req.body);
   await resetPassword({
     token: body.token,
-    newPassword: body.new_password,
+    newPassword: body.new_password ?? body.password ?? '',
   });
   res.json({ data: { message: 'Password updated successfully' } });
 };

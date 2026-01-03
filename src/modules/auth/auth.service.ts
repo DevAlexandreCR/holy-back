@@ -6,6 +6,7 @@ import { AppError } from '../../common/errors';
 import { hashPassword, verifyPassword } from './password';
 import { signAccessToken, signRefreshToken } from './jwt';
 import { ensureSettings } from '../user/userSettings.service';
+import { sendResetPasswordEmail } from './resetEmail.service';
 
 type RegisterInput = {
   name: string;
@@ -97,10 +98,12 @@ export const loginUser = async (input: LoginInput) => {
 };
 
 export const forgotPassword = async (email: string) => {
-  const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + config.auth.resetTokenTtlMinutes * 60 * 1000);
-
   const user = await prisma.user.findUnique({ where: { email } });
+  const token = user ? crypto.randomBytes(32).toString('hex') : null;
+  const expiresAt = token
+    ? new Date(Date.now() + config.auth.resetTokenTtlMinutes * 60 * 1000)
+    : null;
+
   if (user) {
     await prisma.user.update({
       where: { id: user.id },
@@ -109,9 +112,29 @@ export const forgotPassword = async (email: string) => {
         resetTokenExpiresAt: expiresAt,
       },
     });
+
+    if (token) {
+      try {
+        await sendResetPasswordEmail(user.email, token);
+      } catch (error) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { resetToken: null, resetTokenExpiresAt: null },
+        });
+        throw error;
+      }
+    }
   }
 
-  return { reset_token: token };
+  const response: { message: string; reset_token?: string | null } = {
+    message: 'If an account exists, password reset instructions will be sent shortly',
+  };
+
+  if (!config.app.isProduction && token) {
+    response.reset_token = token;
+  }
+
+  return response;
 };
 
 export const resetPassword = async (input: ResetPasswordInput) => {
