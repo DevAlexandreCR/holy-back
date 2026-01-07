@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
 import {
+  getDailyVerseForGuest,
   getDailyVerseForUser,
   resetUserVerseHistory,
   likeVerse,
@@ -19,9 +20,10 @@ export const getTodayVerse = async (
   next: NextFunction
 ) => {
   try {
-    const userId = req.user!.sub // From auth middleware
-
-    const verse = await getDailyVerseForUser(userId)
+    const userId = req.user?.sub
+    const verse = userId
+      ? await getDailyVerseForUser(userId)
+      : await getDailyVerseForGuest()
 
     res.json({
       data: verse,

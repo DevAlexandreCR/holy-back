@@ -10,6 +10,8 @@ const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
 
 // Threshold for switching to 50/50 strategy
 const CACHE_THRESHOLD = 2000
+const DEFAULT_GUEST_VERSION_CODE = 'RVR1995'
+const DEFAULT_GUEST_VERSION_NAME = 'Reina Valera 1995'
 
 interface DailyVerseResponse {
   reference: string
@@ -72,6 +74,41 @@ async function resolveUserVersion(userId: string): Promise<BibleVersion> {
   error.code = 'NO_VERSION_SELECTED'
   error.statusCode = 400
   throw error
+}
+
+async function resolveGuestVersion(): Promise<BibleVersion> {
+  const byCode = await prisma.bibleVersion.findFirst({
+    where: {
+      apiCode: DEFAULT_GUEST_VERSION_CODE,
+      isActive: true,
+    },
+  })
+
+  if (byCode) {
+    return byCode
+  }
+
+  const byName = await prisma.bibleVersion.findFirst({
+    where: {
+      name: { contains: DEFAULT_GUEST_VERSION_NAME },
+      isActive: true,
+    },
+  })
+
+  if (byName) {
+    return byName
+  }
+
+  const fallback = await prisma.bibleVersion.findFirst({
+    where: { isActive: true },
+    orderBy: { id: 'asc' },
+  })
+
+  if (!fallback) {
+    throw new Error('No active Bible versions available')
+  }
+
+  return fallback
 }
 
 /**
@@ -360,6 +397,36 @@ async function markVerseAsSeen(
   }
 }
 
+function hashString(value: string): number {
+  let hash = 0
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+async function getDeterministicLibraryVerseForDate(date: string): Promise<LibraryVerse> {
+  const totalCount = await prisma.libraryVerse.count()
+  if (totalCount === 0) {
+    throw new Error('No library verses available')
+  }
+
+  const offset = hashString(date) % totalCount
+  const verses = await prisma.libraryVerse.findMany({
+    orderBy: { id: 'asc' },
+    skip: offset,
+    take: 1,
+  })
+
+  const verse = verses[0]
+  if (!verse) {
+    throw new Error('No library verse found for the selected date')
+  }
+
+  return verse
+}
+
 /**
  * Get today's date in YYYY-MM-DD format
  * @param timezone - User's timezone (e.g., 'America/Bogota', 'America/New_York')
@@ -415,6 +482,40 @@ async function getTodaysVerseIfExists(
   })
 
   return history
+}
+
+/**
+ * Main function: Get daily verse for guest
+ */
+export async function getDailyVerseForGuest(): Promise<DailyVerseResponse> {
+  const today = getTodayDate()
+  const version = await resolveGuestVersion()
+  const libraryVerse = await getDeterministicLibraryVerseForDate(today)
+
+  let cachedText = await findCachedVerseText(libraryVerse.id, version.id)
+  let source: 'cache' | 'api' = 'cache'
+
+  if (!cachedText) {
+    const apiResult = await fetchVerseFromApi(libraryVerse, version)
+    cachedText = await cacheVerseText(
+      libraryVerse.id,
+      version.id,
+      apiResult.text,
+      apiResult.reference
+    )
+    source = 'api'
+  }
+
+  return {
+    reference: cachedText.reference,
+    text: cachedText.text,
+    theme: libraryVerse.theme,
+    versionCode: version.apiCode,
+    versionName: version.name,
+    source,
+    libraryVerseId: libraryVerse.id,
+    is_saved: false,
+  }
 }
 
 /**

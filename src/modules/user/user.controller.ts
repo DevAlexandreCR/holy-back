@@ -2,6 +2,7 @@ import { Request, Response } from 'express'
 import { z } from 'zod'
 import { AppError } from '../../common/errors'
 import { ensureSettings, setPreferredVersion, setTimezone, setWidgetFontSize } from './userSettings.service'
+import { deleteUserAccount } from './userDeletion.service'
 
 const versionSchema = z.object({
   version_id: z.number().int().positive(),
@@ -66,4 +67,18 @@ export const getSettings = async (req: Request, res: Response) => {
 
   const settings = await ensureSettings(req.user.sub)
   res.json({ data: formatSettings(settings) })
+}
+
+export const deleteAccount = async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
+  }
+
+  const result = await deleteUserAccount(req.user.sub)
+  res.json({
+    data: {
+      deleted_at: result.deleted_at,
+      message: 'Account deleted',
+    },
+  })
 }

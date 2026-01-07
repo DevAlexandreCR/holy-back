@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { requireAuth } from '../auth/auth.middleware'
+import { optionalAuth, requireAuth } from '../auth/auth.middleware'
 import {
   getTodayVerse,
   getTodayVerseChapter,
@@ -15,11 +15,12 @@ import {
 
 const router = Router()
 
-// All verse endpoints require authentication
+router.get('/today', optionalAuth, getTodayVerse)
+
+// All remaining verse endpoints require authentication
 router.use(requireAuth)
 
 router.get('/today/chapter', getTodayVerseChapter)
-router.get('/today', getTodayVerse)
 router.get('/saved', listSavedVersesHandler)
 router.post('/:libraryVerseId/save', saveVerseHandler)
 router.delete('/:libraryVerseId/save', removeSavedVerseHandler)

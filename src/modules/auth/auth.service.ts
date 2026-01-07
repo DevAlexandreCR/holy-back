@@ -82,6 +82,10 @@ export const loginUser = async (input: LoginInput) => {
     throw new AppError('Invalid email or password', 'INVALID_CREDENTIALS', 401);
   }
 
+  if (user.deletedAt) {
+    throw new AppError('Account deleted', 'ACCOUNT_DELETED', 401);
+  }
+
   const isValid = await verifyPassword(input.password, user.passwordHash);
   if (!isValid) {
     throw new AppError('Invalid email or password', 'INVALID_CREDENTIALS', 401);
@@ -166,6 +170,10 @@ export const getUserWithSettings = async (userId: string) => {
 
   if (!user) {
     throw new AppError('User not found', 'USER_NOT_FOUND', 404);
+  }
+
+  if (user.deletedAt) {
+    throw new AppError('Account deleted', 'ACCOUNT_DELETED', 401);
   }
 
   const settings = await ensureSettings(user.id);

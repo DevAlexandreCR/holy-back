@@ -1,19 +1,62 @@
 import { NextFunction, Request, Response } from 'express';
-import { AppError } from '../../common/errors';
+import { AppError, isAppError } from '../../common/errors';
+import { prisma } from '../../config/db';
 import { verifyAccessToken } from './jwt';
 
-export const requireAuth = (req: Request, _res: Response, next: NextFunction) => {
-  const header = req.headers.authorization;
+const ensureActiveUser = async (userId: string) => {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { deletedAt: true },
+  });
+
+  if (!user) {
+    throw new AppError('Invalid or expired token', 'INVALID_TOKEN', 401);
+  }
+
+  if (user.deletedAt) {
+    throw new AppError('Account deleted', 'ACCOUNT_DELETED', 401);
+  }
+};
+
+const getBearerToken = (header?: string) => {
   if (!header || !header.startsWith('Bearer ')) {
+    return null;
+  }
+  return header.replace('Bearer ', '').trim();
+};
+
+export const requireAuth = async (req: Request, _res: Response, next: NextFunction) => {
+  const token = getBearerToken(req.headers.authorization);
+  if (!token) {
     return next(new AppError('Authentication required', 'AUTH_REQUIRED', 401));
   }
 
-  const token = header.replace('Bearer ', '').trim();
+  try {
+    req.user = verifyAccessToken(token);
+    await ensureActiveUser(req.user.sub);
+    return next();
+  } catch (error) {
+    if (isAppError(error)) {
+      return next(error);
+    }
+    return next(new AppError('Invalid or expired token', 'INVALID_TOKEN', 401, error));
+  }
+};
+
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
+  const token = getBearerToken(req.headers.authorization);
+  if (!token) {
+    return next();
+  }
 
   try {
     req.user = verifyAccessToken(token);
+    await ensureActiveUser(req.user.sub);
     return next();
   } catch (error) {
+    if (isAppError(error)) {
+      return next(error);
+    }
     return next(new AppError('Invalid or expired token', 'INVALID_TOKEN', 401, error));
   }
 };

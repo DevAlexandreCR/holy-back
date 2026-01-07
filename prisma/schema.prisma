@@ -16,6 +16,8 @@ model User {
   updatedAt           DateTime              @updatedAt @map("updated_at")
   resetToken          String?               @map("reset_token")
   resetTokenExpiresAt DateTime?             @map("reset_token_expires_at")
+  deletedAt           DateTime?             @map("deleted_at")
+  deletedReason       String?               @map("deleted_reason")
   settings            UserSettings?
   verseHistory        UserVerseHistory[]
   themePreferences    UserThemePreference[]
