@@ -4,6 +4,7 @@ import { formatReference } from './libraryLoader.service'
 import { convertBookToApiCode, getBookDisplayName } from '../bible/bookApiMapping'
 import { config } from '../../config/env'
 import { isVerseSaved } from './savedVerse.service'
+import { ensureSettings } from '../user/userSettings.service'
 
 const prisma = new PrismaClient()
 const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
@@ -60,20 +61,31 @@ function shouldTryCache(cachedCount: number): boolean {
  * Resolve the user's preferred Bible version
  */
 async function resolveUserVersion(userId: string): Promise<BibleVersion> {
-  const userSettings = await prisma.userSettings.findUnique({
-    where: { userId },
-    include: { preferredVersion: true },
-  })
-
-  if (userSettings?.preferredVersion) {
-    return userSettings.preferredVersion
+  const settings = await ensureSettings(userId)
+  if (settings.preferredVersionId) {
+    const preferredVersion = await prisma.bibleVersion.findUnique({
+      where: { id: settings.preferredVersionId },
+    })
+    if (preferredVersion) {
+      return preferredVersion
+    }
   }
 
-  // No preferred version and no fallback - user must select one
-  const error: any = new Error('No Bible version selected. Please select a Bible version in settings.')
-  error.code = 'NO_VERSION_SELECTED'
-  error.statusCode = 400
-  throw error
+  const fallback = await prisma.bibleVersion.findFirst({
+    where: { isActive: true },
+    orderBy: { id: 'asc' },
+  })
+
+  if (!fallback) {
+    throw new Error('No active Bible versions available')
+  }
+
+  await prisma.userSettings.update({
+    where: { userId },
+    data: { preferredVersionId: fallback.id },
+  })
+
+  return fallback
 }
 
 async function resolveGuestVersion(): Promise<BibleVersion> {
