@@ -1,9 +1,11 @@
+import { UserRole } from '@prisma/client';
 import jwt, { JwtPayload, SignOptions } from 'jsonwebtoken';
 import { config } from '../../config/env';
 
 export type AuthTokenPayload = {
   sub: string;
   email: string;
+  role?: UserRole;
 };
 
 type TokenType = 'access' | 'refresh';
@@ -27,7 +29,11 @@ const verifyToken = (token: string, type: TokenType): AuthTokenPayload => {
   if (!decoded.sub || !decoded.email) {
     throw new Error('Invalid token payload');
   }
-  return { sub: decoded.sub as string, email: decoded.email as string };
+  const role = decoded.role as UserRole | undefined;
+  if (role && !Object.values(UserRole).includes(role)) {
+    throw new Error('Invalid token payload');
+  }
+  return { sub: decoded.sub as string, email: decoded.email as string, role };
 };
 
 export const signAccessToken = (payload: AuthTokenPayload): string => signToken(payload, 'access');

@@ -27,12 +27,14 @@ type ResetPasswordInput = {
 const toAuthPayload = (user: User) => ({
   sub: user.id,
   email: user.email,
+  role: user.role,
 });
 
 const sanitizeUser = (user: User) => ({
   id: user.id,
   name: user.name,
   email: user.email,
+  role: user.role,
 });
 
 const ensureUniqueEmail = async (email: string): Promise<void> => {

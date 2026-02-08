@@ -13,7 +13,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "sync:bible-versions": "ts-node-dev --transpile-only src/scripts/syncBibleVersions.ts",
-    "seed:library": "ts-node-dev --transpile-only src/scripts/seedLibraryVerses.ts"
+    "seed:library": "ts-node-dev --transpile-only src/scripts/seedLibraryVerses.ts",
+    "seed:admin": "ts-node-dev --transpile-only src/scripts/seed-admin.ts"
   },
   "keywords": [],
   "author": "",

@@ -7,11 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  EDITOR
+  LEAD
+  ADMIN
+}
+
 model User {
   id                  String                @id @default(uuid()) @db.Char(36)
   name                String
   email               String                @unique
   passwordHash        String                @map("password_hash")
+  role                UserRole              @default(USER)
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
   resetToken          String?               @map("reset_token")

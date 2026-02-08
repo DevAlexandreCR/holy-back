@@ -6,7 +6,7 @@ import { verifyAccessToken } from './jwt';
 const ensureActiveUser = async (userId: string) => {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { deletedAt: true },
+    select: { deletedAt: true, role: true },
   });
 
   if (!user) {
@@ -16,6 +16,8 @@ const ensureActiveUser = async (userId: string) => {
   if (user.deletedAt) {
     throw new AppError('Account deleted', 'ACCOUNT_DELETED', 401);
   }
+
+  return user.role;
 };
 
 const getBearerToken = (header?: string) => {
@@ -32,8 +34,9 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
   }
 
   try {
-    req.user = verifyAccessToken(token);
-    await ensureActiveUser(req.user.sub);
+    const payload = verifyAccessToken(token);
+    const role = await ensureActiveUser(payload.sub);
+    req.user = { ...payload, role };
     return next();
   } catch (error) {
     if (isAppError(error)) {
@@ -50,8 +53,9 @@ export const optionalAuth = async (req: Request, _res: Response, next: NextFunct
   }
 
   try {
-    req.user = verifyAccessToken(token);
-    await ensureActiveUser(req.user.sub);
+    const payload = verifyAccessToken(token);
+    const role = await ensureActiveUser(payload.sub);
+    req.user = { ...payload, role };
     return next();
   } catch (error) {
     if (isAppError(error)) {
