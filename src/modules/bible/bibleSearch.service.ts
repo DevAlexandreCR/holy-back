@@ -245,21 +245,23 @@ const resolveBookName = (bookRaw: string): BookEntry | null => {
     return resolveBookName(`1 ${normalized}`)
   }
 
-  let best: { entry: BookEntry; score: number } | null = null
+  let bestEntry: BookEntry | null = null
+  let bestScore = 0
   const minScore = normalized.length <= 2 ? 0.85 : 0.6
 
   BOOK_ENTRIES.forEach((entry) => {
     entry.aliases.forEach((alias) => {
       if (normalized.length <= 2 && !alias.startsWith(normalized)) return
       const score = scoreMatch(normalized, alias)
-      if (!best || score > best.score) {
-        best = { entry, score }
+      if (!bestEntry || score > bestScore) {
+        bestEntry = entry
+        bestScore = score
       }
     })
   })
 
-  if (!best || best.score < minScore) return null
-  return best.entry
+  if (!bestEntry || bestScore < minScore) return null
+  return bestEntry
 }
 
 const extractReference = (query: string) => {
