@@ -59,7 +59,7 @@ router.put(
 router.delete(
   '/:id',
   requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
+  requireRole([UserRole.ADMIN]),
   deleteDevotionalHandler
 )
 router.post(

@@ -51,6 +51,12 @@ const ensureOwnerOrAdmin = (ownerId: string, role?: UserRole, userId?: string) =
   }
 }
 
+const ensureAdmin = (role?: UserRole) => {
+  if (role !== UserRole.ADMIN) {
+    throw new AppError('Insufficient permissions', 'FORBIDDEN', 403)
+  }
+}
+
 export const createDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   const body = parseOrThrow(createDevotionalSchema, req.body)
@@ -158,8 +164,8 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
 export const deleteDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-  ensureOwnerOrAdmin(devotional.authorId, req.user?.role, req.user?.sub)
+  ensureAdmin(req.user?.role)
+  await getDevotionalAuthorId(devotionalId)
 
   await deleteDevotional(devotionalId)
   res.json({ data: { success: true } })

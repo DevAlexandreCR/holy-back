@@ -224,11 +224,22 @@ export const updateDevotional = async (params: {
 }) => {
   const devotional = await prisma.devotional.findUnique({
     where: { id: params.devotionalId },
-    select: { id: true },
+    select: { id: true, status: true },
   })
 
   if (!devotional) {
     throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+  }
+
+  if (
+    devotional.status === DevotionalStatus.PUBLISHED ||
+    devotional.status === DevotionalStatus.ARCHIVED
+  ) {
+    throw new AppError(
+      'Published or archived devotionals cannot be edited',
+      'DEVOTIONAL_EDIT_NOT_ALLOWED',
+      403
+    )
   }
 
   if (params.content !== undefined) {
