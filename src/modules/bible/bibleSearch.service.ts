@@ -174,6 +174,8 @@ const normalizeQuery = (query: string) => {
   const normalized = stripAccents(query)
     .toLowerCase()
     .replace(/[;,()\[\]{}]/g, ' ')
+    .replace(/([a-z])(\d)/g, '$1 $2')
+    .replace(/(\d)([a-z])/g, '$1 $2')
     .replace(/\s+/g, ' ')
     .trim()
 
@@ -270,6 +272,7 @@ const extractReference = (query: string) => {
     /^(.*?)\s+capitulo\s+(\d+)(?:\s+verso\s+(\d+)(?:\s*(?:-|a|al|hasta)\s*(\d+))?)?$/
   const withVerseWords =
     /^(.*?)\s+(\d+)\s+verso\s+(\d+)(?:\s*(?:-|a|al|hasta)\s*(\d+))?$/
+  const withSpacedRange = /^(.*?)\s+(\d+)\s+(\d+)\s+(\d+)$/
   const withLooseVerses =
     /^(.*?)\s+(\d+)\s+(\d+)(?:\s*(?:-|a|al|hasta)\s*(\d+))?$/
   const chapterOnly = /^(.*?)\s+(\d+)$/
@@ -301,6 +304,17 @@ const extractReference = (query: string) => {
   const matchVerseWords = query.match(withVerseWords)
   if (matchVerseWords) {
     const [, book, chapter, verseStart, verseEnd] = matchVerseWords
+    return {
+      book,
+      chapter: Number(chapter),
+      verseStart: Number(verseStart),
+      verseEnd: verseEnd ? Number(verseEnd) : undefined,
+    }
+  }
+
+  const matchSpacedRange = query.match(withSpacedRange)
+  if (matchSpacedRange) {
+    const [, book, chapter, verseStart, verseEnd] = matchSpacedRange
     return {
       book,
       chapter: Number(chapter),
@@ -448,8 +462,19 @@ export const searchBible = async (
     throw new AppError('No se pudo interpretar la búsqueda', 'INVALID_QUERY', 400)
   }
 
-  const reference = parseReference(query)
   const version = await resolveVersion(userId, versionId)
+  let reference: ParsedReference
+  try {
+    reference = parseReference(query)
+  } catch (error) {
+    if (
+      error instanceof AppError &&
+      ['INVALID_QUERY', 'BOOK_NOT_FOUND', 'INVALID_REFERENCE'].includes(error.code)
+    ) {
+      return null
+    }
+    throw error
+  }
   const bookCode = convertBookToApiCode(reference.bookKey)
 
   try {
@@ -510,10 +535,10 @@ export const searchBible = async (
       0
     )
 
-    return {
-      reference: buildReferenceResponse(
-        reference,
-        responseVerses[0].verseNumber,
+      return {
+        reference: buildReferenceResponse(
+          reference,
+          responseVerses[0].verseNumber,
         responseVerses[responseVerses.length - 1].verseNumber
       ),
       verses: responseVerses,
@@ -528,6 +553,9 @@ export const searchBible = async (
     }
   } catch (error) {
     if (error instanceof AppError) {
+      if (error.code === 'INVALID_REFERENCE') {
+        return null
+      }
       throw error
     }
     throw new AppError('Error al obtener los versículos', 'EXTERNAL_API_ERROR', 502, error)
