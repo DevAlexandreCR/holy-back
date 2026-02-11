@@ -16,6 +16,12 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   })
 })
 
+function trackEvent(name, params = {}) {
+  if (typeof window.gtag === 'function') {
+    window.gtag('event', name, params)
+  }
+}
+
 // Navbar background on scroll
 const navbar = document.querySelector('.navbar')
 let lastScroll = 0
@@ -54,6 +60,26 @@ const observer = new IntersectionObserver((entries) => {
 document.querySelectorAll('[data-aos]').forEach(el => {
   observer.observe(el)
 })
+
+const trackedSections = document.querySelectorAll('[data-track]')
+if (trackedSections.length > 0) {
+  const trackObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const eventName = entry.target.dataset.track
+        const label = entry.target.dataset.trackLabel
+        if (eventName) {
+          trackEvent(eventName, { label })
+        }
+        trackObserver.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.4 })
+
+  trackedSections.forEach(section => {
+    trackObserver.observe(section)
+  })
+}
 
 // Create floating particles dynamically (estrellas brillantes)
 function createParticles() {
@@ -150,25 +176,28 @@ document.head.appendChild(style)
 createParticles()
 
 // Counter animation for stats
-function animateCounter(element, target, duration = 2000) {
+function animateCounter(element, target, duration = 2000, suffix = '') {
   const start = 0
   const increment = target / (duration / 16) // 60fps
   let current = start
 
+  const formatValue = (value) => {
+    if (target >= 1000) {
+      return Math.floor(value / 1000) + 'K+'
+    }
+    if (target.toString().includes('.')) {
+      return value.toFixed(1) + '★'
+    }
+    return Math.floor(value) + suffix
+  }
+
   const timer = setInterval(() => {
     current += increment
     if (current >= target) {
-      element.textContent = target
+      element.textContent = formatValue(target)
       clearInterval(timer)
     } else {
-      // Format number based on target
-      if (target >= 1000) {
-        element.textContent = Math.floor(current / 1000) + 'K+'
-      } else if (target.toString().includes('.')) {
-        element.textContent = current.toFixed(1) + '★'
-      } else {
-        element.textContent = Math.floor(current)
-      }
+      element.textContent = formatValue(current)
     }
   }, 16)
 }
@@ -198,6 +227,9 @@ const statsObserver = new IntersectionObserver((entries) => {
               stat.textContent = current.toFixed(1) + '★'
             }
           }, 50)
+        } else if (text.endsWith('+')) {
+          target = parseInt(text.replace('+', ''))
+          animateCounter(stat, target, 2000, '+')
         } else {
           target = parseInt(text)
           animateCounter(stat, target, 2000)
@@ -211,6 +243,34 @@ const statsObserver = new IntersectionObserver((entries) => {
 const downloadSection = document.querySelector('.download-stats')
 if (downloadSection) {
   statsObserver.observe(downloadSection)
+}
+
+const faqItems = document.querySelectorAll('.faq-item')
+if (faqItems.length > 0) {
+  faqItems.forEach(item => {
+    const button = item.querySelector('.faq-question')
+    if (!button) return
+
+    button.addEventListener('click', () => {
+      const isOpen = item.classList.contains('is-open')
+      faqItems.forEach(other => {
+        if (other !== item) {
+          other.classList.remove('is-open')
+          const otherButton = other.querySelector('.faq-question')
+          if (otherButton) {
+            otherButton.setAttribute('aria-expanded', 'false')
+          }
+        }
+      })
+      item.classList.toggle('is-open')
+      button.setAttribute('aria-expanded', String(!isOpen))
+
+      if (!isOpen) {
+        const label = button.querySelector('span')?.textContent?.trim() || 'faq'
+        trackEvent('faq_open', { label })
+      }
+    })
+  })
 }
 
 // Add parallax effect to hero
