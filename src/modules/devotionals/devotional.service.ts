@@ -48,6 +48,7 @@ const formatDevotional = (
   ...(options.includeContent ? { content: devotional.content } : {}),
   status: devotional.status,
   cover_image_url: devotional.coverImageUrl,
+  cover_image_focus_y: devotional.coverImageFocusY,
   view_count: devotional.viewCount,
   published_at: toIso(devotional.publishedAt),
   created_at: devotional.createdAt.toISOString(),
@@ -106,6 +107,7 @@ export const createDevotional = async (params: {
   title: string
   content: Prisma.InputJsonValue
   coverImageUrl?: string | null
+  coverImageFocusY?: number | null
   verseReferences: {
     book: string
     chapter: number
@@ -129,6 +131,7 @@ export const createDevotional = async (params: {
       authorId: params.authorId,
       status: normalizedStatus,
       coverImageUrl: params.coverImageUrl ?? null,
+      coverImageFocusY: params.coverImageFocusY ?? null,
       publishedAt,
       verseReferences: {
         create: params.verseReferences.map((reference) => ({
@@ -213,6 +216,7 @@ export const updateDevotional = async (params: {
   title?: string
   content?: Prisma.InputJsonValue
   coverImageUrl?: string | null
+  coverImageFocusY?: number | null
   verseReferences?: {
     book: string
     chapter: number
@@ -272,6 +276,9 @@ export const updateDevotional = async (params: {
     if (params.content !== undefined) data.content = params.content
     if (params.coverImageUrl !== undefined) {
       data.coverImageUrl = params.coverImageUrl
+    }
+    if (params.coverImageFocusY !== undefined) {
+      data.coverImageFocusY = params.coverImageFocusY
     }
 
     if (Object.keys(data).length) {

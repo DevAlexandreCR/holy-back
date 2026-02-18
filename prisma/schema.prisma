@@ -184,6 +184,7 @@ model Devotional {
   author        User             @relation(fields: [authorId], references: [id])
   status        DevotionalStatus @default(DRAFT)
   coverImageUrl String?          @map("cover_image_url")
+  coverImageFocusY Float?        @map("cover_image_focus_y")
   viewCount     Int              @default(0) @map("view_count")
   publishedAt   DateTime?        @map("published_at")
   createdAt     DateTime         @default(now()) @map("created_at")

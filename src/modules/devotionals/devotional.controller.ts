@@ -67,6 +67,7 @@ export const createDevotionalHandler = async (req: Request, res: Response) => {
     title: body.title,
     content,
     coverImageUrl: body.cover_image_url ?? null,
+    coverImageFocusY: body.cover_image_focus_y ?? null,
     verseReferences: body.verse_references,
     status: body.status,
   })
@@ -154,6 +155,7 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
     title: body.title,
     content,
     coverImageUrl: body.cover_image_url,
+    coverImageFocusY: body.cover_image_focus_y,
     verseReferences: body.verse_references,
     viewerId: req.user?.sub,
   })

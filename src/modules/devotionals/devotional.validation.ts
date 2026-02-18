@@ -31,6 +31,7 @@ export const createDevotionalSchema = z
     title: z.string().min(1).max(120),
     content: devotionalContentSchema,
     cover_image_url: z.string().max(512).optional().nullable(),
+    cover_image_focus_y: z.number().min(-1).max(1).optional().nullable(),
     verse_references: z.array(verseReferenceSchema).min(1),
     status: z.nativeEnum(DevotionalStatus).optional(),
   })
@@ -47,6 +48,7 @@ export const updateDevotionalSchema = z
     title: z.string().min(1).max(120).optional(),
     content: devotionalContentSchema.optional(),
     cover_image_url: z.string().max(512).optional().nullable(),
+    cover_image_focus_y: z.number().min(-1).max(1).optional().nullable(),
     verse_references: z.array(verseReferenceSchema).min(1).optional(),
   })
 
