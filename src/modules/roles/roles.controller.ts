@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
-import { UserRole } from '@prisma/client'
+import { Prisma, UserRole } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
 import { canManageRole, getRolePermissions } from '../../common/utils/permissions'
@@ -11,6 +11,7 @@ const updateRoleSchema = z.object({
 
 const listSchema = z.object({
   role: z.nativeEnum(UserRole).optional(),
+  search: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 })
@@ -87,7 +88,17 @@ export const updateUserRole = async (req: Request, res: Response) => {
 
 export const listUsersWithRoles = async (req: Request, res: Response) => {
   const query = parseOrThrow(listSchema, req.query)
-  const where = query.role ? { role: query.role } : {}
+  const search = query.search?.trim()
+  const where: Prisma.UserWhereInput = {}
+  if (query.role) {
+    where.role = query.role
+  }
+  if (search) {
+    where.OR = [
+      { name: { contains: search } },
+      { email: { contains: search } },
+    ]
+  }
   const skip = (query.page - 1) * query.limit
 
   const [users, total] = await Promise.all([
