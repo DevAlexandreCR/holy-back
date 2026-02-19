@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "64NKKX69TG.gorda.holyverso",
+        "paths": [
+          "/devotionals/*",
+          "/reset-password*"
+        ]
+      }
+    ]
+  }
+}

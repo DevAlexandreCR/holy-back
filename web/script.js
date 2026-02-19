@@ -25,6 +25,7 @@ function trackEvent(name, params = {}) {
 const HOLYVERSO_SCHEME_BASE = 'holyverso://app'
 const IOS_STORE_URL = 'https://apps.apple.com/app/holyverso/id6757228086'
 const ANDROID_STORE_URL = 'https://play.google.com/store/apps/details?id=gorda.holyverso'
+const DESKTOP_DOWNLOAD_FALLBACK = '#download'
 
 function getMobilePlatform() {
   const userAgent = navigator.userAgent || ''
@@ -90,8 +91,36 @@ function openAppWithStoreFallback(deepLink) {
   window.location.href = deepLink
 }
 
+function replacePrimaryCtaForDeepLink(deepLink) {
+  const primaryButton = document.querySelector('.hero-buttons .btn.btn-primary')
+  if (!primaryButton) {
+    return
+  }
+
+  const platform = getMobilePlatform()
+  if (!platform) {
+    primaryButton.setAttribute('href', DESKTOP_DOWNLOAD_FALLBACK)
+    return
+  }
+
+  const icon = `
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M5 10H15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M10 5L15 10L10 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  `
+
+  primaryButton.setAttribute('href', deepLink)
+  primaryButton.innerHTML = `${icon}Abrir en la app`
+  primaryButton.addEventListener('click', (event) => {
+    event.preventDefault()
+    openAppWithStoreFallback(deepLink)
+  })
+}
+
 const incomingDeepLink = getDeepLinkFromCurrentLocation()
 if (incomingDeepLink) {
+  replacePrimaryCtaForDeepLink(incomingDeepLink)
   openAppWithStoreFallback(incomingDeepLink)
 }
 
