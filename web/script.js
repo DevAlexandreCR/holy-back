@@ -22,6 +22,79 @@ function trackEvent(name, params = {}) {
   }
 }
 
+const HOLYVERSO_SCHEME_BASE = 'holyverso://app'
+const IOS_STORE_URL = 'https://apps.apple.com/app/holyverso/id6757228086'
+const ANDROID_STORE_URL = 'https://play.google.com/store/apps/details?id=gorda.holyverso'
+
+function getMobilePlatform() {
+  const userAgent = navigator.userAgent || ''
+  const isAndroid = /Android/i.test(userAgent)
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent)
+  if (isAndroid) return 'android'
+  if (isIOS) return 'ios'
+  return null
+}
+
+function getStoreUrlForPlatform(platform) {
+  if (platform === 'ios') {
+    return IOS_STORE_URL
+  }
+  if (platform === 'android') {
+    return ANDROID_STORE_URL
+  }
+  return null
+}
+
+function getDeepLinkFromCurrentLocation() {
+  const { pathname, search } = window.location
+
+  if (pathname.startsWith('/devotionals/')) {
+    return `${HOLYVERSO_SCHEME_BASE}${pathname}${search || ''}`
+  }
+
+  if (pathname.startsWith('/reset-password')) {
+    return `${HOLYVERSO_SCHEME_BASE}/reset-password${search || ''}`
+  }
+
+  const params = new URLSearchParams(search)
+  const deepLinkParam = params.get('deeplink')
+  if (deepLinkParam && deepLinkParam.startsWith('holyverso://')) {
+    return deepLinkParam
+  }
+
+  return null
+}
+
+function openAppWithStoreFallback(deepLink) {
+  const platform = getMobilePlatform()
+  const fallbackUrl = getStoreUrlForPlatform(platform)
+  if (!platform || !fallbackUrl) {
+    return
+  }
+
+  let appOpened = false
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      appOpened = true
+    }
+  }
+
+  document.addEventListener('visibilitychange', onVisibilityChange)
+  window.setTimeout(() => {
+    document.removeEventListener('visibilitychange', onVisibilityChange)
+    if (!appOpened) {
+      window.location.replace(fallbackUrl)
+    }
+  }, 2000)
+
+  window.location.href = deepLink
+}
+
+const incomingDeepLink = getDeepLinkFromCurrentLocation()
+if (incomingDeepLink) {
+  openAppWithStoreFallback(incomingDeepLink)
+}
+
 // Navbar background on scroll
 const navbar = document.querySelector('.navbar')
 let lastScroll = 0
