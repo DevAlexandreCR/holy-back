@@ -67,6 +67,39 @@ type FeedCursor = {
   id: string
 }
 
+const isImageAssetUniqueConstraintError = (error: unknown) => {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
+    return false
+  }
+
+  if (error.code !== 'P2002') {
+    return false
+  }
+
+  const target = error.meta?.target
+  if (Array.isArray(target)) {
+    return target.includes('image_asset_id') || target.includes('imageAssetId')
+  }
+
+  if (typeof target === 'string') {
+    return target.includes('image_asset_id') || target.includes('imageAssetId')
+  }
+
+  return error.message.includes('devotionals_image_asset_id_key')
+}
+
+const rethrowKnownDevotionalWriteError = (error: unknown): never => {
+  if (isImageAssetUniqueConstraintError(error)) {
+    throw new AppError(
+      'Image asset is already attached to another devotional',
+      'IMAGE_ASSET_ALREADY_ATTACHED',
+      409
+    )
+  }
+
+  throw error
+}
+
 const toIso = (value: Date | null | undefined) => (value ? value.toISOString() : null)
 
 const formatAuthor = (author: { id: string; name: string }) => ({
@@ -689,36 +722,40 @@ export const createDevotional = async (params: {
 }) => {
   ensureContentSize(params.content)
   ensurePrimaryReference(params.verseReferences)
-  const devotional = await prisma.$transaction(async (tx) => {
-    await ensureImageAssetAttachable(tx, params.authorId, params.imageAssetId)
+  try {
+    const devotional = await prisma.$transaction(async (tx) => {
+      await ensureImageAssetAttachable(tx, params.authorId, params.imageAssetId)
 
-    return tx.devotional.create({
-      data: {
-        title: params.title.trim(),
-        content: params.content,
-        authorId: params.authorId,
-        imageAssetId: params.imageAssetId ?? null,
-        coverImageFocusY: params.coverImageFocusY ?? null,
-        publicationState: DevotionalPublicationState.DRAFT,
-        moderationStatus: DevotionalModerationStatus.CLEAR,
-        verseReferences: {
-          create: params.verseReferences.map((reference) => ({
-            book: reference.book.trim(),
-            chapter: reference.chapter,
-            verseStart: reference.verse_start,
-            verseEnd: reference.verse_end ?? null,
-            isPrimary: reference.is_primary ?? false,
-          })),
+      return tx.devotional.create({
+        data: {
+          title: params.title.trim(),
+          content: params.content,
+          authorId: params.authorId,
+          imageAssetId: params.imageAssetId ?? null,
+          coverImageFocusY: params.coverImageFocusY ?? null,
+          publicationState: DevotionalPublicationState.DRAFT,
+          moderationStatus: DevotionalModerationStatus.CLEAR,
+          verseReferences: {
+            create: params.verseReferences.map((reference) => ({
+              book: reference.book.trim(),
+              chapter: reference.chapter,
+              verseStart: reference.verse_start,
+              verseEnd: reference.verse_end ?? null,
+              isPrimary: reference.is_primary ?? false,
+            })),
+          },
         },
-      },
-      include: devotionalInclude(params.authorId),
+        include: devotionalInclude(params.authorId),
+      })
     })
-  })
 
-  return formatDevotional(devotional, {
-    includeContent: true,
-    viewerId: params.authorId,
-  })
+    return formatDevotional(devotional, {
+      includeContent: true,
+      viewerId: params.authorId,
+    })
+  } catch (error) {
+    rethrowKnownDevotionalWriteError(error)
+  }
 }
 
 export const listDevotionals = async (params: {
@@ -900,84 +937,88 @@ export const updateDevotional = async (params: {
     ensurePrimaryReference(params.verseReferences)
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
-    const existing = await tx.devotional.findUnique({
-      where: { id: params.devotionalId },
-      select: { publicationState: true },
-    })
-
-    if (!existing) {
-      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
-    }
-
-    if (existing.publicationState === DevotionalPublicationState.ARCHIVED) {
-      throw new AppError(
-        'Archived devotionals cannot be edited',
-        'DEVOTIONAL_EDIT_NOT_ALLOWED',
-        403
-      )
-    }
-
-    await ensureImageAssetAttachable(tx, params.viewerId, params.imageAssetId)
-
-    if (params.verseReferences) {
-      await tx.devotionalVerseReference.deleteMany({
-        where: { devotionalId: params.devotionalId },
+  try {
+    const updated = await prisma.$transaction(async (tx) => {
+      const existing = await tx.devotional.findUnique({
+        where: { id: params.devotionalId },
+        select: { publicationState: true },
       })
-      await tx.devotionalVerseReference.createMany({
-        data: params.verseReferences.map((reference) => ({
-          devotionalId: params.devotionalId,
-          book: reference.book.trim(),
-          chapter: reference.chapter,
-          verseStart: reference.verse_start,
-          verseEnd: reference.verse_end ?? null,
-          isPrimary: reference.is_primary ?? false,
-        })),
-      })
-    }
 
-    const data: Prisma.DevotionalUpdateInput = {}
-    if (params.title !== undefined) {
-      data.title = params.title.trim()
-    }
-    if (params.content !== undefined) {
-      data.content = params.content
-    }
-    if (params.imageAssetId !== undefined) {
-      data.imageAsset = params.imageAssetId
-        ? { connect: { id: params.imageAssetId } }
-        : { disconnect: true }
-      if (params.imageAssetId === null) {
-        data.imageUrl = null
-        data.imageModerationStatus = DevotionalImageModerationStatus.PENDING
-        data.imageModerationResultRaw = Prisma.JsonNull
+      if (!existing) {
+        throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
       }
-    }
-    if (params.coverImageFocusY !== undefined) {
-      data.coverImageFocusY = params.coverImageFocusY
-    }
 
-    await tx.devotional.update({
-      where: { id: params.devotionalId },
-      data,
+      if (existing.publicationState === DevotionalPublicationState.ARCHIVED) {
+        throw new AppError(
+          'Archived devotionals cannot be edited',
+          'DEVOTIONAL_EDIT_NOT_ALLOWED',
+          403
+        )
+      }
+
+      await ensureImageAssetAttachable(tx, params.viewerId, params.imageAssetId)
+
+      if (params.verseReferences) {
+        await tx.devotionalVerseReference.deleteMany({
+          where: { devotionalId: params.devotionalId },
+        })
+        await tx.devotionalVerseReference.createMany({
+          data: params.verseReferences.map((reference) => ({
+            devotionalId: params.devotionalId,
+            book: reference.book.trim(),
+            chapter: reference.chapter,
+            verseStart: reference.verse_start,
+            verseEnd: reference.verse_end ?? null,
+            isPrimary: reference.is_primary ?? false,
+          })),
+        })
+      }
+
+      const data: Prisma.DevotionalUpdateInput = {}
+      if (params.title !== undefined) {
+        data.title = params.title.trim()
+      }
+      if (params.content !== undefined) {
+        data.content = params.content
+      }
+      if (params.imageAssetId !== undefined) {
+        data.imageAsset = params.imageAssetId
+          ? { connect: { id: params.imageAssetId } }
+          : { disconnect: true }
+        if (params.imageAssetId === null) {
+          data.imageUrl = null
+          data.imageModerationStatus = DevotionalImageModerationStatus.PENDING
+          data.imageModerationResultRaw = Prisma.JsonNull
+        }
+      }
+      if (params.coverImageFocusY !== undefined) {
+        data.coverImageFocusY = params.coverImageFocusY
+      }
+
+      await tx.devotional.update({
+        where: { id: params.devotionalId },
+        data,
+      })
+
+      const devotional = await tx.devotional.findUnique({
+        where: { id: params.devotionalId },
+        include: devotionalInclude(params.viewerId),
+      })
+
+      if (!devotional) {
+        throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+      }
+
+      return devotional
     })
 
-    const devotional = await tx.devotional.findUnique({
-      where: { id: params.devotionalId },
-      include: devotionalInclude(params.viewerId),
+    return formatDevotional(updated, {
+      includeContent: true,
+      viewerId: params.viewerId,
     })
-
-    if (!devotional) {
-      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
-    }
-
-    return devotional
-  })
-
-  return formatDevotional(updated, {
-    includeContent: true,
-    viewerId: params.viewerId,
-  })
+  } catch (error) {
+    rethrowKnownDevotionalWriteError(error)
+  }
 }
 
 export const deleteDevotional = async (devotionalId: string) => {
