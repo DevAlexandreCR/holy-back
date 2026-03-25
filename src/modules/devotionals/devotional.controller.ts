@@ -1,10 +1,17 @@
-import { Request, Response } from 'express'
+import crypto from 'crypto'
 import { promises as fs } from 'fs'
 import path from 'path'
-import crypto from 'crypto'
+import { Request, Response } from 'express'
 import sharp from 'sharp'
+import {
+  DevotionalFeedEventType,
+  DevotionalImageAssetStatus,
+  DevotionalReportReason,
+  Prisma,
+  UserRole,
+} from '@prisma/client'
 import { z } from 'zod'
-import { DevotionalStatus, Prisma, UserRole } from '@prisma/client'
+import { prisma } from '../../config/db'
 import { AppError } from '../../common/errors'
 import {
   addComment,
@@ -13,19 +20,29 @@ import {
   deleteComment,
   deleteDevotional,
   getCommentAuthorId,
-  getDevotionalAuthorId,
   getDevotionalById,
+  getDevotionalSnapshot,
   listComments,
   listDevotionals,
+  listFeedDevotionals,
+  markReadComplete,
   publishDevotional,
+  recordFeedEvents,
+  reportDevotional,
+  saveDevotional,
+  shareDevotional,
   toggleDevotionalLike,
-  trackView,
+  unsaveDevotional,
   updateComment,
   updateDevotional,
 } from './devotional.service'
+import { moderateImageUpload } from './devotional.moderation'
 import {
   commentSchema,
   createDevotionalSchema,
+  devotionalReportSchema,
+  feedEventsSchema,
+  feedPaginationSchema,
   listDevotionalsSchema,
   paginationSchema,
   updateDevotionalSchema,
@@ -45,16 +62,32 @@ const ensureAuth = (req: Request) => {
   }
 }
 
-const ensureOwnerOrAdmin = (ownerId: string, role?: UserRole, userId?: string) => {
-  if (userId !== ownerId && role !== UserRole.ADMIN) {
+const ensureOwnerOrPrivileged = (
+  ownerId: string,
+  role?: UserRole | null,
+  userId?: string | null
+) => {
+  if (userId !== ownerId && role !== UserRole.ADMIN && role !== UserRole.EDITOR && role !== UserRole.LEAD) {
     throw new AppError('Insufficient permissions', 'FORBIDDEN', 403)
   }
 }
 
-const ensureAdmin = (role?: UserRole) => {
+const ensureAdmin = (role?: UserRole | null) => {
   if (role !== UserRole.ADMIN) {
     throw new AppError('Insufficient permissions', 'FORBIDDEN', 403)
   }
+}
+
+const ensurePublicInteraction = async (devotionalId: string) => {
+  const devotional = await getDevotionalSnapshot(devotionalId)
+  if (!devotional.isPubliclyVisible) {
+    throw new AppError(
+      'This devotional is not available for public interaction',
+      'DEVOTIONAL_NOT_PUBLIC',
+      403
+    )
+  }
+  return devotional
 }
 
 export const createDevotionalHandler = async (req: Request, res: Response) => {
@@ -66,33 +99,27 @@ export const createDevotionalHandler = async (req: Request, res: Response) => {
     authorId: req.user!.sub,
     title: body.title,
     content,
-    coverImageUrl: body.cover_image_url ?? null,
-    coverImageFocusY: body.cover_image_focus_y ?? null,
     verseReferences: body.verse_references,
-    status: body.status,
+    imageAssetId: body.image_asset_id ?? null,
+    coverImageFocusY: body.cover_image_focus_y ?? null,
   })
 
   res.json({ data: devotional })
 }
 
 export const listDevotionalsHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
   const query = parseOrThrow(listDevotionalsSchema, req.query)
-  const userId = req.user?.sub
-  const role = req.user?.role
-
-  const status = query.status ?? DevotionalStatus.PUBLISHED
+  const status = query.status ?? 'PUBLISHED'
+  const userId = req.user!.sub
+  const role = req.user!.role
   let authorId = query.authorId
 
-  if (status !== DevotionalStatus.PUBLISHED) {
-    if (!userId) {
-      throw new AppError('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-    if (!authorId && role !== UserRole.ADMIN) {
-      authorId = userId
-    }
-    if (authorId) {
-      ensureOwnerOrAdmin(authorId, role, userId)
-    }
+  if (!authorId && role !== UserRole.ADMIN) {
+    authorId = userId
+  }
+  if (authorId) {
+    ensureOwnerOrPrivileged(authorId, role, userId)
   }
 
   const pageRaw = query.page ? Number(query.page) : 1
@@ -111,26 +138,44 @@ export const listDevotionalsHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
-export const getDevotionalHandler = async (req: Request, res: Response) => {
-  const devotionalId = req.params.id
-  const userId = req.user?.sub
-  const role = req.user?.role
+export const listFeedHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  const query = parseOrThrow(feedPaginationSchema, req.query)
+  const limitRaw = query.limit ? Number(query.limit) : 20
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20
 
-  const devotional = await getDevotionalById({
-    devotionalId,
-    viewerId: userId,
+  const result = await listFeedDevotionals({
+    userId: req.user!.sub,
+    cursor: query.cursor,
+    limit,
   })
 
-  if (devotional.status !== DevotionalStatus.PUBLISHED) {
-    if (!userId) {
-      throw new AppError('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-    ensureOwnerOrAdmin(devotional.author.id, role, userId)
-  }
+  res.json({ data: result })
+}
 
-  if (devotional.status === DevotionalStatus.PUBLISHED) {
-    await trackView({ devotionalId, userId })
-  }
+export const recordFeedEventsHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  const body = parseOrThrow(feedEventsSchema, req.body)
+  const result = await recordFeedEvents({
+    userId: req.user!.sub,
+    events: body.events.map((event) => ({
+      eventId: event.event_id,
+      type: event.type as DevotionalFeedEventType,
+      devotionalId: event.devotional_id,
+      deliveryToken: event.delivery_token,
+      occurredAt: new Date(event.occurred_at),
+    })),
+  })
+
+  res.json({ data: result })
+}
+
+export const getDevotionalHandler = async (req: Request, res: Response) => {
+  const devotional = await getDevotionalById({
+    devotionalId: req.params.id,
+    viewerId: req.user?.sub,
+    viewerRole: req.user?.role,
+  })
 
   res.json({ data: devotional })
 }
@@ -144,20 +189,21 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
     throw new AppError('No fields to update', 'NO_UPDATES', 400)
   }
 
-  const devotional = await getDevotionalAuthorId(devotionalId)
-  ensureOwnerOrAdmin(devotional.authorId, req.user?.role, req.user?.sub)
-  const content = body.content
-    ? (JSON.parse(JSON.stringify(body.content)) as Prisma.InputJsonValue)
-    : undefined
+  const snapshot = await getDevotionalSnapshot(devotionalId)
+  ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
+  const content =
+    body.content !== undefined
+      ? (JSON.parse(JSON.stringify(body.content)) as Prisma.InputJsonValue)
+      : undefined
 
   const updated = await updateDevotional({
     devotionalId,
+    viewerId: req.user!.sub,
     title: body.title,
     content,
-    coverImageUrl: body.cover_image_url,
+    imageAssetId: body.image_asset_id,
     coverImageFocusY: body.cover_image_focus_y,
     verseReferences: body.verse_references,
-    viewerId: req.user?.sub,
   })
 
   res.json({ data: updated })
@@ -165,23 +211,21 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
 
 export const deleteDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const devotionalId = req.params.id
   ensureAdmin(req.user?.role)
-  await getDevotionalAuthorId(devotionalId)
-
-  await deleteDevotional(devotionalId)
+  await getDevotionalSnapshot(req.params.id)
+  await deleteDevotional(req.params.id)
   res.json({ data: { success: true } })
 }
 
 export const publishDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-  ensureOwnerOrAdmin(devotional.authorId, req.user?.role, req.user?.sub)
+  const snapshot = await getDevotionalSnapshot(req.params.id)
+  ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
 
   const result = await publishDevotional({
-    devotionalId,
-    viewerId: req.user?.sub,
+    devotionalId: req.params.id,
+    viewerId: req.user!.sub,
+    viewerRole: req.user?.role,
   })
 
   res.json({ data: result })
@@ -189,12 +233,11 @@ export const publishDevotionalHandler = async (req: Request, res: Response) => {
 
 export const archiveDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-  ensureOwnerOrAdmin(devotional.authorId, req.user?.role, req.user?.sub)
+  const snapshot = await getDevotionalSnapshot(req.params.id)
+  ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
 
   const result = await archiveDevotional({
-    devotionalId,
+    devotionalId: req.params.id,
     viewerId: req.user?.sub,
   })
 
@@ -203,60 +246,110 @@ export const archiveDevotionalHandler = async (req: Request, res: Response) => {
 
 export const toggleLikeHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-
-  if (devotional.status !== DevotionalStatus.PUBLISHED) {
-    ensureOwnerOrAdmin(devotional.authorId, req.user?.role, req.user?.sub)
+  const snapshot = await getDevotionalSnapshot(req.params.id)
+  if (!snapshot.isPubliclyVisible) {
+    ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
   }
 
   const result = await toggleDevotionalLike({
-    devotionalId,
+    devotionalId: req.params.id,
     userId: req.user!.sub,
   })
 
   res.json({ data: { liked: result.liked, likes_count: result.likesCount } })
 }
 
+export const saveDevotionalHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  await ensurePublicInteraction(req.params.id)
+  const result = await saveDevotional({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+  })
+
+  res.json({ data: { saved: result.saved, save_count: result.saveCount } })
+}
+
+export const unsaveDevotionalHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  await ensurePublicInteraction(req.params.id)
+  const result = await unsaveDevotional({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+  })
+
+  res.json({ data: { saved: result.saved, save_count: result.saveCount } })
+}
+
+export const shareDevotionalHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  await ensurePublicInteraction(req.params.id)
+  const result = await shareDevotional({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+  })
+
+  res.json({ data: { share_count: result.shareCount } })
+}
+
+export const readCompleteHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  await ensurePublicInteraction(req.params.id)
+  const result = await markReadComplete({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+  })
+
+  res.json({
+    data: {
+      read_complete: result.readComplete,
+      read_complete_count: result.readCompleteCount,
+    },
+  })
+}
+
+export const reportDevotionalHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  await ensurePublicInteraction(req.params.id)
+  const body = parseOrThrow(devotionalReportSchema, req.body)
+  const result = await reportDevotional({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+    reason: body.reason as DevotionalReportReason,
+    details: body.details ?? null,
+  })
+
+  res.json({
+    data: {
+      reported: result.reported,
+      report_count: result.reportCount,
+      escalated: result.escalated,
+    },
+  })
+}
+
 export const listCommentsHandler = async (req: Request, res: Response) => {
-  const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-  const userId = req.user?.sub
-
-  if (devotional.status !== DevotionalStatus.PUBLISHED) {
-    if (!userId) {
-      throw new AppError('Authentication required', 'AUTH_REQUIRED', 401)
-    }
-    ensureOwnerOrAdmin(devotional.authorId, req.user?.role, userId)
-  }
-
+  await ensurePublicInteraction(req.params.id)
   const query = parseOrThrow(paginationSchema, req.query)
   const pageRaw = query.page ? Number(query.page) : 1
   const limitRaw = query.limit ? Number(query.limit) : 50
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 50
 
-  const result = await listComments({ devotionalId, page, limit })
+  const result = await listComments({
+    devotionalId: req.params.id,
+    page,
+    limit,
+  })
   res.json({ data: result })
 }
 
 export const addCommentHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const devotionalId = req.params.id
-  const devotional = await getDevotionalAuthorId(devotionalId)
-
-  if (devotional.status !== DevotionalStatus.PUBLISHED) {
-    throw new AppError(
-      'Comments are only allowed on published devotionals',
-      'COMMENTS_NOT_ALLOWED',
-      403
-    )
-  }
-
+  await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(commentSchema, req.body)
-
   const comment = await addComment({
-    devotionalId,
+    devotionalId: req.params.id,
     userId: req.user!.sub,
     content: body.content,
   })
@@ -266,13 +359,12 @@ export const addCommentHandler = async (req: Request, res: Response) => {
 
 export const updateCommentHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const commentId = req.params.commentId
-  const comment = await getCommentAuthorId(commentId)
-  ensureOwnerOrAdmin(comment.userId, req.user?.role, req.user?.sub)
+  const comment = await getCommentAuthorId(req.params.commentId)
+  ensureOwnerOrPrivileged(comment.userId, req.user?.role, req.user?.sub)
 
   const body = parseOrThrow(commentSchema, req.body)
   const updated = await updateComment({
-    commentId,
+    commentId: req.params.commentId,
     content: body.content,
   })
 
@@ -281,11 +373,10 @@ export const updateCommentHandler = async (req: Request, res: Response) => {
 
 export const deleteCommentHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
-  const commentId = req.params.commentId
-  const comment = await getCommentAuthorId(commentId)
-  ensureOwnerOrAdmin(comment.userId, req.user?.role, req.user?.sub)
+  const comment = await getCommentAuthorId(req.params.commentId)
+  ensureOwnerOrPrivileged(comment.userId, req.user?.role, req.user?.sub)
 
-  await deleteComment(commentId)
+  await deleteComment(req.params.commentId)
   res.json({ data: { success: true } })
 }
 
@@ -296,7 +387,8 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
     throw new AppError('Image is required', 'IMAGE_REQUIRED', 400)
   }
 
-  const storageDir = path.join(process.cwd(), 'storage', 'devotionals', 'images')
+  const moderation = moderateImageUpload()
+  const storageDir = path.join(process.cwd(), 'storage', 'devotionals', 'tmp')
   await fs.mkdir(storageDir, { recursive: true })
 
   const extensionByType: Record<string, string> = {
@@ -312,6 +404,7 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
 
   const filename = `${crypto.randomUUID()}.${extension}`
   const outputPath = path.join(storageDir, filename)
+  const metadata = await sharp(req.file.buffer).metadata()
 
   let pipeline = sharp(req.file.buffer).resize({
     width: 1920,
@@ -328,6 +421,34 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
 
   await pipeline.toFile(outputPath)
 
-  const url = `/storage/devotionals/images/${filename}`
-  res.json({ data: { url } })
+  const tempUrl = `/storage/devotionals/tmp/${filename}`
+  const asset = await prisma.devotionalImageAsset.create({
+    data: {
+      userId: req.user!.sub,
+      status: moderation.attachable
+        ? DevotionalImageAssetStatus.ATTACHABLE
+        : DevotionalImageAssetStatus.REJECTED,
+      imageModerationStatus: moderation.moderationStatus,
+      moderationResultRaw: {
+        reason: moderation.reason,
+      },
+      mimeType: req.file.mimetype,
+      tempPath: outputPath,
+      tempUrl,
+      width: metadata.width ?? null,
+      height: metadata.height ?? null,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    },
+  })
+
+  res.json({
+    data: {
+      asset_id: asset.id,
+      image_moderation_status: asset.imageModerationStatus,
+      attachable: moderation.attachable,
+      preview_image_url: tempUrl,
+      width: asset.width,
+      height: asset.height,
+    },
+  })
 }

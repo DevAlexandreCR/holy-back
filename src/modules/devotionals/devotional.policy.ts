@@ -1,0 +1,100 @@
+import {
+  DevotionalPublicationState,
+  DevotionalReportReason,
+  UserRole,
+} from '@prisma/client'
+
+export const DEVOTIONAL_MAX_CONTENT_BYTES = 200 * 1024
+export const DEVOTIONAL_MAX_PAGE_LIMIT = 50
+export const DEVOTIONAL_FEED_DEFAULT_LIMIT = 20
+export const DEVOTIONAL_FEED_CANDIDATE_MULTIPLIER = 6
+export const DEVOTIONAL_PREVIEW_MAX_CHARS = 240
+export const DEVOTIONAL_WORDS_PER_MINUTE = 180
+
+export const DEVOTIONAL_FEED_ELIGIBLE_STATES = [
+  DevotionalPublicationState.PUBLISHED_LOW_REACH,
+  DevotionalPublicationState.TRENDING,
+  DevotionalPublicationState.FEATURED,
+] as const
+
+export const DEVOTIONAL_PUBLISHED_MANAGEMENT_STATES = [
+  DevotionalPublicationState.PUBLISHED_LOW_REACH,
+  DevotionalPublicationState.TRENDING,
+  DevotionalPublicationState.FEATURED,
+] as const
+
+export const devotionalFeedPolicy = {
+  dedupWindowHours: 72,
+  authorRepetitionMax: 2,
+  authorRepetitionWindow: 20,
+} as const
+
+export const devotionalRankingPolicy = {
+  featureDurationHours: 48,
+  privilegedLaunchScore: 1000,
+  promotion: {
+    trending: {
+      uniqueImpressions: 250,
+      score: 20,
+      readCompleteRate: 0.08,
+      saveRate: 0.03,
+      reportRate: 0.02,
+      skipRate: 0.8,
+    },
+    featured: {
+      uniqueImpressions: 1000,
+      score: 40,
+      readCompleteRate: 0.12,
+      shareRate: 0.02,
+      reportRate: 0.01,
+      skipRate: 0.7,
+    },
+  },
+  decay: {
+    trendingScoreFloor: 18,
+    featuredScoreFloor: 32,
+  },
+  scoreWeights: {
+    like: 0.5,
+    comment: 2,
+    share: 4,
+    save: 3,
+    readComplete: 3,
+    qualityRateMultiplier: 35,
+    reportPenalty: 10,
+    skipPenalty: 12,
+    authorPenaltyImpressionsDivisor: 200,
+  },
+} as const
+
+export const DEVOTIONAL_PRIVILEGED_FEATURE_ROLES = [
+  UserRole.ADMIN,
+  UserRole.EDITOR,
+] as const
+
+export const devotionalModerationPolicy = {
+  reportEscalation: {
+    distinctReports: 3,
+    distinctUsers: 3,
+  },
+  reviewKeywords: [
+    'casino',
+    'apuesta',
+    'apuestas',
+    'crypto pump',
+    'hate',
+    'odio',
+    'violento',
+  ],
+  blockedKeywords: [
+    'porn',
+    'porno',
+    'sexo explicito',
+    'sexual explícito',
+    'kill',
+    'matar',
+    'suicidio',
+  ],
+  priorityKeywords: ['abuso infantil', 'child abuse'],
+  allowedReportReasons: Object.values(DevotionalReportReason),
+} as const

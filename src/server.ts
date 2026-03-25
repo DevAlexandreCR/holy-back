@@ -3,20 +3,29 @@ import { app } from './app';
 import { config } from './config/env';
 import { connectToDatabase, disconnectFromDatabase } from './config/db';
 import { registerBibleVersionsJob, syncBibleVersionsOnce } from './jobs/bibleVersionsJob';
+import {
+  registerDevotionalRankingJob,
+  runDevotionalRankingOnce,
+} from './jobs/devotionalRankingJob';
 
 const { port } = config.app;
 let server: Server | undefined;
 let bibleVersionsJob: ReturnType<typeof registerBibleVersionsJob> | undefined;
+let devotionalRankingJob:
+  | ReturnType<typeof registerDevotionalRankingJob>
+  | undefined;
 
 const start = async (): Promise<void> => {
   try {
     await connectToDatabase();
     await syncBibleVersionsOnce();
+    await runDevotionalRankingOnce();
     server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on port ${port}`);
     });
     bibleVersionsJob = registerBibleVersionsJob();
+    devotionalRankingJob = registerDevotionalRankingJob();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to start server', error);
@@ -30,6 +39,9 @@ const shutdown = async (signal: string): Promise<void> => {
   try {
     if (bibleVersionsJob) {
       bibleVersionsJob.stop();
+    }
+    if (devotionalRankingJob) {
+      devotionalRankingJob.stop();
     }
     if (server) {
       await new Promise<void>((resolve) => server?.close(() => resolve()));

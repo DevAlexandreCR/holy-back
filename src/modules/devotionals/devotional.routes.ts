@@ -1,8 +1,6 @@
 import { Router } from 'express'
 import multer from 'multer'
-import { UserRole } from '@prisma/client'
 import { requireAuth, optionalAuth } from '../auth/auth.middleware'
-import { requireRole } from '../../common/middleware/requireRole'
 import { AppError } from '../../common/errors'
 import {
   addCommentHandler,
@@ -13,8 +11,15 @@ import {
   getDevotionalHandler,
   listCommentsHandler,
   listDevotionalsHandler,
+  listFeedHandler,
   publishDevotionalHandler,
+  readCompleteHandler,
+  recordFeedEventsHandler,
+  reportDevotionalHandler,
+  saveDevotionalHandler,
+  shareDevotionalHandler,
   toggleLikeHandler,
+  unsaveDevotionalHandler,
   updateCommentHandler,
   updateDevotionalHandler,
   uploadImageHandler,
@@ -34,47 +39,23 @@ const upload = multer({
   },
 })
 
-router.post(
-  '/upload-image',
-  requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
-  upload.single('image'),
-  uploadImageHandler
-)
+router.get('/feed', requireAuth, listFeedHandler)
+router.post('/feed/events', requireAuth, recordFeedEventsHandler)
+router.post('/upload-image', requireAuth, upload.single('image'), uploadImageHandler)
 
-router.get('/', optionalAuth, listDevotionalsHandler)
+router.get('/', requireAuth, listDevotionalsHandler)
+router.post('/', requireAuth, createDevotionalHandler)
 router.get('/:id', optionalAuth, getDevotionalHandler)
-router.post(
-  '/',
-  requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
-  createDevotionalHandler
-)
-router.put(
-  '/:id',
-  requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
-  updateDevotionalHandler
-)
-router.delete(
-  '/:id',
-  requireAuth,
-  requireRole([UserRole.ADMIN]),
-  deleteDevotionalHandler
-)
-router.post(
-  '/:id/publish',
-  requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
-  publishDevotionalHandler
-)
-router.post(
-  '/:id/archive',
-  requireAuth,
-  requireRole([UserRole.EDITOR, UserRole.ADMIN]),
-  archiveDevotionalHandler
-)
+router.put('/:id', requireAuth, updateDevotionalHandler)
+router.delete('/:id', requireAuth, deleteDevotionalHandler)
+router.post('/:id/publish', requireAuth, publishDevotionalHandler)
+router.post('/:id/archive', requireAuth, archiveDevotionalHandler)
 router.post('/:id/like', requireAuth, toggleLikeHandler)
+router.post('/:id/save', requireAuth, saveDevotionalHandler)
+router.delete('/:id/save', requireAuth, unsaveDevotionalHandler)
+router.post('/:id/share', requireAuth, shareDevotionalHandler)
+router.post('/:id/read-complete', requireAuth, readCompleteHandler)
+router.post('/:id/report', requireAuth, reportDevotionalHandler)
 router.get('/:id/comments', optionalAuth, listCommentsHandler)
 router.post('/:id/comments', requireAuth, addCommentHandler)
 router.put('/:id/comments/:commentId', requireAuth, updateCommentHandler)
