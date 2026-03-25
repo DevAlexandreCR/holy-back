@@ -4,7 +4,7 @@
     "module": "CommonJS",
     "moduleResolution": "node",
     "lib": ["ES2020"],
-    "rootDir": "src",
+    "rootDir": "storage/devotionals/tmp/src",
     "outDir": "dist",
     "strict": true,
     "esModuleInterop": true,
@@ -18,6 +18,6 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["node"]
   },
-  "include": ["src"],
+  "include": ["storage/devotionals/tmp/src"],
   "exclude": ["node_modules", "dist"]
 }

@@ -229,13 +229,32 @@ const getsPrivilegedInitialVisibility = (role?: UserRole | null) =>
     (allowedRole) => allowedRole === role
   )
 
+const normalizeStorageUrl = (value?: string | null) => {
+  if (!value) {
+    return null
+  }
+
+  if (value.startsWith('/storage/')) {
+    return value
+  }
+
+  try {
+    const parsed = new URL(value)
+    if (parsed.pathname.startsWith('/storage/')) {
+      return parsed.pathname
+    }
+  } catch {}
+
+  return value
+}
+
 const resolveImageUrl = (devotional: {
   imageUrl: string | null
   imageAsset?: { permanentUrl: string | null; tempUrl: string } | null
 }) =>
-  devotional.imageUrl ??
-  devotional.imageAsset?.permanentUrl ??
-  devotional.imageAsset?.tempUrl ??
+  normalizeStorageUrl(devotional.imageUrl) ??
+  normalizeStorageUrl(devotional.imageAsset?.permanentUrl) ??
+  normalizeStorageUrl(devotional.imageAsset?.tempUrl) ??
   null
 
 const formatCounters = (devotional: {
