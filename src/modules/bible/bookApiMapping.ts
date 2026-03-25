@@ -84,17 +84,56 @@ const BOOK_API_CODE_MAP: Record<string, string> = {
   'revelation': 'AP',
 }
 
+const ORDINAL_WORD_TO_NUMBER: Record<string, string> = {
+  first: '1',
+  second: '2',
+  third: '3',
+}
+
+const NUMBER_TO_ORDINAL_WORD: Record<string, string> = {
+  '1': 'first',
+  '2': 'second',
+  '3': 'third',
+}
+
 /**
  * Convert a normalized database book name to the API book code
  * @param dbBookName - Normalized book name from database (e.g., "2_peter", "second_kings")
  * @returns API book code (e.g., "2peter", "2kings")
  */
 export const convertBookToApiCode = (dbBookName: string): string => {
-  const normalized = dbBookName.toLowerCase().trim()
-  const apiCode = BOOK_API_CODE_MAP[normalized]
+  const normalized = dbBookName
+    .toLowerCase()
+    .trim()
+    .replace(/[\s-]+/g, '_')
+    .replace(/_+/g, '_')
+
+  const lookupCandidates = [normalized]
+
+  const numericVariant = normalized.replace(
+    /^(first|second|third)_/,
+    (_, ordinal: string) => `${ORDINAL_WORD_TO_NUMBER[ordinal]}_`
+  )
+  if (numericVariant !== normalized) {
+    lookupCandidates.push(numericVariant)
+  }
+
+  const ordinalVariant = normalized.replace(
+    /^([123])_/,
+    (_, number: string) => `${NUMBER_TO_ORDINAL_WORD[number]}_`
+  )
+  if (ordinalVariant !== normalized) {
+    lookupCandidates.push(ordinalVariant)
+  }
+
+  const apiCode = lookupCandidates
+    .map(candidate => BOOK_API_CODE_MAP[candidate])
+    .find(Boolean)
 
   if (!apiCode) {
-    console.warn(`[bookApiMapping] No mapping found for book: "${dbBookName}". Using fallback: remove underscores.`)
+    console.warn(
+      `[bookApiMapping] No mapping found for book: "${dbBookName}". Using fallback: remove underscores.`
+    )
     // Fallback: remove underscores and spaces
     return normalized.replace(/[_\s]/g, '')
   }
