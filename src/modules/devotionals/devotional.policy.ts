@@ -77,6 +77,106 @@ export const devotionalModerationPolicy = {
     distinctReports: 3,
     distinctUsers: 3,
   },
+  openAISeverityMatrix: {
+    text: {
+      default: {
+        medium: 0.2,
+        high: 0.5,
+        critical: 0.8,
+        flaggedSeverity: 'MEDIUM',
+      },
+      categories: {
+        'sexual/minors': {
+          medium: 0.01,
+          high: 0.05,
+          critical: 0.1,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'self-harm/instructions': {
+          medium: 0.05,
+          high: 0.2,
+          critical: 0.45,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'self-harm/intent': {
+          medium: 0.08,
+          high: 0.25,
+          critical: 0.5,
+          flaggedSeverity: 'HIGH',
+        },
+        'harassment/threatening': {
+          medium: 0.12,
+          high: 0.35,
+          critical: 0.65,
+          flaggedSeverity: 'HIGH',
+        },
+        'hate/threatening': {
+          medium: 0.08,
+          high: 0.25,
+          critical: 0.5,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'illicit/violent': {
+          medium: 0.08,
+          high: 0.22,
+          critical: 0.45,
+          flaggedSeverity: 'HIGH',
+        },
+        'violence/graphic': {
+          medium: 0.08,
+          high: 0.25,
+          critical: 0.5,
+          flaggedSeverity: 'HIGH',
+        },
+      },
+    },
+    image: {
+      default: {
+        medium: 0.12,
+        high: 0.3,
+        critical: 0.6,
+        flaggedSeverity: 'MEDIUM',
+      },
+      categories: {
+        'sexual/minors': {
+          medium: 0.01,
+          high: 0.03,
+          critical: 0.08,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'self-harm/instructions': {
+          medium: 0.04,
+          high: 0.12,
+          critical: 0.3,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'harassment/threatening': {
+          medium: 0.08,
+          high: 0.25,
+          critical: 0.5,
+          flaggedSeverity: 'HIGH',
+        },
+        'hate/threatening': {
+          medium: 0.08,
+          high: 0.22,
+          critical: 0.45,
+          flaggedSeverity: 'CRITICAL',
+        },
+        'illicit/violent': {
+          medium: 0.05,
+          high: 0.18,
+          critical: 0.35,
+          flaggedSeverity: 'HIGH',
+        },
+        'violence/graphic': {
+          medium: 0.05,
+          high: 0.18,
+          critical: 0.35,
+          flaggedSeverity: 'HIGH',
+        },
+      },
+    },
+  },
   reviewKeywords: [
     'casino',
     'apuesta',

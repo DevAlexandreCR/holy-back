@@ -111,6 +111,15 @@ const MAIL_SECURE = toOptionalBoolean(readEnvOptional(['MAIL_SECURE']), 'MAIL_SE
 const MAIL_FROM = readEnvOptional(['MAIL_FROM']);
 const PASSWORD_RESET_BASE_URL = readEnvOptional(['PASSWORD_RESET_BASE_URL']);
 const PASSWORD_RESET_DEEP_LINK = readEnvOptional(['PASSWORD_RESET_DEEP_LINK']);
+const OPENAI_API_KEY = readEnvOptional(['OPENAI_API_KEY']);
+const OPENAI_MODERATION_MODEL = readEnvAny(
+  ['OPENAI_MODERATION_MODEL'],
+  'omni-moderation-latest',
+);
+const OPENAI_MODERATION_TIMEOUT_MS = toNumber(
+  readEnvAny(['OPENAI_MODERATION_TIMEOUT_MS'], '8000'),
+  'OPENAI_MODERATION_TIMEOUT_MS',
+);
 
 export const config = {
   app: {
@@ -144,6 +153,11 @@ export const config = {
     passwordResetBaseUrl: PASSWORD_RESET_BASE_URL,
     passwordResetDeepLink: PASSWORD_RESET_DEEP_LINK ?? 'holyverso://app/reset-password',
     isConfigured: Boolean(MAIL_HOST && MAIL_PORT && MAIL_FROM && PASSWORD_RESET_BASE_URL),
+  },
+  openai: {
+    apiKey: OPENAI_API_KEY,
+    moderationModel: OPENAI_MODERATION_MODEL,
+    moderationTimeoutMs: OPENAI_MODERATION_TIMEOUT_MS,
   },
 } as const;
 

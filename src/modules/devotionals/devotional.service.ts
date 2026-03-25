@@ -29,7 +29,7 @@ import {
   devotionalModerationPolicy,
   devotionalRankingPolicy,
 } from './devotional.policy'
-import { moderateText } from './devotional.moderation'
+import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
 
 export const DEVOTIONAL_MANAGEMENT_STATUSES = [
   'DRAFT',
@@ -430,6 +430,7 @@ const ensurePermanentImage = async (
       imageUrl: null as string | null,
       imageModerationStatus: DevotionalImageModerationStatus.PENDING,
       imageModerationResultRaw: Prisma.JsonNull,
+      disconnectImageAsset: false,
     }
   }
 
@@ -442,11 +443,13 @@ const ensurePermanentImage = async (
       imageUrl: null as string | null,
       imageModerationStatus: DevotionalImageModerationStatus.PENDING,
       imageModerationResultRaw: Prisma.JsonNull,
+      disconnectImageAsset: true,
     }
   }
 
   if (
     asset.imageModerationStatus !== DevotionalImageModerationStatus.APPROVED ||
+    (asset.expiresAt != null && asset.expiresAt.getTime() <= Date.now()) ||
     (asset.status !== DevotionalImageAssetStatus.ATTACHABLE &&
       asset.status !== DevotionalImageAssetStatus.USED)
   ) {
@@ -454,6 +457,7 @@ const ensurePermanentImage = async (
       imageUrl: null as string | null,
       imageModerationStatus: asset.imageModerationStatus,
       imageModerationResultRaw: asset.moderationResultRaw ?? Prisma.JsonNull,
+      disconnectImageAsset: true,
     }
   }
 
@@ -470,6 +474,7 @@ const ensurePermanentImage = async (
       imageUrl: asset.permanentUrl,
       imageModerationStatus: asset.imageModerationStatus,
       imageModerationResultRaw: asset.moderationResultRaw ?? Prisma.JsonNull,
+      disconnectImageAsset: false,
     }
   }
 
@@ -496,6 +501,7 @@ const ensurePermanentImage = async (
     imageUrl: permanentUrl,
     imageModerationStatus: asset.imageModerationStatus,
     imageModerationResultRaw: asset.moderationResultRaw ?? Prisma.JsonNull,
+    disconnectImageAsset: false,
   }
 }
 
@@ -1009,7 +1015,7 @@ export const publishDevotional = async (params: {
       )
     }
 
-    const textModeration = moderateText(extractPlainText(devotional.content))
+    const textModeration = await moderateText(extractPlainText(devotional.content))
     if (
       textModeration.severity === 'HIGH' ||
       textModeration.severity === 'CRITICAL'
@@ -1024,10 +1030,7 @@ export const publishDevotional = async (params: {
         devotionalId: devotional.id,
         actionType: DevotionalModerationActionType.PUBLISH_BLOCKED,
         reason: textModeration.reason,
-        metadata: {
-          severity: textModeration.severity,
-          categories: textModeration.categories,
-        },
+        metadata: toModerationAuditMetadata(textModeration),
       })
 
       throw new AppError(
@@ -1071,6 +1074,11 @@ export const publishDevotional = async (params: {
         imageUrl: imageResult.imageUrl,
         imageModerationStatus: imageResult.imageModerationStatus,
         imageModerationResultRaw: imageResult.imageModerationResultRaw,
+        imageAsset: imageResult.disconnectImageAsset
+          ? { disconnect: true }
+          : devotional.imageAssetId
+            ? { connect: { id: devotional.imageAssetId } }
+            : undefined,
         rankingScore,
         publishedAt: now,
         firstPublishedAt: devotional.firstPublishedAt ?? now,
@@ -1085,10 +1093,7 @@ export const publishDevotional = async (params: {
         devotionalId: devotional.id,
         actionType: DevotionalModerationActionType.AUTO_UNDER_REVIEW,
         reason: textModeration.reason,
-        metadata: {
-          severity: textModeration.severity,
-          categories: textModeration.categories,
-        },
+        metadata: toModerationAuditMetadata(textModeration),
       })
     }
 

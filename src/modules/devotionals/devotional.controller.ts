@@ -36,7 +36,7 @@ import {
   updateComment,
   updateDevotional,
 } from './devotional.service'
-import { moderateImageUpload } from './devotional.moderation'
+import { moderateImageUpload, toModerationAuditMetadata } from './devotional.moderation'
 import {
   commentSchema,
   createDevotionalSchema,
@@ -386,8 +386,6 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
   if (!req.file) {
     throw new AppError('Image is required', 'IMAGE_REQUIRED', 400)
   }
-
-  const moderation = moderateImageUpload()
   const storageDir = path.join(process.cwd(), 'storage', 'devotionals', 'tmp')
   await fs.mkdir(storageDir, { recursive: true })
 
@@ -404,8 +402,6 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
 
   const filename = `${crypto.randomUUID()}.${extension}`
   const outputPath = path.join(storageDir, filename)
-  const metadata = await sharp(req.file.buffer).metadata()
-
   let pipeline = sharp(req.file.buffer).resize({
     width: 1920,
     withoutEnlargement: true,
@@ -419,36 +415,49 @@ export const uploadImageHandler = async (req: Request, res: Response) => {
     pipeline = pipeline.webp({ quality: 85 })
   }
 
-  await pipeline.toFile(outputPath)
+  const outputBuffer = await pipeline.toBuffer()
+  const metadata = await sharp(outputBuffer).metadata()
+  const moderation = await moderateImageUpload({
+    mimeType: req.file.mimetype,
+    data: outputBuffer,
+  })
+
+  await fs.writeFile(outputPath, outputBuffer)
 
   const tempUrl = `/storage/devotionals/tmp/${filename}`
-  const asset = await prisma.devotionalImageAsset.create({
-    data: {
-      userId: req.user!.sub,
-      status: moderation.attachable
-        ? DevotionalImageAssetStatus.ATTACHABLE
-        : DevotionalImageAssetStatus.REJECTED,
-      imageModerationStatus: moderation.moderationStatus,
-      moderationResultRaw: {
-        reason: moderation.reason,
+  try {
+    const asset = await prisma.devotionalImageAsset.create({
+      data: {
+        userId: req.user!.sub,
+        status: moderation.attachable
+          ? DevotionalImageAssetStatus.ATTACHABLE
+          : DevotionalImageAssetStatus.REJECTED,
+        imageModerationStatus: moderation.moderationStatus,
+        moderationResultRaw: moderation.attachable
+          ? Prisma.JsonNull
+          : toModerationAuditMetadata(moderation),
+        mimeType: req.file.mimetype,
+        tempPath: outputPath,
+        tempUrl,
+        width: metadata.width ?? null,
+        height: metadata.height ?? null,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
-      mimeType: req.file.mimetype,
-      tempPath: outputPath,
-      tempUrl,
-      width: metadata.width ?? null,
-      height: metadata.height ?? null,
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    },
-  })
+    })
 
-  res.json({
-    data: {
-      asset_id: asset.id,
-      image_moderation_status: asset.imageModerationStatus,
-      attachable: moderation.attachable,
-      preview_image_url: tempUrl,
-      width: asset.width,
-      height: asset.height,
-    },
-  })
+    res.json({
+      data: {
+        asset_id: asset.id,
+        image_moderation_status: asset.imageModerationStatus,
+        attachable: moderation.attachable,
+        preview_image_url: moderation.attachable ? tempUrl : null,
+        width: asset.width,
+        height: asset.height,
+        moderation_reason: moderation.reason,
+      },
+    })
+  } catch (error) {
+    await fs.unlink(outputPath).catch(() => undefined)
+    throw error
+  }
 }
