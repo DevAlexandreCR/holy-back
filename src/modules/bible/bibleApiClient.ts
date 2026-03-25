@@ -1,5 +1,5 @@
-import axios, { AxiosInstance } from 'axios'
-import { config } from '../../config/env'
+import axios, { AxiosInstance } from "axios";
+import { config } from "../../config/env";
 import {
   BibleVersionApiModel,
   BookApiModel,
@@ -8,116 +8,142 @@ import {
   GetChapterParams,
   GetVersesParams,
   VerseApiModel,
-} from './bible.types'
+} from "./bible.types";
 
 const logAxiosError = (context: string, error: unknown) => {
   if (axios.isAxiosError(error)) {
-    const { response, message, code } = error
+    const { response, message, code } = error;
     // eslint-disable-next-line no-console
     console.error(`[BibleApiClient] ${context} failed`, {
       status: response?.status,
       data: response?.data,
       message,
       code,
-    })
+    });
   } else {
     // eslint-disable-next-line no-console
-    console.error(`[BibleApiClient] ${context} failed`, error)
+    console.error(`[BibleApiClient] ${context} failed`, error);
   }
-}
+};
 
 export class BibleApiClient {
-  private client: AxiosInstance
+  private client: AxiosInstance;
 
   constructor(baseUrl = config.external.bibleApiBaseUrl) {
     this.client = axios.create({
       baseURL: baseUrl,
       timeout: 10000,
-    })
+    });
   }
 
   async getVersions(): Promise<BibleVersionApiModel[]> {
-    const path = '/versions'
+    const path = "/versions";
     try {
-      const { data } = await this.client.get<unknown>(path)
+      const { data } = await this.client.get<unknown>(path);
       if (!Array.isArray(data)) {
-        throw new Error('Unexpected versions payload')
+        throw new Error("Unexpected versions payload");
       }
 
       return data.map((item) => {
-        const record = item as Record<string, unknown>
+        const record = item as Record<string, unknown>;
         const code =
           (record.code as string | undefined) ??
           (record.version as string | undefined) ??
           (record.abbrev as string | undefined) ??
-          ''
+          "";
         const name =
           (record.name as string | undefined) ??
           (record.title as string | undefined) ??
-          ''
-        const language = (record.language as string | undefined) ?? ''
+          "";
+        const language = (record.language as string | undefined) ?? "";
 
-        return { code, name, language }
-      })
+        return { code, name, language };
+      });
     } catch (error) {
-      logAxiosError(path, error)
-      throw new Error('Failed to fetch bible versions')
+      logAxiosError(path, error);
+      throw new Error("Failed to fetch bible versions");
     }
   }
 
   async getBooks(): Promise<BookApiModel[]> {
-    const path = '/books'
+    const path = "/books";
     try {
-      const { data } = await this.client.get<BookApiModel[]>(path)
-      return data
+      const { data } = await this.client.get<unknown>(path);
+      if (!Array.isArray(data)) {
+        throw new Error("Unexpected books payload");
+      }
+
+      return data.map((item) => {
+        const record = item as Record<string, unknown>;
+        const names = Array.isArray(record.names)
+          ? record.names.filter(
+              (value): value is string => typeof value === "string",
+            )
+          : [];
+
+        return {
+          name: (record.name as string | undefined) ?? names[0] ?? "",
+          abbrev:
+            (record.abbrev as string | undefined) ??
+            (record.abrev as string | undefined) ??
+            "",
+          chapters: Number(record.chapters ?? 0),
+          testament: (record.testament as string | undefined) ?? "",
+        };
+      });
     } catch (error) {
-      logAxiosError(path, error)
-      throw new Error('Failed to fetch bible books')
+      logAxiosError(path, error);
+      throw new Error("Failed to fetch bible books");
     }
   }
 
   async getVerses(params: GetVersesParams): Promise<VerseApiModel[]> {
-    const { versionCode, book, chapter, fromVerse, toVerse } = params
-    const range = toVerse && toVerse !== fromVerse ? `${fromVerse}-${toVerse}` : `${fromVerse}`
-    const encodedBook = encodeURIComponent(book)
-    const encodedVersion = encodeURIComponent(versionCode)
-    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`
+    const { versionCode, book, chapter, fromVerse, toVerse } = params;
+    const range =
+      toVerse && toVerse !== fromVerse
+        ? `${fromVerse}-${toVerse}`
+        : `${fromVerse}`;
+    const encodedBook = encodeURIComponent(book);
+    const encodedVersion = encodeURIComponent(versionCode);
+    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`;
     try {
-      const { data } = await this.client.get<VerseApiModel[] | VerseApiModel>(path)
+      const { data } = await this.client.get<VerseApiModel[] | VerseApiModel>(
+        path,
+      );
       // API returns an object for a single verse and an array for a range
-      return Array.isArray(data) ? data : [data]
+      return Array.isArray(data) ? data : [data];
     } catch (error) {
-      logAxiosError(path, error)
-      throw new Error('Failed to fetch bible verses')
+      logAxiosError(path, error);
+      throw new Error("Failed to fetch bible verses");
     }
   }
 
   async getChapter(params: GetChapterParams): Promise<Chapter> {
-    const { versionCode, book, chapter } = params
-    const normalizedBook = book.trim()
-    const normalizedVersion = versionCode.trim()
+    const { versionCode, book, chapter } = params;
+    const normalizedBook = book.trim();
+    const normalizedVersion = versionCode.trim();
 
     if (!normalizedBook) {
-      throw new Error('Book is required to fetch a chapter')
+      throw new Error("Book is required to fetch a chapter");
     }
 
     if (!normalizedVersion) {
-      throw new Error('Version code is required to fetch a chapter')
+      throw new Error("Version code is required to fetch a chapter");
     }
 
     if (!Number.isInteger(chapter) || chapter <= 0) {
-      throw new Error('Chapter must be greater than 0')
+      throw new Error("Chapter must be greater than 0");
     }
 
-    const encodedBook = encodeURIComponent(normalizedBook)
-    const encodedVersion = encodeURIComponent(normalizedVersion)
-    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}`
+    const encodedBook = encodeURIComponent(normalizedBook);
+    const encodedVersion = encodeURIComponent(normalizedVersion);
+    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}`;
 
     try {
-      const { data } = await this.client.get<ChapterApiModel>(path)
+      const { data } = await this.client.get<ChapterApiModel>(path);
 
       if (!data || !Array.isArray(data.vers)) {
-        throw new Error('Unexpected chapter payload')
+        throw new Error("Unexpected chapter payload");
       }
 
       return {
@@ -125,18 +151,18 @@ export class BibleApiClient {
         name: data.name,
         numChapters: data.num_chapters,
         chapter: data.chapter,
-        verses: data.vers.map(verse => ({
+        verses: data.vers.map((verse) => ({
           number: verse.number,
           text: verse.verse,
           study: verse.study,
           id: verse.id,
         })),
-      }
+      };
     } catch (error) {
-      logAxiosError(path, error)
-      throw new Error('Failed to fetch bible chapter')
+      logAxiosError(path, error);
+      throw new Error("Failed to fetch bible chapter");
     }
   }
 }
 
-export default BibleApiClient
+export default BibleApiClient;

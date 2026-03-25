@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { AppError } from '../../common/errors';
 import BibleApiClient from './bibleApiClient';
+import { getBibleChapterForReference } from './bibleChapter.service';
 import { getAutocompleteSuggestions, searchBible } from './bibleSearch.service';
 import { listActiveBibleVersions } from './bible.service';
 
@@ -57,4 +58,25 @@ export const getBibleAutocomplete = async (req: Request, res: Response) => {
 
   const suggestions = await getAutocompleteSuggestions(query);
   res.json({ data: { suggestions } });
+};
+
+export const getBibleChapter = async (req: Request, res: Response) => {
+  const userId = req.user?.sub;
+  if (!userId) {
+    throw new AppError('Authentication required', 'AUTH_REQUIRED', 401);
+  }
+
+  const book = req.query.book;
+  const chapter = Number(req.query.chapter);
+
+  if (typeof book !== 'string' || !book.trim()) {
+    throw new AppError('Book is required', 'INVALID_BOOK', 400);
+  }
+
+  if (Number.isNaN(chapter)) {
+    throw new AppError('Chapter is required', 'INVALID_CHAPTER', 400);
+  }
+
+  const payload = await getBibleChapterForReference(userId, book, chapter);
+  res.json({ data: payload });
 };
