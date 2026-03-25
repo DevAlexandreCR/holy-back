@@ -1,6 +1,7 @@
 import { DevotionalFeedEventType, DevotionalReportReason } from '@prisma/client'
 import { z } from 'zod'
 import { DEVOTIONAL_MANAGEMENT_STATUSES } from './devotional.service'
+import { DEVOTIONAL_FEED_MODES } from './devotional.policy'
 
 export const verseReferenceSchema = z
   .object({
@@ -57,6 +58,7 @@ export const listDevotionalsSchema = paginationSchema.extend({
 export const feedPaginationSchema = z.object({
   cursor: z.string().optional(),
   limit: z.string().optional(),
+  mode: z.enum(DEVOTIONAL_FEED_MODES).optional(),
 })
 
 export const feedEventsSchema = z.object({

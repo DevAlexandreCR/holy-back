@@ -148,6 +148,7 @@ export const listFeedHandler = async (req: Request, res: Response) => {
     userId: req.user!.sub,
     cursor: query.cursor,
     limit,
+    mode: query.mode,
   })
 
   res.json({ data: result })

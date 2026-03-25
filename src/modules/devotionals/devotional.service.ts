@@ -16,7 +16,6 @@ import {
 import { prisma } from '../../config/db'
 import { AppError } from '../../common/errors'
 import {
-  DEVOTIONAL_FEED_CANDIDATE_MULTIPLIER,
   DEVOTIONAL_FEED_DEFAULT_LIMIT,
   DEVOTIONAL_FEED_ELIGIBLE_STATES,
   DEVOTIONAL_MAX_CONTENT_BYTES,
@@ -25,6 +24,7 @@ import {
   DEVOTIONAL_PREVIEW_MAX_CHARS,
   DEVOTIONAL_PUBLISHED_MANAGEMENT_STATES,
   DEVOTIONAL_WORDS_PER_MINUTE,
+  DevotionalFeedMode,
   devotionalFeedPolicy,
   devotionalModerationPolicy,
   devotionalRankingPolicy,
@@ -40,9 +40,27 @@ export const DEVOTIONAL_MANAGEMENT_STATUSES = [
 export type DevotionalManagementStatus =
   (typeof DEVOTIONAL_MANAGEMENT_STATUSES)[number]
 
+export const DEVOTIONAL_RECOMMENDATION_REASONS = [
+  'FOLLOWED_AUTHOR',
+  'RECENTLY_ENGAGED_AUTHOR',
+  'TRENDING',
+  'DISCOVERY',
+] as const
+
+export type DevotionalRecommendationReason =
+  (typeof DEVOTIONAL_RECOMMENDATION_REASONS)[number]
+
 type DevotionalWithRelations = Prisma.DevotionalGetPayload<{
   include: {
-    author: { select: { id: true; name: true } }
+    author: {
+      select: {
+        id: true
+        name: true
+        handle: true
+        creatorAvatarUrl: true
+        followedBy: { where: { followerId: string }; select: { id: true } }
+      }
+    }
     moderatedByUser: { select: { id: true; name: true } }
     imageAsset: {
       select: {
@@ -61,10 +79,13 @@ type DevotionalWithRelations = Prisma.DevotionalGetPayload<{
   }
 }>
 
-type FeedCursor = {
-  ranking_score: number
-  last_scored_at: string
-  id: string
+type OffsetCursor = {
+  offset: number
+}
+
+type FeedSelection = {
+  devotional: DevotionalWithRelations
+  recommendationReason: DevotionalRecommendationReason
 }
 
 const isImageAssetUniqueConstraintError = (error: unknown) => {
@@ -102,9 +123,22 @@ const rethrowKnownDevotionalWriteError = (error: unknown): never => {
 
 const toIso = (value: Date | null | undefined) => (value ? value.toISOString() : null)
 
-const formatAuthor = (author: { id: string; name: string }) => ({
+const formatAuthor = (author: {
+  id: string
+  name: string
+  handle?: string | null
+  creatorAvatarUrl?: string | null
+}) => ({
   id: author.id,
   name: author.name,
+  handle: author.handle,
+  avatar_url: normalizeStorageUrl(author.creatorAvatarUrl),
+})
+
+const formatAuthorRelationship = (author: {
+  followedBy: { id: string }[]
+}) => ({
+  following: author.followedBy.length > 0,
 })
 
 const formatVerseReference = (reference: {
@@ -127,7 +161,18 @@ const formatVerseReference = (reference: {
 
 const devotionalInclude = (viewerId?: string | null) =>
   Prisma.validator<Prisma.DevotionalInclude>()({
-    author: { select: { id: true, name: true } },
+    author: {
+      select: {
+        id: true,
+        name: true,
+        handle: true,
+        creatorAvatarUrl: true,
+        followedBy: {
+          where: { followerId: viewerId ?? '' },
+          select: { id: true },
+        },
+      },
+    },
     moderatedByUser: { select: { id: true, name: true } },
     imageAsset: {
       select: {
@@ -316,10 +361,12 @@ const formatDevotional = (
     includeContent?: boolean
     viewerId?: string | null
     deliveryToken?: string
+    recommendationReason?: DevotionalRecommendationReason | null
   } = {}
 ) => {
   const viewerState = formatViewerState(devotional)
   const imageUrl = resolveImageUrl(devotional)
+  const authorRelationship = formatAuthorRelationship(devotional.author)
 
   return {
     id: devotional.id,
@@ -346,6 +393,7 @@ const formatDevotional = (
     created_at: devotional.createdAt.toISOString(),
     updated_at: devotional.updatedAt.toISOString(),
     author: formatAuthor(devotional.author),
+    author_relationship: authorRelationship,
     moderated_by: devotional.moderatedByUser
       ? formatAuthor(devotional.moderatedByUser)
       : null,
@@ -364,24 +412,21 @@ const formatDevotional = (
     viewer_state: viewerState,
     counters: formatCounters(devotional),
     ...(options.deliveryToken ? { delivery_token: options.deliveryToken } : {}),
+    recommendation_reason: options.recommendationReason ?? null,
   }
 }
 
-const encodeFeedCursor = (cursor: FeedCursor) =>
+const encodeOffsetCursor = (cursor: OffsetCursor) =>
   Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url')
 
-const decodeFeedCursor = (cursor?: string | null): FeedCursor | null => {
+const decodeOffsetCursor = (cursor?: string | null): OffsetCursor | null => {
   if (!cursor) return null
 
   try {
     const parsed = JSON.parse(
       Buffer.from(cursor, 'base64url').toString('utf8')
-    ) as FeedCursor
-    if (
-      typeof parsed.ranking_score !== 'number' ||
-      typeof parsed.last_scored_at !== 'string' ||
-      typeof parsed.id !== 'string'
-    ) {
+    ) as OffsetCursor
+    if (typeof parsed.offset !== 'number' || parsed.offset < 0) {
       return null
     }
     return parsed
@@ -390,30 +435,8 @@ const decodeFeedCursor = (cursor?: string | null): FeedCursor | null => {
   }
 }
 
-const buildCursorWhere = (cursor?: string | null): Prisma.DevotionalWhereInput => {
-  const decoded = decodeFeedCursor(cursor)
-  if (!decoded) return {}
-
-  const lastScoredAt = new Date(decoded.last_scored_at)
-  if (Number.isNaN(lastScoredAt.getTime())) {
-    return {}
-  }
-
-  return {
-    OR: [
-      { rankingScore: { lt: decoded.ranking_score } },
-      {
-        rankingScore: decoded.ranking_score,
-        lastScoredAt: { lt: lastScoredAt },
-      },
-      {
-        rankingScore: decoded.ranking_score,
-        lastScoredAt,
-        id: { lt: decoded.id },
-      },
-    ],
-  }
-}
+const getCursorOffset = (cursor?: string | null) =>
+  Math.max(0, decodeOffsetCursor(cursor)?.offset ?? 0)
 
 const ensureImageAssetAttachable = async (
   tx: Prisma.TransactionClient,
@@ -581,8 +604,16 @@ const buildManagementWhere = (
 }
 
 const getFeedCandidateWindow = (limit: number) =>
-  Math.max(limit, DEVOTIONAL_FEED_DEFAULT_LIMIT) *
-  DEVOTIONAL_FEED_CANDIDATE_MULTIPLIER
+  Math.max(limit, DEVOTIONAL_FEED_DEFAULT_LIMIT)
+
+const getFeedCandidateWindowByMode = (
+  mode: DevotionalFeedMode,
+  requiredItems: number
+) =>
+  getFeedCandidateWindow(requiredItems) *
+  (mode === 'following'
+    ? devotionalFeedPolicy.following.candidateWindowMultiplier
+    : devotionalFeedPolicy.forYou.candidateWindowMultiplier)
 
 const selectFeedCandidates = (params: {
   candidates: DevotionalWithRelations[]
@@ -633,6 +664,337 @@ const selectFeedCandidates = (params: {
     items: selected,
     selectedIds,
   }
+}
+
+const isActiveFeatured = (devotional: {
+  publicationState: DevotionalPublicationState
+  featuredUntil: Date | null
+}) =>
+  devotional.publicationState === DevotionalPublicationState.FEATURED &&
+  (devotional.featuredUntil == null ||
+    devotional.featuredUntil.getTime() > Date.now())
+
+const compareDatesDesc = (left?: Date | null, right?: Date | null) =>
+  (right?.getTime() ?? 0) - (left?.getTime() ?? 0)
+
+const compareNumbersDesc = (left: number, right: number) => right - left
+
+const compareStringsDesc = (left: string, right: string) =>
+  right.localeCompare(left)
+
+const buildEligibleFeedWhere = (): Prisma.DevotionalWhereInput => ({
+  publicationState: { in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES] },
+  moderationStatus: DevotionalModerationStatus.CLEAR,
+})
+
+const getDiscoveryReason = (
+  devotional: Pick<DevotionalWithRelations, 'publicationState' | 'rankingScore'>
+): DevotionalRecommendationReason => {
+  if (
+    devotional.publicationState === DevotionalPublicationState.TRENDING ||
+    devotional.publicationState === DevotionalPublicationState.FEATURED ||
+    devotional.rankingScore >= devotionalFeedPolicy.forYou.trendingThreshold
+  ) {
+    return 'TRENDING'
+  }
+
+  return 'DISCOVERY'
+}
+
+const buildBucketTargets = (limit: number) => {
+  const personalized = Math.round(limit * devotionalFeedPolicy.forYou.mix.personalized)
+  const lowReach = Math.round(
+    limit * devotionalFeedPolicy.forYou.mix.lowReachExploration
+  )
+  const global = Math.max(limit - personalized - lowReach, 0)
+
+  return {
+    global,
+    lowReach,
+    personalized,
+  }
+}
+
+const appendSelectionsFromBucket = (params: {
+  bucket: FeedSelection[]
+  target: number
+  selected: FeedSelection[]
+  selectedIds: Set<string>
+  authorCounts: Map<string, number>
+  recentDeliveryIds: Set<string>
+}) => {
+  let added = 0
+  const phases = [
+    { recentOnly: false, respectAuthorCap: true },
+    { recentOnly: true, respectAuthorCap: true },
+    { recentOnly: undefined as boolean | undefined, respectAuthorCap: false },
+  ]
+
+  for (const phase of phases) {
+    for (const item of params.bucket) {
+      if (added >= params.target) {
+        return
+      }
+
+      const devotional = item.devotional
+      if (params.selectedIds.has(devotional.id)) {
+        continue
+      }
+
+      const isRecent = params.recentDeliveryIds.has(devotional.id)
+      if (phase.recentOnly === false && isRecent) {
+        continue
+      }
+      if (phase.recentOnly === true && !isRecent) {
+        continue
+      }
+
+      const authorCount = params.authorCounts.get(devotional.authorId) ?? 0
+      if (
+        phase.respectAuthorCap &&
+        authorCount >= devotionalFeedPolicy.authorRepetitionMax
+      ) {
+        continue
+      }
+
+      params.selected.push(item)
+      params.selectedIds.add(devotional.id)
+      params.authorCounts.set(devotional.authorId, authorCount + 1)
+      added += 1
+    }
+  }
+}
+
+const upsertCreatorAffinity = async (
+  tx: Prisma.TransactionClient,
+  params: {
+    userId: string
+    creatorId: string
+    scoreDelta: number
+    signaledAt?: Date
+  }
+) => {
+  if (
+    params.userId === params.creatorId ||
+    !Number.isFinite(params.scoreDelta) ||
+    params.scoreDelta <= 0
+  ) {
+    return
+  }
+
+  await tx.userCreatorAffinity.upsert({
+    where: {
+      userId_creatorId: {
+        userId: params.userId,
+        creatorId: params.creatorId,
+      },
+    },
+    create: {
+      userId: params.userId,
+      creatorId: params.creatorId,
+      score: params.scoreDelta,
+      lastSignalAt: params.signaledAt ?? new Date(),
+    },
+    update: {
+      score: { increment: params.scoreDelta },
+      lastSignalAt: params.signaledAt ?? new Date(),
+    },
+  })
+}
+
+const listFollowingSelections = (params: {
+  candidates: DevotionalWithRelations[]
+  recentDeliveryIds: Set<string>
+  limit: number
+}) => {
+  const ordered = [...params.candidates].sort((left, right) => {
+    const featuredComparison =
+      Number(isActiveFeatured(right)) - Number(isActiveFeatured(left))
+    if (featuredComparison !== 0) {
+      return featuredComparison
+    }
+
+    const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
+    if (publishedComparison !== 0) {
+      return publishedComparison
+    }
+
+    const rankingComparison = compareNumbersDesc(
+      left.rankingScore,
+      right.rankingScore
+    )
+    if (rankingComparison !== 0) {
+      return rankingComparison
+    }
+
+    return compareStringsDesc(left.id, right.id)
+  })
+
+  const selected = selectFeedCandidates({
+    candidates: ordered,
+    recentDeliveryIds: params.recentDeliveryIds,
+    limit: params.limit,
+  }).items
+
+  return selected.map<FeedSelection>((devotional) => ({
+    devotional,
+    recommendationReason: 'FOLLOWED_AUTHOR',
+  }))
+}
+
+const listForYouSelections = (params: {
+  candidates: DevotionalWithRelations[]
+  recentDeliveryIds: Set<string>
+  limit: number
+  followedAuthorIds: Set<string>
+  affinityByCreatorId: Map<string, number>
+  lowReachAuthorIds: Set<string>
+}) => {
+  const personalizedBucket = params.candidates
+    .filter((devotional) => {
+      const affinityScore = params.affinityByCreatorId.get(devotional.authorId) ?? 0
+      return (
+        params.followedAuthorIds.has(devotional.authorId) || affinityScore > 0
+      )
+    })
+    .sort((left, right) => {
+      const leftScore =
+        left.rankingScore +
+        (params.followedAuthorIds.has(left.authorId)
+          ? devotionalFeedPolicy.forYou.followBoost
+          : 0) +
+        (params.affinityByCreatorId.get(left.authorId) ?? 0) *
+          devotionalFeedPolicy.forYou.affinityScoreMultiplier +
+        (isActiveFeatured(left) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
+      const rightScore =
+        right.rankingScore +
+        (params.followedAuthorIds.has(right.authorId)
+          ? devotionalFeedPolicy.forYou.followBoost
+          : 0) +
+        (params.affinityByCreatorId.get(right.authorId) ?? 0) *
+          devotionalFeedPolicy.forYou.affinityScoreMultiplier +
+        (isActiveFeatured(right) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
+
+      const scoreComparison = compareNumbersDesc(leftScore, rightScore)
+      if (scoreComparison !== 0) {
+        return scoreComparison
+      }
+
+      const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
+      if (publishedComparison !== 0) {
+        return publishedComparison
+      }
+
+      return compareStringsDesc(left.id, right.id)
+    })
+    .map<FeedSelection>((devotional) => ({
+      devotional,
+      recommendationReason: params.followedAuthorIds.has(devotional.authorId)
+        ? 'FOLLOWED_AUTHOR'
+        : 'RECENTLY_ENGAGED_AUTHOR',
+    }))
+
+  const lowReachBucket = params.candidates
+    .filter((devotional) => params.lowReachAuthorIds.has(devotional.authorId))
+    .sort((left, right) => {
+      const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
+      if (publishedComparison !== 0) {
+        return publishedComparison
+      }
+
+      const rankingComparison = compareNumbersDesc(
+        left.rankingScore,
+        right.rankingScore
+      )
+      if (rankingComparison !== 0) {
+        return rankingComparison
+      }
+
+      return compareStringsDesc(left.id, right.id)
+    })
+    .map<FeedSelection>((devotional) => ({
+      devotional,
+      recommendationReason: 'DISCOVERY',
+    }))
+
+  const globalBucket = [...params.candidates]
+    .sort((left, right) => {
+      const rankingComparison = compareNumbersDesc(
+        left.rankingScore,
+        right.rankingScore
+      )
+      if (rankingComparison !== 0) {
+        return rankingComparison
+      }
+
+      const scoredComparison = compareDatesDesc(left.lastScoredAt, right.lastScoredAt)
+      if (scoredComparison !== 0) {
+        return scoredComparison
+      }
+
+      return compareStringsDesc(left.id, right.id)
+    })
+    .map<FeedSelection>((devotional) => ({
+      devotional,
+      recommendationReason: getDiscoveryReason(devotional),
+    }))
+
+  const targets = buildBucketTargets(params.limit)
+  const selected: FeedSelection[] = []
+  const selectedIds = new Set<string>()
+  const authorCounts = new Map<string, number>()
+
+  appendSelectionsFromBucket({
+    bucket: globalBucket,
+    target: targets.global,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+  appendSelectionsFromBucket({
+    bucket: lowReachBucket,
+    target: targets.lowReach,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+  appendSelectionsFromBucket({
+    bucket: personalizedBucket,
+    target: targets.personalized,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+
+  appendSelectionsFromBucket({
+    bucket: personalizedBucket,
+    target: params.limit - selected.length,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+  appendSelectionsFromBucket({
+    bucket: globalBucket,
+    target: params.limit - selected.length,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+  appendSelectionsFromBucket({
+    bucket: lowReachBucket,
+    target: params.limit - selected.length,
+    selected,
+    selectedIds,
+    authorCounts,
+    recentDeliveryIds: params.recentDeliveryIds,
+  })
+
+  return selected
 }
 
 const maybeTrackView = async (devotionalId: string, userId?: string | null) => {
@@ -754,7 +1116,7 @@ export const createDevotional = async (params: {
       viewerId: params.authorId,
     })
   } catch (error) {
-    rethrowKnownDevotionalWriteError(error)
+    return rethrowKnownDevotionalWriteError(error)
   }
 }
 
@@ -800,13 +1162,13 @@ export const listFeedDevotionals = async (params: {
   userId: string
   cursor?: string | null
   limit: number
+  mode?: DevotionalFeedMode
 }) => {
-  const limit = Math.min(
-    Math.max(params.limit, 1),
-    DEVOTIONAL_FEED_DEFAULT_LIMIT
-  )
-  const cursorWhere = buildCursorWhere(params.cursor)
-  const candidateWindow = getFeedCandidateWindow(limit)
+  const mode = params.mode ?? 'for_you'
+  const limit = Math.min(Math.max(params.limit, 1), DEVOTIONAL_FEED_DEFAULT_LIMIT)
+  const offset = getCursorOffset(params.cursor)
+  const selectionWindow = offset + limit + 1
+  const candidateWindow = getFeedCandidateWindowByMode(mode, selectionWindow)
   const dedupSince = new Date(
     Date.now() - devotionalFeedPolicy.dedupWindowHours * 60 * 60 * 1000
   )
@@ -820,66 +1182,158 @@ export const listFeedDevotionals = async (params: {
   })
 
   const seenDevotionalIds = new Set(recentDeliveries.map((item) => item.devotionalId))
+  const followedAuthorRows = await prisma.userFollow.findMany({
+    where: { followerId: params.userId },
+    select: { followedId: true },
+  })
+  const followedAuthorIds = new Set(
+    followedAuthorRows.map((item) => item.followedId)
+  )
+
+  const where: Prisma.DevotionalWhereInput =
+    mode === 'following'
+      ? {
+          ...buildEligibleFeedWhere(),
+          authorId: { in: [...followedAuthorIds] },
+        }
+      : buildEligibleFeedWhere()
+
   const fetchedCandidates = await prisma.devotional.findMany({
-    where: {
-      publicationState: { in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES] },
-      moderationStatus: DevotionalModerationStatus.CLEAR,
-      ...cursorWhere,
-    },
-    orderBy: [
-      { rankingScore: 'desc' },
-      { lastScoredAt: 'desc' },
-      { id: 'desc' },
-    ],
-    take: candidateWindow + 1,
+    where,
+    orderBy:
+      mode === 'following'
+        ? [
+            { publishedAt: 'desc' },
+            { rankingScore: 'desc' },
+            { id: 'desc' },
+          ]
+        : [
+            { rankingScore: 'desc' },
+            { lastScoredAt: 'desc' },
+            { id: 'desc' },
+          ],
+    take: candidateWindow,
     include: devotionalInclude(params.userId),
   })
-  const hasAdditionalCandidates = fetchedCandidates.length > candidateWindow
-  const candidates = fetchedCandidates.slice(0, candidateWindow)
-  const { items: selected, selectedIds } = selectFeedCandidates({
-    candidates,
-    recentDeliveryIds: seenDevotionalIds,
-    limit,
-  })
+
+  let orderedSelections: FeedSelection[] = []
+
+  if (mode === 'following') {
+    orderedSelections = listFollowingSelections({
+      candidates: fetchedCandidates,
+      recentDeliveryIds: seenDevotionalIds,
+      limit: selectionWindow,
+    })
+  } else {
+    const affinityRows = await prisma.userCreatorAffinity.findMany({
+      where: {
+        userId: params.userId,
+        creatorId: {
+          in: [...new Set(fetchedCandidates.map((item) => item.authorId))],
+        },
+      },
+      select: {
+        creatorId: true,
+        score: true,
+      },
+    })
+    const affinityByCreatorId = new Map(
+      affinityRows.map((item) => [item.creatorId, item.score])
+    )
+    const authorImpressionsLast24h = await getAuthorImpressionsLast24h()
+    const lowReachAuthorIds = new Set<string>()
+
+    for (const devotional of fetchedCandidates) {
+      if (
+        (authorImpressionsLast24h.get(devotional.authorId) ?? 0) <=
+        devotionalFeedPolicy.forYou.lowReachAuthorImpressions24hMax
+      ) {
+        lowReachAuthorIds.add(devotional.authorId)
+      }
+    }
+
+    orderedSelections = listForYouSelections({
+      candidates: fetchedCandidates,
+      recentDeliveryIds: seenDevotionalIds,
+      limit: selectionWindow,
+      followedAuthorIds,
+      affinityByCreatorId,
+      lowReachAuthorIds,
+    })
+  }
+
+  const pageSelections = orderedSelections.slice(offset, offset + limit)
 
   const deliveries = await Promise.all(
-    selected.map(async (item) => {
+    pageSelections.map(async ({ devotional, recommendationReason }) => {
       const delivery = await prisma.devotionalFeedDelivery.create({
         data: {
           token: crypto.randomUUID(),
-          devotionalId: item.id,
+          devotionalId: devotional.id,
           userId: params.userId,
-          rankingScore: item.rankingScore,
+          rankingScore: devotional.rankingScore,
         },
       })
 
       return {
-        item,
+        devotional,
         token: delivery.token,
+        recommendationReason,
       }
     })
   )
 
-  const lastItem = selected.length > 0 ? selected[selected.length - 1] : null
-  const hasMore =
-    candidates.some((candidate) => !selectedIds.has(candidate.id)) ||
-    hasAdditionalCandidates
+  const hasMore = orderedSelections.length > offset + pageSelections.length
+  const nextOffset = offset + pageSelections.length
 
   return {
-    items: deliveries.map(({ item, token }) =>
-      formatDevotional(item, {
+    items: deliveries.map(({ devotional, token, recommendationReason }) =>
+      formatDevotional(devotional, {
         viewerId: params.userId,
         deliveryToken: token,
+        recommendationReason,
       })
     ),
-    next_cursor: lastItem
-      ? encodeFeedCursor({
-          ranking_score: lastItem.rankingScore,
-          last_scored_at: (lastItem.lastScoredAt ?? lastItem.updatedAt).toISOString(),
-          id: lastItem.id,
-        })
-      : null,
-    has_more: selected.length > 0 && hasMore,
+    next_cursor:
+      pageSelections.length > 0 && hasMore
+        ? encodeOffsetCursor({ offset: nextOffset })
+        : null,
+    has_more: pageSelections.length > 0 && hasMore,
+  }
+}
+
+export const listPublicCreatorDevotionals = async (params: {
+  creatorId: string
+  viewerId: string
+  cursor?: string | null
+  limit: number
+}) => {
+  const limit = Math.min(Math.max(params.limit, 1), DEVOTIONAL_FEED_DEFAULT_LIMIT)
+  const offset = getCursorOffset(params.cursor)
+  const take = offset + limit + 1
+
+  const items = await prisma.devotional.findMany({
+    where: {
+      ...buildEligibleFeedWhere(),
+      authorId: params.creatorId,
+    },
+    orderBy: [{ publishedAt: 'desc' }, { id: 'desc' }],
+    take,
+    include: devotionalInclude(params.viewerId),
+  })
+
+  const pageItems = items.slice(offset, offset + limit)
+  const hasMore = items.length > offset + pageItems.length
+
+  return {
+    items: pageItems.map((item) =>
+      formatDevotional(item, { viewerId: params.viewerId })
+    ),
+    next_cursor:
+      pageItems.length > 0 && hasMore
+        ? encodeOffsetCursor({ offset: offset + pageItems.length })
+        : null,
+    has_more: pageItems.length > 0 && hasMore,
   }
 }
 
@@ -1017,7 +1471,7 @@ export const updateDevotional = async (params: {
       viewerId: params.viewerId,
     })
   } catch (error) {
-    rethrowKnownDevotionalWriteError(error)
+    return rethrowKnownDevotionalWriteError(error)
   }
 }
 
@@ -1228,6 +1682,15 @@ export const saveDevotional = async (params: {
   userId: string
 }) => {
   return prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: { authorId: true },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
     const existing = await tx.devotionalSave.findUnique({
       where: {
         devotionalId_userId: {
@@ -1248,6 +1711,11 @@ export const saveDevotional = async (params: {
         where: { id: params.devotionalId },
         data: { saveCount: { increment: 1 } },
         select: { saveCount: true },
+      })
+      await upsertCreatorAffinity(tx, {
+        userId: params.userId,
+        creatorId: devotional.authorId,
+        scoreDelta: devotionalFeedPolicy.affinitySignals.save,
       })
       return { saved: true, saveCount: updated.saveCount }
     }
@@ -1324,6 +1792,15 @@ export const markReadComplete = async (params: {
   userId: string
 }) => {
   return prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: { authorId: true },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
     const created = await tx.devotionalReadComplete.createMany({
       data: [
         {
@@ -1339,6 +1816,11 @@ export const markReadComplete = async (params: {
         where: { id: params.devotionalId },
         data: { readCompleteCount: { increment: 1 } },
         select: { readCompleteCount: true },
+      })
+      await upsertCreatorAffinity(tx, {
+        userId: params.userId,
+        creatorId: devotional.authorId,
+        scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
       })
       return {
         readComplete: true,

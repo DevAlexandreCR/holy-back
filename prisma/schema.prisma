@@ -79,6 +79,12 @@ model User {
   email               String                @unique
   passwordHash        String                @map("password_hash")
   role                UserRole              @default(USER)
+  handle              String?               @unique @db.VarChar(30)
+  creatorBio          String?               @map("creator_bio") @db.VarChar(280)
+  creatorAvatarUrl    String?               @map("creator_avatar_url")
+  creatorProfileUpdatedAt DateTime?         @map("creator_profile_updated_at")
+  followersCount      Int                   @default(0) @map("followers_count")
+  followingCount      Int                   @default(0) @map("following_count")
   createdAt           DateTime              @default(now()) @map("created_at")
   updatedAt           DateTime              @updatedAt @map("updated_at")
   resetToken          String?               @map("reset_token")
@@ -104,6 +110,11 @@ model User {
   devotionalReports DevotionalReport[]
   devotionalModerationActions DevotionalModerationAction[]
   devotionalAuthorImpressionDaily DevotionalAuthorImpressionDaily[]
+  creatorAvatarAssets CreatorAvatarAsset[]
+  followedBy UserFollow[]                   @relation("UserFollowFollowed")
+  following UserFollow[]                    @relation("UserFollowFollower")
+  creatorAffinities UserCreatorAffinity[]   @relation("UserCreatorAffinityCreator")
+  viewerAffinities UserCreatorAffinity[]    @relation("UserCreatorAffinityUser")
 
   @@map("users")
 }
@@ -382,6 +393,63 @@ model DevotionalImageAsset {
   @@index([userId, status])
   @@index([expiresAt])
   @@map("devotional_image_assets")
+}
+
+model CreatorAvatarAsset {
+  id                    String                        @id @default(uuid()) @db.Char(36)
+  userId                String                        @map("user_id") @db.Char(36)
+  user                  User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                DevotionalImageAssetStatus    @default(PENDING)
+  imageModerationStatus DevotionalImageModerationStatus @default(PENDING) @map("image_moderation_status")
+  moderationResultRaw   Json?                         @map("moderation_result_raw")
+  mimeType              String                        @map("mime_type")
+  tempPath              String                        @map("temp_path")
+  tempUrl               String                        @map("temp_url")
+  permanentPath         String?                       @map("permanent_path")
+  permanentUrl          String?                       @map("permanent_url")
+  width                 Int?
+  height                Int?
+  expiresAt             DateTime?                     @map("expires_at")
+  usedAt                DateTime?                     @map("used_at")
+  createdAt             DateTime                      @default(now()) @map("created_at")
+  updatedAt             DateTime                      @updatedAt @map("updated_at")
+
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@map("creator_avatar_assets")
+}
+
+model UserFollow {
+  id         String    @id @default(uuid()) @db.Char(36)
+  followerId String    @map("follower_id") @db.Char(36)
+  followedId String    @map("followed_id") @db.Char(36)
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  follower   User      @relation("UserFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed   User      @relation("UserFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followedId])
+  @@index([followedId, createdAt])
+  @@index([followerId, createdAt])
+  @@map("user_follows")
+}
+
+model UserCreatorAffinity {
+  id           String    @id @default(uuid()) @db.Char(36)
+  userId       String    @map("user_id") @db.Char(36)
+  creatorId    String    @map("creator_id") @db.Char(36)
+  score        Float     @default(0)
+  lastSignalAt DateTime  @default(now()) @map("last_signal_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user         User      @relation("UserCreatorAffinityUser", fields: [userId], references: [id], onDelete: Cascade)
+  creator      User      @relation("UserCreatorAffinityCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, creatorId])
+  @@index([userId, score])
+  @@index([creatorId, lastSignalAt])
+  @@map("user_creator_affinity")
 }
 
 model DevotionalFeedDelivery {

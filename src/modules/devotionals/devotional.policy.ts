@@ -11,6 +11,9 @@ export const DEVOTIONAL_FEED_CANDIDATE_MULTIPLIER = 6
 export const DEVOTIONAL_PREVIEW_MAX_CHARS = 240
 export const DEVOTIONAL_WORDS_PER_MINUTE = 180
 
+export const DEVOTIONAL_FEED_MODES = ['for_you', 'following'] as const
+export type DevotionalFeedMode = (typeof DEVOTIONAL_FEED_MODES)[number]
+
 export const DEVOTIONAL_FEED_ELIGIBLE_STATES = [
   DevotionalPublicationState.PUBLISHED_LOW_REACH,
   DevotionalPublicationState.TRENDING,
@@ -27,6 +30,33 @@ export const devotionalFeedPolicy = {
   dedupWindowHours: 72,
   authorRepetitionMax: 2,
   authorRepetitionWindow: 20,
+  forYou: {
+    candidateWindowMultiplier: 12,
+    mix: {
+      globalDiscovery: 0.5,
+      lowReachExploration: 0.25,
+      personalized: 0.25,
+    },
+    lowReachAuthorImpressions24hMax: 50,
+    followBoost: 16,
+    affinityScoreMultiplier: 2.5,
+    featuredBoost: 10,
+    trendingThreshold: 20,
+  },
+  following: {
+    candidateWindowMultiplier: 8,
+  },
+  affinitySignals: {
+    follow: 12,
+    save: 4,
+    readComplete: 3,
+  },
+  profile: {
+    maxBioLength: 280,
+    handleMinLength: 3,
+    handleMaxLength: 30,
+    avatarAssetTtlHours: 24,
+  },
 } as const
 
 export const devotionalRankingPolicy = {

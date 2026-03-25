@@ -5,6 +5,7 @@ import bibleRouter from './modules/bible/bible.routes';
 import devotionalRouter from './modules/devotionals/devotional.routes';
 import rolesRouter from './modules/roles/roles.routes';
 import userRouter from './modules/user/user.routes';
+import userProfileRouter from './modules/user/userProfile.routes';
 import verseRouter from './modules/verse/verse.routes';
 import widgetRouter from './modules/widget/widget.routes';
 import { errorHandler } from './common/errorHandler';
@@ -23,6 +24,7 @@ app.use('/bible', bibleRouter);
 app.use('/devotionals', devotionalRouter);
 app.use('/roles', rolesRouter);
 app.use('/user', userRouter);
+app.use('/users', userProfileRouter);
 app.use('/verse', verseRouter);
 app.use('/widget', widgetRouter);
 
