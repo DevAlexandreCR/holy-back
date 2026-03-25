@@ -526,6 +526,57 @@ const getFeedCandidateWindow = (limit: number) =>
   Math.max(limit, DEVOTIONAL_FEED_DEFAULT_LIMIT) *
   DEVOTIONAL_FEED_CANDIDATE_MULTIPLIER
 
+const selectFeedCandidates = (params: {
+  candidates: DevotionalWithRelations[]
+  recentDeliveryIds: Set<string>
+  limit: number
+}) => {
+  const authorCounts = new Map<string, number>()
+  const selected: DevotionalWithRelations[] = []
+  const selectedIds = new Set<string>()
+
+  const trySelect = (candidate: DevotionalWithRelations, respectAuthorCap: boolean) => {
+    if (selected.length >= params.limit || selectedIds.has(candidate.id)) {
+      return
+    }
+
+    const authorCount = authorCounts.get(candidate.authorId) ?? 0
+    if (
+      respectAuthorCap &&
+      authorCount >= devotionalFeedPolicy.authorRepetitionMax
+    ) {
+      return
+    }
+
+    selected.push(candidate)
+    selectedIds.add(candidate.id)
+    authorCounts.set(candidate.authorId, authorCount + 1)
+  }
+
+  for (const candidate of params.candidates) {
+    if (params.recentDeliveryIds.has(candidate.id)) {
+      continue
+    }
+    trySelect(candidate, true)
+  }
+
+  for (const candidate of params.candidates) {
+    if (!params.recentDeliveryIds.has(candidate.id)) {
+      continue
+    }
+    trySelect(candidate, true)
+  }
+
+  for (const candidate of params.candidates) {
+    trySelect(candidate, false)
+  }
+
+  return {
+    items: selected,
+    selectedIds,
+  }
+}
+
 const maybeTrackView = async (devotionalId: string, userId?: string | null) => {
   if (!userId) {
     await prisma.devotional.update({
@@ -693,6 +744,7 @@ export const listFeedDevotionals = async (params: {
     DEVOTIONAL_FEED_DEFAULT_LIMIT
   )
   const cursorWhere = buildCursorWhere(params.cursor)
+  const candidateWindow = getFeedCandidateWindow(limit)
   const dedupSince = new Date(
     Date.now() - devotionalFeedPolicy.dedupWindowHours * 60 * 60 * 1000
   )
@@ -706,7 +758,7 @@ export const listFeedDevotionals = async (params: {
   })
 
   const seenDevotionalIds = new Set(recentDeliveries.map((item) => item.devotionalId))
-  const candidates = await prisma.devotional.findMany({
+  const fetchedCandidates = await prisma.devotional.findMany({
     where: {
       publicationState: { in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES] },
       moderationStatus: DevotionalModerationStatus.CLEAR,
@@ -717,30 +769,16 @@ export const listFeedDevotionals = async (params: {
       { lastScoredAt: 'desc' },
       { id: 'desc' },
     ],
-    take: getFeedCandidateWindow(limit),
+    take: candidateWindow + 1,
     include: devotionalInclude(params.userId),
   })
-
-  const authorCounts = new Map<string, number>()
-  const selected: DevotionalWithRelations[] = []
-
-  for (const candidate of candidates) {
-    if (seenDevotionalIds.has(candidate.id)) {
-      continue
-    }
-
-    const authorCount = authorCounts.get(candidate.authorId) ?? 0
-    if (authorCount >= devotionalFeedPolicy.authorRepetitionMax) {
-      continue
-    }
-
-    selected.push(candidate)
-    authorCounts.set(candidate.authorId, authorCount + 1)
-
-    if (selected.length >= limit) {
-      break
-    }
-  }
+  const hasAdditionalCandidates = fetchedCandidates.length > candidateWindow
+  const candidates = fetchedCandidates.slice(0, candidateWindow)
+  const { items: selected, selectedIds } = selectFeedCandidates({
+    candidates,
+    recentDeliveryIds: seenDevotionalIds,
+    limit,
+  })
 
   const deliveries = await Promise.all(
     selected.map(async (item) => {
@@ -761,6 +799,10 @@ export const listFeedDevotionals = async (params: {
   )
 
   const lastItem = selected.length > 0 ? selected[selected.length - 1] : null
+  const hasMore =
+    candidates.some((candidate) => !selectedIds.has(candidate.id)) ||
+    hasAdditionalCandidates
+
   return {
     items: deliveries.map(({ item, token }) =>
       formatDevotional(item, {
@@ -775,7 +817,7 @@ export const listFeedDevotionals = async (params: {
           id: lastItem.id,
         })
       : null,
-    has_more: selected.length === limit && candidates.length > selected.length,
+    has_more: selected.length > 0 && hasMore,
   }
 }
 
@@ -1217,22 +1259,17 @@ export const markReadComplete = async (params: {
   userId: string
 }) => {
   return prisma.$transaction(async (tx) => {
-    const existing = await tx.devotionalReadComplete.findUnique({
-      where: {
-        devotionalId_userId: {
+    const created = await tx.devotionalReadComplete.createMany({
+      data: [
+        {
           devotionalId: params.devotionalId,
           userId: params.userId,
         },
-      },
+      ],
+      skipDuplicates: true,
     })
 
-    if (!existing) {
-      await tx.devotionalReadComplete.create({
-        data: {
-          devotionalId: params.devotionalId,
-          userId: params.userId,
-        },
-      })
+    if (created.count > 0) {
       const updated = await tx.devotional.update({
         where: { id: params.devotionalId },
         data: { readCompleteCount: { increment: 1 } },
