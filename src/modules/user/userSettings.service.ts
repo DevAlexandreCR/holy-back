@@ -60,7 +60,17 @@ export const ensureSettings = async (userId: string): Promise<UserSettings> => {
 
 export const updateSettings = async (
   userId: string,
-  data: Partial<Pick<UserSettings, 'preferredVersionId' | 'timezone' | 'widgetFontSize'>>,
+  data: Partial<
+    Pick<
+      UserSettings,
+      | 'preferredVersionId'
+      | 'timezone'
+      | 'widgetFontSize'
+      | 'devotionalNotificationsEnabled'
+      | 'followedCreatorNotificationsEnabled'
+      | 'featuredDevotionalNotificationsEnabled'
+    >
+  >,
 ): Promise<UserSettings> => {
   await ensureSettings(userId)
   return prisma.userSettings.update({

@@ -7,9 +7,11 @@ import {
   DevotionalImageModerationStatus,
   DevotionalModerationActionType,
   DevotionalModerationStatus,
+  DevotionalNotificationType,
   DevotionalPublicationState,
   DevotionalReportReason,
   DevotionalReportStatus,
+  DevotionalStateTransitionSource,
   Prisma,
   UserRole,
 } from '@prisma/client'
@@ -30,6 +32,16 @@ import {
   devotionalRankingPolicy,
 } from './devotional.policy'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
+import {
+  recordPublicationStateTransition,
+  resolveDeliveryIdByToken,
+} from './devotionalPhase3.service'
+import {
+  createShareAttributionSource,
+  recordFirstAttributedDevotionalOpen,
+  recordFirstAttributedReadComplete,
+} from '../shareAttribution/shareAttribution.service'
+import { sendDevotionalNotifications } from '../notifications/notification.service'
 
 export const DEVOTIONAL_MANAGEMENT_STATUSES = [
   'DRAFT',
@@ -1271,6 +1283,8 @@ export const listFeedDevotionals = async (params: {
           token: crypto.randomUUID(),
           devotionalId: devotional.id,
           userId: params.userId,
+          feedMode: mode,
+          recommendationReason,
           rankingScore: devotional.rankingScore,
         },
       })
@@ -1341,6 +1355,8 @@ export const getDevotionalById = async (params: {
   devotionalId: string
   viewerId?: string | null
   viewerRole?: UserRole | null
+  shareToken?: string | null
+  deviceId?: string | null
 }) => {
   const devotional = await prisma.devotional.findUnique({
     where: { id: params.devotionalId },
@@ -1360,6 +1376,14 @@ export const getDevotionalById = async (params: {
 
   if (isPubliclyVisible(devotional)) {
     await maybeTrackView(params.devotionalId, params.viewerId)
+    if (params.viewerId && params.shareToken) {
+      await recordFirstAttributedDevotionalOpen({
+        token: params.shareToken,
+        devotionalId: devotional.id,
+        userId: params.viewerId,
+        deviceId: params.deviceId,
+      })
+    }
   }
 
   return formatDevotional(devotional, {
@@ -1583,6 +1607,16 @@ export const publishDevotional = async (params: {
       include: devotionalInclude(params.viewerId),
     })
 
+    await recordPublicationStateTransition(tx, {
+      devotionalId: devotional.id,
+      fromPublicationState: devotional.publicationState,
+      toPublicationState: publicationState,
+      source: DevotionalStateTransitionSource.PUBLISH,
+      metadata: {
+        moderation_status: moderationStatus,
+      },
+    })
+
     if (textModeration.severity === 'MEDIUM') {
       await addModerationAction(tx, {
         devotionalId: devotional.id,
@@ -1595,6 +1629,27 @@ export const publishDevotional = async (params: {
     return updated
   })
 
+  if (
+    result.moderationStatus === DevotionalModerationStatus.CLEAR &&
+    [
+      DevotionalPublicationState.PUBLISHED_LOW_REACH,
+      DevotionalPublicationState.TRENDING,
+      DevotionalPublicationState.FEATURED,
+    ].some((state) => state === result.publicationState)
+  ) {
+    await sendDevotionalNotifications({
+      devotionalId: result.id,
+      type: DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL,
+    })
+
+    if (result.publicationState === DevotionalPublicationState.FEATURED) {
+      await sendDevotionalNotifications({
+        devotionalId: result.id,
+        type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
+      })
+    }
+  }
+
   return formatDevotional(result, {
     includeContent: true,
     viewerId: params.viewerId,
@@ -1605,29 +1660,38 @@ export const archiveDevotional = async (params: {
   devotionalId: string
   viewerId?: string | null
 }) => {
-  const devotional = await prisma.devotional.findUnique({
-    where: { id: params.devotionalId },
-    select: { publicationState: true },
-  })
+  const updated = await prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: { publicationState: true },
+    })
 
-  if (!devotional) {
-    throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
-  }
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
 
-  if (devotional.publicationState === DevotionalPublicationState.ARCHIVED) {
-    throw new AppError(
-      'Devotional already archived',
-      'DEVOTIONAL_ALREADY_ARCHIVED',
-      400
-    )
-  }
+    if (devotional.publicationState === DevotionalPublicationState.ARCHIVED) {
+      throw new AppError(
+        'Devotional already archived',
+        'DEVOTIONAL_ALREADY_ARCHIVED',
+        400
+      )
+    }
 
-  const updated = await prisma.devotional.update({
-    where: { id: params.devotionalId },
-    data: {
-      publicationState: DevotionalPublicationState.ARCHIVED,
-    },
-    include: devotionalInclude(params.viewerId),
+    await recordPublicationStateTransition(tx, {
+      devotionalId: params.devotionalId,
+      fromPublicationState: devotional.publicationState,
+      toPublicationState: DevotionalPublicationState.ARCHIVED,
+      source: DevotionalStateTransitionSource.OWNER_ARCHIVE,
+    })
+
+    return tx.devotional.update({
+      where: { id: params.devotionalId },
+      data: {
+        publicationState: DevotionalPublicationState.ARCHIVED,
+      },
+      include: devotionalInclude(params.viewerId),
+    })
   })
 
   return formatDevotional(updated, {
@@ -1680,6 +1744,7 @@ export const toggleDevotionalLike = async (params: {
 export const saveDevotional = async (params: {
   devotionalId: string
   userId: string
+  deliveryToken?: string | null
 }) => {
   return prisma.$transaction(async (tx) => {
     const devotional = await tx.devotional.findUnique({
@@ -1701,10 +1766,17 @@ export const saveDevotional = async (params: {
     })
 
     if (!existing) {
+      const deliveryId = await resolveDeliveryIdByToken(tx, {
+        userId: params.userId,
+        devotionalId: params.devotionalId,
+        deliveryToken: params.deliveryToken,
+      })
+
       await tx.devotionalSave.create({
         data: {
           devotionalId: params.devotionalId,
           userId: params.userId,
+          deliveryId,
         },
       })
       const updated = await tx.devotional.update({
@@ -1768,13 +1840,27 @@ export const unsaveDevotional = async (params: {
 export const shareDevotional = async (params: {
   devotionalId: string
   userId: string
+  deliveryToken?: string | null
 }) => {
   return prisma.$transaction(async (tx) => {
+    const deliveryId = await resolveDeliveryIdByToken(tx, {
+      userId: params.userId,
+      devotionalId: params.devotionalId,
+      deliveryToken: params.deliveryToken,
+    })
+
     await tx.devotionalShareEvent.create({
       data: {
         devotionalId: params.devotionalId,
         userId: params.userId,
+        deliveryId,
       },
+    })
+
+    const shareSource = await createShareAttributionSource({
+      devotionalId: params.devotionalId,
+      userId: params.userId,
+      tx,
     })
 
     const updated = await tx.devotional.update({
@@ -1783,13 +1869,16 @@ export const shareDevotional = async (params: {
       select: { shareCount: true },
     })
 
-    return { shareCount: updated.shareCount }
+    return { shareCount: updated.shareCount, shareUrl: shareSource.shareUrl }
   })
 }
 
 export const markReadComplete = async (params: {
   devotionalId: string
   userId: string
+  deliveryToken?: string | null
+  shareToken?: string | null
+  deviceId?: string | null
 }) => {
   return prisma.$transaction(async (tx) => {
     const devotional = await tx.devotional.findUnique({
@@ -1801,11 +1890,18 @@ export const markReadComplete = async (params: {
       throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
     }
 
+    const deliveryId = await resolveDeliveryIdByToken(tx, {
+      userId: params.userId,
+      devotionalId: params.devotionalId,
+      deliveryToken: params.deliveryToken,
+    })
+
     const created = await tx.devotionalReadComplete.createMany({
       data: [
         {
           devotionalId: params.devotionalId,
           userId: params.userId,
+          deliveryId,
         },
       ],
       skipDuplicates: true,
@@ -1822,6 +1918,14 @@ export const markReadComplete = async (params: {
         creatorId: devotional.authorId,
         scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
       })
+      if (params.shareToken) {
+        await recordFirstAttributedReadComplete({
+          token: params.shareToken,
+          devotionalId: params.devotionalId,
+          userId: params.userId,
+          deviceId: params.deviceId,
+        })
+      }
       return {
         readComplete: true,
         readCompleteCount: updated.readCompleteCount,
@@ -1845,6 +1949,7 @@ export const reportDevotional = async (params: {
   userId: string
   reason: DevotionalReportReason
   details?: string | null
+  deliveryToken?: string | null
 }) => {
   if (!devotionalModerationPolicy.allowedReportReasons.includes(params.reason)) {
     throw new AppError('Invalid report reason', 'INVALID_REPORT_REASON', 400)
@@ -1872,6 +1977,11 @@ export const reportDevotional = async (params: {
       data: {
         devotionalId: params.devotionalId,
         userId: params.userId,
+        deliveryId: await resolveDeliveryIdByToken(tx, {
+          userId: params.userId,
+          devotionalId: params.devotionalId,
+          deliveryToken: params.deliveryToken,
+        }),
         reason: params.reason,
         details: params.details ?? null,
       },
@@ -2210,12 +2320,15 @@ export const rescoreDevotionals = async () => {
 
   const now = new Date()
 
-  await prisma.$transaction(
-    candidates.map((devotional) => {
+  const newlyFeaturedIds: string[] = []
+
+  await prisma.$transaction(async (tx) => {
+    for (const devotional of candidates) {
       const ageHours = devotional.publishedAt
         ? Math.max(
             0,
-            (now.getTime() - devotional.publishedAt.getTime()) / (1000 * 60 * 60)
+            (now.getTime() - devotional.publishedAt.getTime()) /
+              (1000 * 60 * 60)
           )
         : 0
       const uniqueImpressions = Math.max(devotional.uniqueImpressionCount, 1)
@@ -2236,7 +2349,8 @@ export const rescoreDevotionals = async () => {
       const authorPenalty = Math.log10(
         1 +
           (authorImpressions.get(devotional.authorId) ?? 0) /
-            devotionalRankingPolicy.scoreWeights.authorPenaltyImpressionsDivisor
+            devotionalRankingPolicy.scoreWeights
+              .authorPenaltyImpressionsDivisor
       )
       const score =
         weightedEngagement * freshness +
@@ -2251,17 +2365,21 @@ export const rescoreDevotionals = async () => {
       let featuredUntil = devotional.featuredUntil
 
       const qualifiesFeatured =
-        uniqueImpressions >= devotionalRankingPolicy.promotion.featured.uniqueImpressions &&
+        uniqueImpressions >=
+          devotionalRankingPolicy.promotion.featured.uniqueImpressions &&
         score >= devotionalRankingPolicy.promotion.featured.score &&
-        readCompleteRate >= devotionalRankingPolicy.promotion.featured.readCompleteRate &&
+        readCompleteRate >=
+          devotionalRankingPolicy.promotion.featured.readCompleteRate &&
         shareRate >= devotionalRankingPolicy.promotion.featured.shareRate &&
         reportRate < devotionalRankingPolicy.promotion.featured.reportRate &&
         skipRate < devotionalRankingPolicy.promotion.featured.skipRate
 
       const qualifiesTrending =
-        uniqueImpressions >= devotionalRankingPolicy.promotion.trending.uniqueImpressions &&
+        uniqueImpressions >=
+          devotionalRankingPolicy.promotion.trending.uniqueImpressions &&
         score >= devotionalRankingPolicy.promotion.trending.score &&
-        readCompleteRate >= devotionalRankingPolicy.promotion.trending.readCompleteRate &&
+        readCompleteRate >=
+          devotionalRankingPolicy.promotion.trending.readCompleteRate &&
         saveRate >= devotionalRankingPolicy.promotion.trending.saveRate &&
         reportRate < devotionalRankingPolicy.promotion.trending.reportRate &&
         skipRate < devotionalRankingPolicy.promotion.trending.skipRate
@@ -2299,7 +2417,7 @@ export const rescoreDevotionals = async () => {
         featuredUntil = null
       }
 
-      return prisma.devotional.update({
+      await tx.devotional.update({
         where: { id: devotional.id },
         data: {
           rankingScore: score,
@@ -2308,8 +2426,33 @@ export const rescoreDevotionals = async () => {
           featuredUntil,
         },
       })
+
+      const changed = await recordPublicationStateTransition(tx, {
+        devotionalId: devotional.id,
+        fromPublicationState: devotional.publicationState,
+        toPublicationState: publicationState,
+        source: DevotionalStateTransitionSource.RANKING,
+        metadata: {
+          ranking_score: score,
+        },
+      })
+
+      if (
+        changed &&
+        publicationState === DevotionalPublicationState.FEATURED &&
+        devotional.publicationState !== DevotionalPublicationState.FEATURED
+      ) {
+        newlyFeaturedIds.push(devotional.id)
+      }
+    }
+  })
+
+  for (const devotionalId of newlyFeaturedIds) {
+    await sendDevotionalNotifications({
+      devotionalId,
+      type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
     })
-  )
+  }
 
   return { rescored: candidates.length }
 }

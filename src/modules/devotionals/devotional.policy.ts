@@ -59,6 +59,42 @@ export const devotionalFeedPolicy = {
   },
 } as const
 
+export const devotionalNotificationPolicy = {
+  featuredCampaignEnabled: true,
+  shareAttributionWindowDays: 7,
+  preferences: {
+    devotionalDefaultEnabled: true,
+    followedCreatorDefaultEnabled: true,
+    featuredDefaultEnabled: true,
+  },
+  cooldowns: {
+    featuredHours: 12,
+    followedCreatorPer24h: 3,
+  },
+  titleTemplates: {
+    followedCreator: 'Nuevo devocional de alguien que sigues',
+    featured: 'Devocional destacado para ti',
+  },
+} as const
+
+export const devotionalRankingReviewPolicy = {
+  version: 'phase3-v1',
+  effectiveDate: '2026-03-25',
+  reason: 'Phase 3 launch baseline for production tuning.',
+  metricsReviewed: [
+    'D1 retention',
+    'D7 retention',
+    'read complete rate by feed mode',
+    'save rate by feed mode',
+    'share rate by feed mode',
+    'report rate by feed mode',
+    'creator concentration among top creators',
+    'low-reach promotion rate',
+    'Following feed usage share',
+    'personalized candidate lift in For You',
+  ],
+} as const
+
 export const devotionalRankingPolicy = {
   featureDurationHours: 48,
   privilegedLaunchScore: 1000,

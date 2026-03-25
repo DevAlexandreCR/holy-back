@@ -16,10 +16,22 @@ const widgetFontSizeSchema = z.object({
   widget_font_size: z.enum(['small', 'medium', 'large', 'extra_large']),
 })
 
-const formatSettings = (settings: { preferredVersionId: number | null; timezone: string | null; widgetFontSize: string | null }) => ({
+const formatSettings = (settings: {
+  preferredVersionId: number | null
+  timezone: string | null
+  widgetFontSize: string | null
+  devotionalNotificationsEnabled: boolean
+  followedCreatorNotificationsEnabled: boolean
+  featuredDevotionalNotificationsEnabled: boolean
+}) => ({
   preferred_version_id: settings.preferredVersionId,
   timezone: settings.timezone,
   widget_font_size: settings.widgetFontSize,
+  devotional_notifications_enabled: settings.devotionalNotificationsEnabled,
+  followed_creator_notifications_enabled:
+    settings.followedCreatorNotificationsEnabled,
+  featured_devotional_notifications_enabled:
+    settings.featuredDevotionalNotificationsEnabled,
 })
 
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {

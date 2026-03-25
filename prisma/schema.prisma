@@ -47,6 +47,40 @@ enum DevotionalFeedEventType {
   OPEN
 }
 
+enum DevicePlatform {
+  ANDROID
+  IOS
+}
+
+enum DeviceOsPermissionStatus {
+  AUTHORIZED
+  PROVISIONAL
+  DENIED
+  NOT_DETERMINED
+}
+
+enum DevotionalNotificationType {
+  FOLLOWED_CREATOR_NEW_DEVOTIONAL
+  FEATURED_DEVOTIONAL
+}
+
+enum ShareAttributionEventType {
+  LINK_OPEN
+  APP_OPEN
+  INSTALL_DETECTED
+  REGISTRATION
+  FIRST_DEVOTIONAL_OPEN
+  FIRST_READ_COMPLETE
+}
+
+enum DevotionalStateTransitionSource {
+  PUBLISH
+  RANKING
+  OWNER_ARCHIVE
+  MODERATION
+  RESTORE
+}
+
 enum DevotionalReportReason {
   INAPPROPRIATE
   OFFENSIVE
@@ -115,6 +149,13 @@ model User {
   following UserFollow[]                    @relation("UserFollowFollower")
   creatorAffinities UserCreatorAffinity[]   @relation("UserCreatorAffinityCreator")
   viewerAffinities UserCreatorAffinity[]    @relation("UserCreatorAffinityUser")
+  deviceTokens DeviceToken[]
+  appSessionEvents AppSessionEvent[]
+  notificationSends DevotionalNotificationSend[]
+  shareAttributionSources DevotionalShareAttributionSource[] @relation("ShareAttributionSharer")
+  shareAttributionEvents DevotionalShareAttributionEvent[] @relation("ShareAttributionUser")
+  creatorDailyMetrics CreatorDailyMetric[]
+  userActivityDailyMetrics UserActivityDailyMetric[]
 
   @@map("users")
 }
@@ -141,6 +182,9 @@ model UserSettings {
   preferredVersionId Int?          @map("preferred_version_id")
   timezone           String?
   widgetFontSize     String?       @default("large") @map("widget_font_size")
+  devotionalNotificationsEnabled Boolean @default(true) @map("devotional_notifications_enabled")
+  followedCreatorNotificationsEnabled Boolean @default(true) @map("followed_creator_notifications_enabled")
+  featuredDevotionalNotificationsEnabled Boolean @default(true) @map("featured_devotional_notifications_enabled")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   user               User          @relation(fields: [userId], references: [id])
@@ -299,6 +343,10 @@ model Devotional {
   readCompletions        DevotionalReadComplete[]
   reports                DevotionalReport[]
   moderationActions      DevotionalModerationAction[]
+  notificationSends      DevotionalNotificationSend[]
+  stateTransitionEvents  DevotionalStateTransitionEvent[]
+  dailyMetrics           DevotionalDailyMetric[]
+  shareAttributionSources DevotionalShareAttributionSource[]
 
   @@index([publicationState, moderationStatus, rankingScore, lastScoredAt], map: "devotions_feed_rank_idx")
   @@index([publicationState, moderationStatus, publishedAt], map: "devotions_pub_vis_idx")
@@ -457,15 +505,22 @@ model DevotionalFeedDelivery {
   token        String     @unique
   devotionalId String     @map("devotional_id") @db.Char(36)
   userId       String     @map("user_id") @db.Char(36)
+  feedMode     String     @map("feed_mode")
+  recommendationReason String? @map("recommendation_reason")
   rankingScore Float      @default(0) @map("ranking_score")
   deliveredAt  DateTime   @default(now()) @map("delivered_at")
 
   devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   events       DevotionalFeedEvent[]
+  saves        DevotionalSave[]
+  shares       DevotionalShareEvent[]
+  readCompletions DevotionalReadComplete[]
+  reports      DevotionalReport[]
 
   @@index([userId, deliveredAt])
   @@index([devotionalId, deliveredAt])
+  @@index([feedMode, deliveredAt])
   @@map("devotional_feed_deliveries")
 }
 
@@ -506,13 +561,16 @@ model DevotionalSave {
   id           String     @id @default(uuid()) @db.Char(36)
   devotionalId String     @map("devotional_id") @db.Char(36)
   userId       String     @map("user_id") @db.Char(36)
+  deliveryId   String?    @map("delivery_id") @db.Char(36)
   createdAt    DateTime   @default(now()) @map("created_at")
 
   devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
+  @@index([deliveryId])
   @@map("devotional_saves")
 }
 
@@ -520,13 +578,16 @@ model DevotionalShareEvent {
   id           String     @id @default(uuid()) @db.Char(36)
   devotionalId String     @map("devotional_id") @db.Char(36)
   userId       String     @map("user_id") @db.Char(36)
+  deliveryId   String?    @map("delivery_id") @db.Char(36)
   createdAt    DateTime   @default(now()) @map("created_at")
 
   devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@index([devotionalId, createdAt])
   @@index([userId, createdAt])
+  @@index([deliveryId])
   @@map("devotional_share_events")
 }
 
@@ -534,13 +595,16 @@ model DevotionalReadComplete {
   id           String     @id @default(uuid()) @db.Char(36)
   devotionalId String     @map("devotional_id") @db.Char(36)
   userId       String     @map("user_id") @db.Char(36)
+  deliveryId   String?    @map("delivery_id") @db.Char(36)
   createdAt    DateTime   @default(now()) @map("created_at")
 
   devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
+  @@index([deliveryId])
   @@map("devotional_read_completions")
 }
 
@@ -548,6 +612,7 @@ model DevotionalReport {
   id           String                 @id @default(uuid()) @db.Char(36)
   devotionalId String                 @map("devotional_id") @db.Char(36)
   userId       String                 @map("user_id") @db.Char(36)
+  deliveryId   String?                @map("delivery_id") @db.Char(36)
   reason       DevotionalReportReason
   details      String?                @db.Text
   status       DevotionalReportStatus @default(OPEN)
@@ -558,9 +623,11 @@ model DevotionalReport {
 
   devotional   Devotional             @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([status, createdAt])
+  @@index([deliveryId])
   @@map("devotional_reports")
 }
 
@@ -594,4 +661,252 @@ model DevotionalAuthorImpressionDaily {
   @@unique([authorId, date])
   @@index([date])
   @@map("devotional_author_impression_daily")
+}
+
+model DeviceToken {
+  id                     String                   @id @default(uuid()) @db.Char(36)
+  userId                 String                   @map("user_id") @db.Char(36)
+  token                  String                   @unique
+  platform               DevicePlatform
+  osPermissionStatus     DeviceOsPermissionStatus @map("os_permission_status")
+  isActive               Boolean                  @default(true) @map("is_active")
+  lastSeenAt             DateTime                 @default(now()) @map("last_seen_at")
+  lastPermissionSyncedAt DateTime                 @default(now()) @map("last_permission_synced_at")
+  createdAt              DateTime                 @default(now()) @map("created_at")
+  updatedAt              DateTime                 @updatedAt @map("updated_at")
+
+  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationSends      DevotionalNotificationSend[]
+
+  @@index([userId, isActive])
+  @@index([osPermissionStatus, isActive])
+  @@map("device_tokens")
+}
+
+model DevotionalNotificationSend {
+  id                 String                    @id @default(uuid()) @db.Char(36)
+  devotionalId       String                    @map("devotional_id") @db.Char(36)
+  userId             String                    @map("user_id") @db.Char(36)
+  deviceTokenId      String                    @map("device_token_id") @db.Char(36)
+  type               DevotionalNotificationType
+  title              String
+  body               String
+  imageUrl           String?                   @map("image_url")
+  providerMessageId  String?                   @map("provider_message_id")
+  sentAt             DateTime                  @default(now()) @map("sent_at")
+  providerAcceptedAt DateTime?                 @map("provider_accepted_at")
+  openedAt           DateTime?                 @map("opened_at")
+  failedAt           DateTime?                 @map("failed_at")
+  failureCode        String?                   @map("failure_code")
+  tokenDeactivatedAt DateTime?                 @map("token_deactivated_at")
+  payload            Json?
+  createdAt          DateTime                  @default(now()) @map("created_at")
+  updatedAt          DateTime                  @updatedAt @map("updated_at")
+
+  devotional         Devotional                @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceToken        DeviceToken               @relation(fields: [deviceTokenId], references: [id], onDelete: Cascade)
+
+  @@index([type, sentAt])
+  @@index([userId, type, sentAt])
+  @@index([deviceTokenId, sentAt])
+  @@map("devotional_notification_sends")
+}
+
+model AppSessionEvent {
+  id         String   @id @default(uuid()) @db.Char(36)
+  userId      String   @map("user_id") @db.Char(36)
+  deviceId    String?  @map("device_id")
+  occurredAt  DateTime @default(now()) @map("occurred_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, occurredAt])
+  @@map("app_session_events")
+}
+
+model DevotionalStateTransitionEvent {
+  id                   String                         @id @default(uuid()) @db.Char(36)
+  devotionalId         String                         @map("devotional_id") @db.Char(36)
+  fromPublicationState DevotionalPublicationState?    @map("from_publication_state")
+  toPublicationState   DevotionalPublicationState     @map("to_publication_state")
+  source               DevotionalStateTransitionSource
+  metadata             Json?
+  occurredAt           DateTime                       @default(now()) @map("occurred_at")
+  createdAt            DateTime                       @default(now()) @map("created_at")
+
+  devotional           Devotional                     @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+
+  @@index([devotionalId, occurredAt])
+  @@index([toPublicationState, occurredAt])
+  @@map("devotional_state_transition_events")
+}
+
+model DevotionalShareAttributionSource {
+  id          String                           @id @default(uuid()) @db.Char(36)
+  token       String                           @unique
+  devotionalId String                          @map("devotional_id") @db.Char(36)
+  sharerUserId String                          @map("sharer_user_id") @db.Char(36)
+  createdAt   DateTime                         @default(now()) @map("created_at")
+
+  devotional  Devotional                       @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  sharerUser  User                             @relation("ShareAttributionSharer", fields: [sharerUserId], references: [id], onDelete: Cascade)
+  events      DevotionalShareAttributionEvent[]
+
+  @@index([devotionalId, createdAt])
+  @@index([sharerUserId, createdAt])
+  @@map("devotional_share_attribution_sources")
+}
+
+model DevotionalShareAttributionEvent {
+  id         String                    @id @default(uuid()) @db.Char(36)
+  sourceId    String                    @map("source_id") @db.Char(36)
+  type       ShareAttributionEventType
+  userId     String?                    @map("user_id") @db.Char(36)
+  deviceId   String?                    @map("device_id")
+  dedupKey   String?                    @map("dedup_key")
+  metadata   Json?
+  occurredAt DateTime                   @default(now()) @map("occurred_at")
+  createdAt  DateTime                   @default(now()) @map("created_at")
+
+  source     DevotionalShareAttributionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user       User?                      @relation("ShareAttributionUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@unique([sourceId, type, dedupKey])
+  @@index([type, occurredAt])
+  @@index([userId, type, occurredAt])
+  @@map("devotional_share_attribution_events")
+}
+
+model DevotionalDailyMetric {
+  id                Int        @id @default(autoincrement())
+  date              String
+  devotionalId      String     @map("devotional_id") @db.Char(36)
+  impressions       Int        @default(0)
+  uniqueImpressions Int        @default(0) @map("unique_impressions")
+  opens             Int        @default(0)
+  readCompletes     Int        @default(0) @map("read_completes")
+  likes             Int        @default(0)
+  comments          Int        @default(0)
+  saves             Int        @default(0)
+  shares            Int        @default(0)
+  reports           Int        @default(0)
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  devotional        Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+
+  @@unique([date, devotionalId])
+  @@index([devotionalId, date])
+  @@map("devotional_daily_metrics")
+}
+
+model CreatorDailyMetric {
+  id                   Int      @id @default(autoincrement())
+  date                 String
+  creatorId            String   @map("creator_id") @db.Char(36)
+  publishedDevotionals Int      @default(0) @map("published_devotionals")
+  impressions          Int      @default(0)
+  uniqueImpressions    Int      @default(0) @map("unique_impressions")
+  opens                Int      @default(0)
+  readCompletes        Int      @default(0) @map("read_completes")
+  saves                Int      @default(0)
+  shares               Int      @default(0)
+  newFollowers         Int      @default(0) @map("new_followers")
+  followersTotalSnapshot Int    @default(0) @map("followers_total_snapshot")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  creator              User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  @@unique([date, creatorId])
+  @@index([creatorId, date])
+  @@map("creator_daily_metrics")
+}
+
+model FeedDailyMetric {
+  id                Int      @id @default(autoincrement())
+  date              String
+  feedMode          String   @map("feed_mode")
+  impressions       Int      @default(0)
+  uniqueImpressions Int      @default(0) @map("unique_impressions")
+  opens             Int      @default(0)
+  readCompletes     Int      @default(0) @map("read_completes")
+  saves             Int      @default(0)
+  shares            Int      @default(0)
+  reports           Int      @default(0)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([date, feedMode])
+  @@index([feedMode, date])
+  @@map("feed_daily_metrics")
+}
+
+model ForYouReasonDailyMetric {
+  id                   Int      @id @default(autoincrement())
+  date                 String
+  recommendationReason String   @map("recommendation_reason")
+  impressions          Int      @default(0)
+  uniqueImpressions    Int      @default(0) @map("unique_impressions")
+  opens                Int      @default(0)
+  readCompletes        Int      @default(0) @map("read_completes")
+  saves                Int      @default(0)
+  shares               Int      @default(0)
+  reports              Int      @default(0)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@unique([date, recommendationReason])
+  @@index([recommendationReason, date])
+  @@map("for_you_reason_daily_metrics")
+}
+
+model UserActivityDailyMetric {
+  id                   Int      @id @default(autoincrement())
+  date                 String
+  userId               String   @map("user_id") @db.Char(36)
+  sessions             Int      @default(0)
+  hadDevotionalActivity Boolean @default(false) @map("had_devotional_activity")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([date, userId])
+  @@index([userId, date])
+  @@map("user_activity_daily_metrics")
+}
+
+model ShareAttributionDailyMetric {
+  id                    Int      @id @default(autoincrement())
+  date                  String   @unique
+  linkOpens             Int      @default(0) @map("link_opens")
+  appOpens              Int      @default(0) @map("app_opens")
+  installsDetected      Int      @default(0) @map("installs_detected")
+  registrationsAttributed Int    @default(0) @map("registrations_attributed")
+  firstDevotionalOpens  Int      @default(0) @map("first_devotional_opens")
+  firstReadCompletes    Int      @default(0) @map("first_read_completes")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("share_attribution_daily_metrics")
+}
+
+model NotificationDailyMetric {
+  id                Int                       @id @default(autoincrement())
+  date              String
+  notificationType  DevotionalNotificationType @map("notification_type")
+  sent              Int                       @default(0)
+  providerAccepted  Int                       @default(0) @map("provider_accepted")
+  opened            Int                       @default(0)
+  failed            Int                       @default(0)
+  tokenDeactivated  Int                       @default(0) @map("token_deactivated")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+
+  @@unique([date, notificationType])
+  @@index([notificationType, date])
+  @@map("notification_daily_metrics")
 }

@@ -79,4 +79,15 @@ export const feedEventsSchema = z.object({
 export const devotionalReportSchema = z.object({
   reason: z.nativeEnum(DevotionalReportReason),
   details: z.string().max(1000).optional().nullable(),
+  delivery_token: z.string().min(1).optional().nullable(),
+})
+
+export const devotionalShareSchema = z.object({
+  delivery_token: z.string().min(1).optional().nullable(),
+})
+
+export const devotionalReadCompleteSchema = z.object({
+  delivery_token: z.string().min(1).optional().nullable(),
+  share_token: z.string().min(1).optional().nullable(),
+  device_id: z.string().min(1).optional().nullable(),
 })

@@ -41,6 +41,8 @@ import {
   commentSchema,
   createDevotionalSchema,
   devotionalReportSchema,
+  devotionalReadCompleteSchema,
+  devotionalShareSchema,
   feedEventsSchema,
   feedPaginationSchema,
   listDevotionalsSchema,
@@ -176,6 +178,10 @@ export const getDevotionalHandler = async (req: Request, res: Response) => {
     devotionalId: req.params.id,
     viewerId: req.user?.sub,
     viewerRole: req.user?.role,
+    shareToken:
+      typeof req.query.share_token === 'string' ? req.query.share_token : null,
+    deviceId:
+      typeof req.query.device_id === 'string' ? req.query.device_id : null,
   })
 
   res.json({ data: devotional })
@@ -263,9 +269,11 @@ export const toggleLikeHandler = async (req: Request, res: Response) => {
 export const saveDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
+  const body = parseOrThrow(devotionalShareSchema, req.body ?? {})
   const result = await saveDevotional({
     devotionalId: req.params.id,
     userId: req.user!.sub,
+    deliveryToken: body.delivery_token ?? null,
   })
 
   res.json({ data: { saved: result.saved, save_count: result.saveCount } })
@@ -285,20 +293,28 @@ export const unsaveDevotionalHandler = async (req: Request, res: Response) => {
 export const shareDevotionalHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
+  const body = parseOrThrow(devotionalShareSchema, req.body ?? {})
   const result = await shareDevotional({
     devotionalId: req.params.id,
     userId: req.user!.sub,
+    deliveryToken: body.delivery_token ?? null,
   })
 
-  res.json({ data: { share_count: result.shareCount } })
+  res.json({
+    data: { share_count: result.shareCount, share_url: result.shareUrl },
+  })
 }
 
 export const readCompleteHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
+  const body = parseOrThrow(devotionalReadCompleteSchema, req.body ?? {})
   const result = await markReadComplete({
     devotionalId: req.params.id,
     userId: req.user!.sub,
+    deliveryToken: body.delivery_token ?? null,
+    shareToken: body.share_token ?? null,
+    deviceId: body.device_id ?? null,
   })
 
   res.json({
@@ -318,6 +334,7 @@ export const reportDevotionalHandler = async (req: Request, res: Response) => {
     userId: req.user!.sub,
     reason: body.reason as DevotionalReportReason,
     details: body.details ?? null,
+    deliveryToken: body.delivery_token ?? null,
   })
 
   res.json({

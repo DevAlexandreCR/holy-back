@@ -102,6 +102,8 @@ const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
   'RESET_TOKEN_EXPIRES_MINUTES',
 );
 const BIBLE_VERSIONS_CRON = readEnvAny(['BIBLE_VERSIONS_CRON'], '15 0 * * *');
+const DAILY_AGGREGATES_CRON = readEnvAny(['DAILY_AGGREGATES_CRON'], '25 0 * * *');
+const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
 
 const MAIL_HOST = readEnvOptional(['MAIL_HOST']);
 const MAIL_PORT = toOptionalNumber(readEnvOptional(['MAIL_PORT']), 'MAIL_PORT');
@@ -120,12 +122,21 @@ const OPENAI_MODERATION_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_MODERATION_TIMEOUT_MS'], '8000'),
   'OPENAI_MODERATION_TIMEOUT_MS',
 );
+const FCM_PROJECT_ID = readEnvOptional(['FCM_PROJECT_ID']);
+const FCM_CLIENT_EMAIL = readEnvOptional(['FCM_CLIENT_EMAIL']);
+const rawFcmPrivateKey =
+  readEnvOptional(['FCM_PRIVATE_KEY']) ??
+  (readEnvOptional(['FCM_PRIVATE_KEY_BASE64'])
+    ? Buffer.from(readEnvOptional(['FCM_PRIVATE_KEY_BASE64'])!, 'base64').toString('utf8')
+    : undefined);
+const FCM_PRIVATE_KEY = rawFcmPrivateKey?.replace(/\\n/g, '\n');
 
 export const config = {
   app: {
     port: APP_PORT,
     env: NODE_ENV,
     isProduction: NODE_ENV === 'production',
+    publicBaseUrl: PUBLIC_BASE_URL,
   },
   db: {
     url: buildDatabaseUrl(),
@@ -142,6 +153,7 @@ export const config = {
   },
   jobs: {
     bibleVersionsCron: BIBLE_VERSIONS_CRON,
+    dailyAggregatesCron: DAILY_AGGREGATES_CRON,
   },
   mail: {
     host: MAIL_HOST,
@@ -158,6 +170,12 @@ export const config = {
     apiKey: OPENAI_API_KEY,
     moderationModel: OPENAI_MODERATION_MODEL,
     moderationTimeoutMs: OPENAI_MODERATION_TIMEOUT_MS,
+  },
+  notifications: {
+    fcmProjectId: FCM_PROJECT_ID,
+    fcmClientEmail: FCM_CLIENT_EMAIL,
+    fcmPrivateKey: FCM_PRIVATE_KEY,
+    isConfigured: Boolean(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY),
   },
 } as const;
 

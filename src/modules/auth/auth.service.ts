@@ -185,6 +185,13 @@ export const getUserWithSettings = async (userId: string) => {
     settings: {
       preferred_version_id: settings.preferredVersionId,
       timezone: settings.timezone,
+      widget_font_size: settings.widgetFontSize,
+      devotional_notifications_enabled:
+        settings.devotionalNotificationsEnabled,
+      followed_creator_notifications_enabled:
+        settings.followedCreatorNotificationsEnabled,
+      featured_devotional_notifications_enabled:
+        settings.featuredDevotionalNotificationsEnabled,
     },
   };
 };
