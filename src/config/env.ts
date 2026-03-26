@@ -104,6 +104,7 @@ const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
 const BIBLE_VERSIONS_CRON = readEnvAny(['BIBLE_VERSIONS_CRON'], '15 0 * * *');
 const DAILY_AGGREGATES_CRON = readEnvAny(['DAILY_AGGREGATES_CRON'], '25 0 * * *');
 const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
+const PUBLIC_API_BASE_URL = readEnvAny(['PUBLIC_API_BASE_URL'], PUBLIC_BASE_URL);
 
 const MAIL_HOST = readEnvOptional(['MAIL_HOST']);
 const MAIL_PORT = toOptionalNumber(readEnvOptional(['MAIL_PORT']), 'MAIL_PORT');
@@ -137,6 +138,7 @@ export const config = {
     env: NODE_ENV,
     isProduction: NODE_ENV === 'production',
     publicBaseUrl: PUBLIC_BASE_URL,
+    publicApiBaseUrl: PUBLIC_API_BASE_URL,
   },
   db: {
     url: buildDatabaseUrl(),

@@ -1,3 +1,5 @@
+import { access } from 'fs/promises'
+import path from 'path'
 import {
   DeviceOsPermissionStatus,
   DevicePlatform,
@@ -41,7 +43,14 @@ const buildNotificationBody = (devotional: { title: string; author: { name: stri
   },
 })
 
-const resolveImageUrl = (value?: string | null) => {
+const toAbsoluteUrl = (baseUrl: string, relativePath: string) =>
+  `${baseUrl.replace(/\/+$/, '')}${relativePath}`
+
+const resolveImageUrl = async (params: {
+  devotionalId: string
+  value?: string | null
+}) => {
+  const value = params.value
   if (!value) {
     return null
   }
@@ -50,8 +59,24 @@ const resolveImageUrl = (value?: string | null) => {
     return value
   }
 
+  if (value.startsWith('/storage/')) {
+    const relativePath = value.replace(/^\/+/, '')
+    const absoluteFilePath = path.join(process.cwd(), relativePath)
+
+    try {
+      await access(absoluteFilePath)
+      return toAbsoluteUrl(config.app.publicApiBaseUrl, value)
+    } catch {
+      console.warn('[DevotionalNotifications] Skipping notification image because the storage asset is missing', {
+        devotionalId: params.devotionalId,
+        imagePath: value,
+      })
+      return null
+    }
+  }
+
   if (value.startsWith('/')) {
-    return `${config.app.publicBaseUrl.replace(/\/+$/, '')}${value}`
+    return toAbsoluteUrl(config.app.publicApiBaseUrl, value)
   }
 
   return null
@@ -403,7 +428,10 @@ export const sendDevotionalNotifications = async (params: {
   const deviceTokens = await listEligibleDeviceTokens(userIds)
   const messageTemplates = buildNotificationBody(devotional)
   const payload = messageTemplates[params.type]
-  const imageUrl = resolveImageUrl(devotional.imageUrl)
+  const imageUrl = await resolveImageUrl({
+    devotionalId: devotional.id,
+    value: devotional.imageUrl,
+  })
   const now = new Date()
 
   let sent = 0
