@@ -62,6 +62,9 @@ enum DeviceOsPermissionStatus {
 enum DevotionalNotificationType {
   FOLLOWED_CREATOR_NEW_DEVOTIONAL
   FEATURED_DEVOTIONAL
+  EDITOR_DEVOTIONAL_REVIEW_REQUIRED
+  AUTHOR_DEVOTIONAL_APPROVED
+  AUTHOR_DEVOTIONAL_RESTRICTED
 }
 
 enum ShareAttributionEventType {
@@ -185,6 +188,8 @@ model UserSettings {
   devotionalNotificationsEnabled Boolean @default(true) @map("devotional_notifications_enabled")
   followedCreatorNotificationsEnabled Boolean @default(true) @map("followed_creator_notifications_enabled")
   featuredDevotionalNotificationsEnabled Boolean @default(true) @map("featured_devotional_notifications_enabled")
+  authorModerationNotificationsEnabled Boolean @default(true) @map("author_moderation_notifications_enabled")
+  editorReviewNotificationsEnabled Boolean @default(true) @map("editor_review_notifications_enabled")
   createdAt          DateTime      @default(now()) @map("created_at")
   updatedAt          DateTime      @updatedAt @map("updated_at")
   user               User          @relation(fields: [userId], references: [id])

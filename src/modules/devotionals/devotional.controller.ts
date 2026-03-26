@@ -16,6 +16,7 @@ import { AppError } from '../../common/errors'
 import {
   addComment,
   archiveDevotional,
+  approveDevotionalReview,
   createDevotional,
   deleteComment,
   deleteDevotional,
@@ -29,6 +30,7 @@ import {
   publishDevotional,
   recordFeedEvents,
   reportDevotional,
+  restrictDevotionalReview,
   saveDevotional,
   shareDevotional,
   toggleDevotionalLike,
@@ -42,6 +44,7 @@ import {
   createDevotionalSchema,
   devotionalReportSchema,
   devotionalReadCompleteSchema,
+  devotionalRestrictSchema,
   devotionalShareSchema,
   feedEventsSchema,
   feedPaginationSchema,
@@ -76,6 +79,16 @@ const ensureOwnerOrPrivileged = (
 
 const ensureAdmin = (role?: UserRole | null) => {
   if (role !== UserRole.ADMIN) {
+    throw new AppError('Insufficient permissions', 'FORBIDDEN', 403)
+  }
+}
+
+const ensureReviewer = (role?: UserRole | null) => {
+  if (
+    role !== UserRole.ADMIN &&
+    role !== UserRole.EDITOR &&
+    role !== UserRole.LEAD
+  ) {
     throw new AppError('Insufficient permissions', 'FORBIDDEN', 403)
   }
 }
@@ -117,7 +130,14 @@ export const listDevotionalsHandler = async (req: Request, res: Response) => {
   const role = req.user!.role
   let authorId = query.authorId
 
-  if (!authorId && role !== UserRole.ADMIN) {
+  if (
+    !authorId &&
+    !(
+      status === 'UNDER_REVIEW' &&
+      (role === UserRole.ADMIN || role === UserRole.EDITOR || role === UserRole.LEAD)
+    ) &&
+    role !== UserRole.ADMIN
+  ) {
     authorId = userId
   }
   if (authorId) {
@@ -135,6 +155,7 @@ export const listDevotionalsHandler = async (req: Request, res: Response) => {
     limit,
     authorId,
     viewerId: userId,
+    viewerRole: role,
   })
 
   res.json({ data: result })
@@ -206,6 +227,7 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
   const updated = await updateDevotional({
     devotionalId,
     viewerId: req.user!.sub,
+    viewerRole: req.user?.role,
     title: body.title,
     content,
     imageAssetId: body.image_asset_id,
@@ -246,6 +268,7 @@ export const archiveDevotionalHandler = async (req: Request, res: Response) => {
   const result = await archiveDevotional({
     devotionalId: req.params.id,
     viewerId: req.user?.sub,
+    viewerRole: req.user?.role,
   })
 
   res.json({ data: result })
@@ -344,6 +367,42 @@ export const reportDevotionalHandler = async (req: Request, res: Response) => {
       escalated: result.escalated,
     },
   })
+}
+
+export const approveDevotionalReviewHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  ensureReviewer(req.user?.role)
+
+  const result = await approveDevotionalReview({
+    devotionalId: req.params.id,
+    reviewerId: req.user!.sub,
+    viewerId: req.user!.sub,
+    viewerRole: req.user?.role,
+  })
+
+  res.json({ data: result })
+}
+
+export const restrictDevotionalReviewHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  ensureReviewer(req.user?.role)
+  const body = parseOrThrow(devotionalRestrictSchema, req.body)
+
+  const result = await restrictDevotionalReview({
+    devotionalId: req.params.id,
+    reviewerId: req.user!.sub,
+    reason: body.reason,
+    viewerId: req.user!.sub,
+    viewerRole: req.user?.role,
+  })
+
+  res.json({ data: result })
 }
 
 export const listCommentsHandler = async (req: Request, res: Response) => {

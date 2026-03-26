@@ -91,3 +91,7 @@ export const devotionalReadCompleteSchema = z.object({
   share_token: z.string().min(1).optional().nullable(),
   device_id: z.string().min(1).optional().nullable(),
 })
+
+export const devotionalRestrictSchema = z.object({
+  reason: z.string().trim().min(1).max(1000),
+})

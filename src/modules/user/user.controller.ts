@@ -23,6 +23,8 @@ const formatSettings = (settings: {
   devotionalNotificationsEnabled: boolean
   followedCreatorNotificationsEnabled: boolean
   featuredDevotionalNotificationsEnabled: boolean
+  authorModerationNotificationsEnabled: boolean
+  editorReviewNotificationsEnabled: boolean
 }) => ({
   preferred_version_id: settings.preferredVersionId,
   timezone: settings.timezone,
@@ -32,6 +34,10 @@ const formatSettings = (settings: {
     settings.followedCreatorNotificationsEnabled,
   featured_devotional_notifications_enabled:
     settings.featuredDevotionalNotificationsEnabled,
+  author_moderation_notifications_enabled:
+    settings.authorModerationNotificationsEnabled,
+  editor_review_notifications_enabled:
+    settings.editorReviewNotificationsEnabled,
 })
 
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {

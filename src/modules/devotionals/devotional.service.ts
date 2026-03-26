@@ -47,6 +47,7 @@ export const DEVOTIONAL_MANAGEMENT_STATUSES = [
   'DRAFT',
   'PUBLISHED',
   'ARCHIVED',
+  'UNDER_REVIEW',
 ] as const
 
 export type DevotionalManagementStatus =
@@ -88,6 +89,10 @@ type DevotionalWithRelations = Prisma.DevotionalGetPayload<{
     verseReferences: { orderBy: { createdAt: 'asc' } }
     likes: { where: { userId: string }; select: { id: true } }
     saves: { where: { userId: string }; select: { id: true } }
+    reports: {
+      where: { status: 'OPEN' }
+      select: { id: true }
+    }
   }
 }>
 
@@ -233,6 +238,14 @@ const devotionalInclude = (viewerId?: string | null) =>
     verseReferences: { orderBy: { createdAt: 'asc' } },
     likes: { where: { userId: viewerId ?? '' }, select: { id: true } },
     saves: { where: { userId: viewerId ?? '' }, select: { id: true } },
+    reports: {
+      where: {
+        status: DevotionalReportStatus.OPEN,
+      },
+      select: {
+        id: true,
+      },
+    },
   })
 
 const ensureContentSize = (content: Prisma.InputJsonValue) => {
@@ -352,6 +365,26 @@ const getsPrivilegedInitialVisibility = (role?: UserRole | null) =>
     (allowedRole) => allowedRole === role
   )
 
+const maybeSendReviewRequiredNotification = async (params: {
+  devotionalId: string
+  transitionedToUnderReview: boolean
+}) => {
+  if (!params.transitionedToUnderReview) {
+    return
+  }
+
+  const result = await sendDevotionalNotifications({
+    devotionalId: params.devotionalId,
+    type: DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED,
+  })
+
+  console.log('[DevotionalModeration] Reviewer notifications finished', {
+    devotionalId: params.devotionalId,
+    type: DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED,
+    ...result,
+  })
+}
+
 const normalizeStorageUrl = (value?: string | null) => {
   if (!value) {
     return null
@@ -405,6 +438,7 @@ const formatDevotional = (
   options: {
     includeContent?: boolean
     viewerId?: string | null
+    viewerRole?: UserRole | null
     deliveryToken?: string
     recommendationReason?: DevotionalRecommendationReason | null
   } = {}
@@ -451,9 +485,12 @@ const formatDevotional = (
     read_complete_count: devotional.readCompleteCount,
     impression_count: devotional.impressionCount,
     unique_impression_count: devotional.uniqueImpressionCount,
+    report_count: devotional.reportCount,
+    open_report_count: devotional.reports.length,
     liked: viewerState.liked,
     saved: viewerState.saved,
     is_owner: options.viewerId ? devotional.authorId === options.viewerId : false,
+    can_moderate: isPrivilegedViewer(options.viewerRole),
     viewer_state: viewerState,
     counters: formatCounters(devotional),
     ...(options.deliveryToken ? { delivery_token: options.deliveryToken } : {}),
@@ -636,6 +673,10 @@ const buildManagementWhere = (
       ? { publicationState: DevotionalPublicationState.DRAFT }
       : status === 'ARCHIVED'
         ? { publicationState: DevotionalPublicationState.ARCHIVED }
+        : status === 'UNDER_REVIEW'
+          ? {
+              moderationStatus: DevotionalModerationStatus.UNDER_REVIEW,
+            }
         : {
             publicationState: {
               in: [...DEVOTIONAL_PUBLISHED_MANAGEMENT_STATES],
@@ -1263,6 +1304,7 @@ export const listDevotionals = async (params: {
   limit: number
   authorId?: string
   viewerId?: string | null
+  viewerRole?: UserRole | null
 }) => {
   const limit = Math.min(Math.max(params.limit, 1), DEVOTIONAL_MAX_PAGE_LIMIT)
   const page = Math.max(params.page, 1)
@@ -1270,7 +1312,7 @@ export const listDevotionals = async (params: {
   const where = buildManagementWhere(params.status, params.authorId)
 
   const orderBy =
-    params.status === 'PUBLISHED'
+    params.status === 'PUBLISHED' || params.status === 'UNDER_REVIEW'
       ? [{ publishedAt: 'desc' as const }, { updatedAt: 'desc' as const }]
       : [{ updatedAt: 'desc' as const }]
 
@@ -1287,7 +1329,10 @@ export const listDevotionals = async (params: {
 
   return {
     items: items.map((item) =>
-      formatDevotional(item, { viewerId: params.viewerId })
+      formatDevotional(item, {
+        viewerId: params.viewerId,
+        viewerRole: params.viewerRole,
+      })
     ),
     page,
     limit,
@@ -1514,12 +1559,14 @@ export const getDevotionalById = async (params: {
   return formatDevotional(devotional, {
     includeContent: true,
     viewerId: params.viewerId,
+    viewerRole: params.viewerRole,
   })
 }
 
 export const updateDevotional = async (params: {
   devotionalId: string
   viewerId: string
+  viewerRole?: UserRole | null
   title?: string
   content?: Prisma.InputJsonValue
   imageAssetId?: string | null
@@ -1618,6 +1665,7 @@ export const updateDevotional = async (params: {
     return formatDevotional(updated, {
       includeContent: true,
       viewerId: params.viewerId,
+      viewerRole: params.viewerRole,
     })
   } catch (error) {
     return rethrowKnownDevotionalWriteError(error)
@@ -1642,6 +1690,7 @@ export const publishDevotional = async (params: {
         content: true,
         authorId: true,
         publicationState: true,
+        moderationStatus: true,
         imageAssetId: true,
         firstPublishedAt: true,
       },
@@ -1751,65 +1800,77 @@ export const publishDevotional = async (params: {
       })
     }
 
-    return updated
+    return {
+      devotional: updated,
+      transitionedToUnderReview:
+        devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW &&
+        moderationStatus === DevotionalModerationStatus.UNDER_REVIEW,
+    }
+  })
+
+  await maybeSendReviewRequiredNotification({
+    devotionalId: result.devotional.id,
+    transitionedToUnderReview: result.transitionedToUnderReview,
   })
 
   if (
-    result.moderationStatus === DevotionalModerationStatus.CLEAR &&
+    result.devotional.moderationStatus === DevotionalModerationStatus.CLEAR &&
     [
       DevotionalPublicationState.PUBLISHED_LOW_REACH,
       DevotionalPublicationState.TRENDING,
       DevotionalPublicationState.FEATURED,
-    ].some((state) => state === result.publicationState)
+    ].some((state) => state === result.devotional.publicationState)
   ) {
     console.log('[PublishDevotional] Triggering follower notifications', {
-      devotionalId: result.id,
-      authorId: result.authorId,
-      publicationState: result.publicationState,
-      moderationStatus: result.moderationStatus,
+      devotionalId: result.devotional.id,
+      authorId: result.devotional.authorId,
+      publicationState: result.devotional.publicationState,
+      moderationStatus: result.devotional.moderationStatus,
     })
 
     const followerNotificationResult = await sendDevotionalNotifications({
-      devotionalId: result.id,
+      devotionalId: result.devotional.id,
       type: DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL,
     })
 
     console.log('[PublishDevotional] Follower notifications finished', {
-      devotionalId: result.id,
+      devotionalId: result.devotional.id,
       type: DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL,
       ...followerNotificationResult,
     })
 
-    if (result.publicationState === DevotionalPublicationState.FEATURED) {
+    if (result.devotional.publicationState === DevotionalPublicationState.FEATURED) {
       const featuredNotificationResult = await sendDevotionalNotifications({
-        devotionalId: result.id,
+        devotionalId: result.devotional.id,
         type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
       })
 
       console.log('[PublishDevotional] Featured notifications finished', {
-        devotionalId: result.id,
+        devotionalId: result.devotional.id,
         type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
         ...featuredNotificationResult,
       })
     }
   } else {
     console.log('[PublishDevotional] Skipping notifications after publish', {
-      devotionalId: result.id,
-      authorId: result.authorId,
-      publicationState: result.publicationState,
-      moderationStatus: result.moderationStatus,
+      devotionalId: result.devotional.id,
+      authorId: result.devotional.authorId,
+      publicationState: result.devotional.publicationState,
+      moderationStatus: result.devotional.moderationStatus,
     })
   }
 
-  return formatDevotional(result, {
+  return formatDevotional(result.devotional, {
     includeContent: true,
     viewerId: params.viewerId,
+    viewerRole: params.viewerRole,
   })
 }
 
 export const archiveDevotional = async (params: {
   devotionalId: string
   viewerId?: string | null
+  viewerRole?: UserRole | null
 }) => {
   const updated = await prisma.$transaction(async (tx) => {
     const devotional = await tx.devotional.findUnique({
@@ -1848,6 +1909,157 @@ export const archiveDevotional = async (params: {
   return formatDevotional(updated, {
     includeContent: true,
     viewerId: params.viewerId,
+    viewerRole: params.viewerRole,
+  })
+}
+
+export const approveDevotionalReview = async (params: {
+  devotionalId: string
+  reviewerId: string
+  viewerId: string
+  viewerRole?: UserRole | null
+}) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: {
+        id: true,
+        moderationStatus: true,
+      },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
+    if (devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW) {
+      throw new AppError(
+        'Only under-review devotionals can be approved',
+        'DEVOTIONAL_NOT_UNDER_REVIEW',
+        400
+      )
+    }
+
+    const reviewedAt = new Date()
+
+    await tx.devotionalReport.updateMany({
+      where: {
+        devotionalId: params.devotionalId,
+        status: DevotionalReportStatus.OPEN,
+      },
+      data: {
+        status: DevotionalReportStatus.DISMISSED,
+        reviewedBy: params.reviewerId,
+        reviewedAt,
+      },
+    })
+
+    await addModerationAction(tx, {
+      devotionalId: params.devotionalId,
+      actorId: params.reviewerId,
+      actionType: DevotionalModerationActionType.RESTORE,
+    })
+
+    const updated = await tx.devotional.update({
+      where: { id: params.devotionalId },
+      data: {
+        moderationStatus: DevotionalModerationStatus.CLEAR,
+        moderationReason: null,
+        moderatedBy: params.reviewerId,
+        moderatedAt: reviewedAt,
+        reportCount: 0,
+      },
+      include: devotionalInclude(params.viewerId),
+    })
+
+    return updated
+  })
+
+  await sendDevotionalNotifications({
+    devotionalId: result.id,
+    type: DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED,
+  })
+
+  return formatDevotional(result, {
+    includeContent: true,
+    viewerId: params.viewerId,
+    viewerRole: params.viewerRole,
+  })
+}
+
+export const restrictDevotionalReview = async (params: {
+  devotionalId: string
+  reviewerId: string
+  reason: string
+  viewerId: string
+  viewerRole?: UserRole | null
+}) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: {
+        id: true,
+        moderationStatus: true,
+      },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
+    if (devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW) {
+      throw new AppError(
+        'Only under-review devotionals can be restricted',
+        'DEVOTIONAL_NOT_UNDER_REVIEW',
+        400
+      )
+    }
+
+    const reviewedAt = new Date()
+
+    await tx.devotionalReport.updateMany({
+      where: {
+        devotionalId: params.devotionalId,
+        status: DevotionalReportStatus.OPEN,
+      },
+      data: {
+        status: DevotionalReportStatus.DISMISSED,
+        reviewedBy: params.reviewerId,
+        reviewedAt,
+      },
+    })
+
+    await addModerationAction(tx, {
+      devotionalId: params.devotionalId,
+      actorId: params.reviewerId,
+      actionType: DevotionalModerationActionType.RESTRICT,
+      reason: params.reason,
+    })
+
+    const updated = await tx.devotional.update({
+      where: { id: params.devotionalId },
+      data: {
+        moderationStatus: DevotionalModerationStatus.RESTRICTED,
+        moderationReason: params.reason,
+        moderatedBy: params.reviewerId,
+        moderatedAt: reviewedAt,
+        reportCount: 0,
+      },
+      include: devotionalInclude(params.viewerId),
+    })
+
+    return updated
+  })
+
+  await sendDevotionalNotifications({
+    devotionalId: result.id,
+    type: DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED,
+  })
+
+  return formatDevotional(result, {
+    includeContent: true,
+    viewerId: params.viewerId,
+    viewerRole: params.viewerRole,
   })
 }
 
@@ -2144,7 +2356,18 @@ export const reportDevotional = async (params: {
     throw new AppError('Invalid report reason', 'INVALID_REPORT_REASON', 400)
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: {
+        moderationStatus: true,
+      },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
     const existing = await tx.devotionalReport.findUnique({
       where: {
         devotionalId_userId: {
@@ -2191,7 +2414,11 @@ export const reportDevotional = async (params: {
     const shouldEscalate =
       reportCountResult >= devotionalModerationPolicy.reportEscalation.distinctReports
 
-    if (shouldEscalate) {
+    const transitionedToUnderReview =
+      shouldEscalate &&
+      devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW
+
+    if (transitionedToUnderReview) {
       await tx.devotional.update({
         where: { id: params.devotionalId },
         data: {
@@ -2214,9 +2441,21 @@ export const reportDevotional = async (params: {
     return {
       reported: true,
       reportCount: reportCountResult,
-      escalated: shouldEscalate,
+      escalated: transitionedToUnderReview,
+      transitionedToUnderReview,
     }
   })
+
+  await maybeSendReviewRequiredNotification({
+    devotionalId: params.devotionalId,
+    transitionedToUnderReview: result.transitionedToUnderReview,
+  })
+
+  return {
+    reported: result.reported,
+    reportCount: result.reportCount,
+    escalated: result.escalated,
+  }
 }
 
 export const recordFeedEvents = async (params: {

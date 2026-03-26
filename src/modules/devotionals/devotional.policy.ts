@@ -66,6 +66,8 @@ export const devotionalNotificationPolicy = {
     devotionalDefaultEnabled: true,
     followedCreatorDefaultEnabled: true,
     featuredDefaultEnabled: true,
+    authorModerationDefaultEnabled: true,
+    editorReviewDefaultEnabled: true,
   },
   cooldowns: {
     featuredHours: 12,
@@ -74,6 +76,9 @@ export const devotionalNotificationPolicy = {
   titleTemplates: {
     followedCreator: 'Nuevo devocional de alguien que sigues',
     featured: 'Devocional destacado para ti',
+    editorReviewRequired: 'Nuevo devocional en revisión',
+    authorApproved: 'Tu devocional fue aprobado',
+    authorRestricted: 'Tu devocional fue restringido',
   },
 } as const
 

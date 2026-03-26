@@ -7,6 +7,7 @@ import {
   DevotionalNotificationType,
   DevotionalPublicationState,
   Prisma,
+  UserRole,
 } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
@@ -24,12 +25,18 @@ const formatNotificationPreferences = (settings: {
   devotionalNotificationsEnabled: boolean
   followedCreatorNotificationsEnabled: boolean
   featuredDevotionalNotificationsEnabled: boolean
+  authorModerationNotificationsEnabled: boolean
+  editorReviewNotificationsEnabled: boolean
 }) => ({
   devotional_notifications_enabled: settings.devotionalNotificationsEnabled,
   followed_creator_notifications_enabled:
     settings.followedCreatorNotificationsEnabled,
   featured_devotional_notifications_enabled:
     settings.featuredDevotionalNotificationsEnabled,
+  author_moderation_notifications_enabled:
+    settings.authorModerationNotificationsEnabled,
+  editor_review_notifications_enabled:
+    settings.editorReviewNotificationsEnabled,
 })
 
 const buildNotificationBody = (devotional: { title: string; author: { name: string } }) => ({
@@ -40,6 +47,18 @@ const buildNotificationBody = (devotional: { title: string; author: { name: stri
   [DevotionalNotificationType.FEATURED_DEVOTIONAL]: {
     title: devotionalNotificationPolicy.titleTemplates.featured,
     body: devotional.title,
+  },
+  [DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED]: {
+    title: devotionalNotificationPolicy.titleTemplates.editorReviewRequired,
+    body: `${devotional.author.name} publicó "${devotional.title}" y requiere revisión.`,
+  },
+  [DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED]: {
+    title: devotionalNotificationPolicy.titleTemplates.authorApproved,
+    body: `"${devotional.title}" ya volvió a estar disponible.`,
+  },
+  [DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED]: {
+    title: devotionalNotificationPolicy.titleTemplates.authorRestricted,
+    body: `"${devotional.title}" fue retirado por revisión editorial.`,
   },
 })
 
@@ -112,6 +131,14 @@ const getCooldownEligibility = async (params: {
   type: DevotionalNotificationType
   now: Date
 }) => {
+  if (
+    params.type === DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED ||
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED ||
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED
+  ) {
+    return true
+  }
+
   if (params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL) {
     const since = new Date(
       params.now.getTime() -
@@ -144,6 +171,32 @@ const listTargetUserIds = async (params: {
   authorId: string
   type: DevotionalNotificationType
 }) => {
+  if (
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED ||
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED
+  ) {
+    return [params.authorId]
+  }
+
+  if (
+    params.type === DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED
+  ) {
+    const reviewers = await prisma.user.findMany({
+      where: {
+        role: {
+          in: [UserRole.EDITOR, UserRole.LEAD, UserRole.ADMIN],
+        },
+        deletedAt: null,
+        id: {
+          not: params.authorId,
+        },
+      },
+      select: { id: true },
+    })
+
+    return reviewers.map((item) => item.id)
+  }
+
   if (
     params.type === DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL
   ) {
@@ -236,21 +289,78 @@ const isPreferenceEnabled = (params: {
     devotionalNotificationsEnabled: boolean
     followedCreatorNotificationsEnabled: boolean
     featuredDevotionalNotificationsEnabled: boolean
+    authorModerationNotificationsEnabled: boolean
+    editorReviewNotificationsEnabled: boolean
   } | null
   type: DevotionalNotificationType
 }) => {
   const settings = params.settings
-  if (!settings?.devotionalNotificationsEnabled) {
-    return false
-  }
-
   if (
     params.type === DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL
   ) {
-    return settings.followedCreatorNotificationsEnabled
+    return (
+      settings?.devotionalNotificationsEnabled === true &&
+      settings.followedCreatorNotificationsEnabled
+    )
   }
 
-  return settings.featuredDevotionalNotificationsEnabled
+  if (params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL) {
+    return (
+      settings?.devotionalNotificationsEnabled === true &&
+      settings.featuredDevotionalNotificationsEnabled
+    )
+  }
+
+  if (
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED ||
+    params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED
+  ) {
+    return settings?.authorModerationNotificationsEnabled === true
+  }
+
+  if (
+    params.type === DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED
+  ) {
+    return settings?.editorReviewNotificationsEnabled === true
+  }
+
+  return false
+}
+
+const isNotificationEligibleForDevotional = (params: {
+  type: DevotionalNotificationType
+  moderationStatus: DevotionalModerationStatus
+  publicationState: DevotionalPublicationState
+}) => {
+  if (
+    params.type === DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL ||
+    params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL
+  ) {
+    return (
+      params.moderationStatus === DevotionalModerationStatus.CLEAR &&
+      [
+        DevotionalPublicationState.PUBLISHED_LOW_REACH,
+        DevotionalPublicationState.TRENDING,
+        DevotionalPublicationState.FEATURED,
+      ].some((state) => state === params.publicationState)
+    )
+  }
+
+  if (
+    params.type === DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED
+  ) {
+    return params.moderationStatus === DevotionalModerationStatus.UNDER_REVIEW
+  }
+
+  if (params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED) {
+    return params.moderationStatus === DevotionalModerationStatus.CLEAR
+  }
+
+  if (params.type === DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED) {
+    return params.moderationStatus === DevotionalModerationStatus.RESTRICTED
+  }
+
+  return false
 }
 
 export const getNotificationPreferences = async (userId: string) => {
@@ -264,6 +374,8 @@ export const updateNotificationPreferences = async (
     devotional_notifications_enabled: boolean
     followed_creator_notifications_enabled: boolean
     featured_devotional_notifications_enabled: boolean
+    author_moderation_notifications_enabled: boolean
+    editor_review_notifications_enabled: boolean
   }
 ) => {
   const settings = await updateSettings(userId, {
@@ -272,6 +384,9 @@ export const updateNotificationPreferences = async (
       input.followed_creator_notifications_enabled,
     featuredDevotionalNotificationsEnabled:
       input.featured_devotional_notifications_enabled,
+    authorModerationNotificationsEnabled:
+      input.author_moderation_notifications_enabled,
+    editorReviewNotificationsEnabled: input.editor_review_notifications_enabled,
   })
 
   return formatNotificationPreferences(settings)
@@ -398,12 +513,11 @@ export const sendDevotionalNotifications = async (params: {
   })
 
   if (
-    devotional.moderationStatus !== DevotionalModerationStatus.CLEAR ||
-    ![
-      DevotionalPublicationState.PUBLISHED_LOW_REACH,
-      DevotionalPublicationState.TRENDING,
-      DevotionalPublicationState.FEATURED,
-    ].some((state) => state === devotional.publicationState)
+    !isNotificationEligibleForDevotional({
+      type: params.type,
+      moderationStatus: devotional.moderationStatus,
+      publicationState: devotional.publicationState,
+    })
   ) {
     console.log('[DevotionalNotifications] Skipping send because devotional is not eligible', {
       devotionalId: devotional.id,

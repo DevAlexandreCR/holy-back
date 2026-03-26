@@ -69,6 +69,8 @@ export const updateSettings = async (
       | 'devotionalNotificationsEnabled'
       | 'followedCreatorNotificationsEnabled'
       | 'featuredDevotionalNotificationsEnabled'
+      | 'authorModerationNotificationsEnabled'
+      | 'editorReviewNotificationsEnabled'
     >
   >,
 ): Promise<UserSettings> => {

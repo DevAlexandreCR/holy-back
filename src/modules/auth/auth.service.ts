@@ -192,6 +192,10 @@ export const getUserWithSettings = async (userId: string) => {
         settings.followedCreatorNotificationsEnabled,
       featured_devotional_notifications_enabled:
         settings.featuredDevotionalNotificationsEnabled,
+      author_moderation_notifications_enabled:
+        settings.authorModerationNotificationsEnabled,
+      editor_review_notifications_enabled:
+        settings.editorReviewNotificationsEnabled,
     },
   };
 };
