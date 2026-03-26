@@ -897,6 +897,18 @@ const insertDevotionalReadComplete = async (params: {
   return Number(created) > 0
 }
 
+const previewDeliveryToken = (token?: string | null) => {
+  if (!token) {
+    return null
+  }
+
+  if (token.length <= 12) {
+    return token
+  }
+
+  return `${token.slice(0, 8)}...${token.slice(-4)}`
+}
+
 const applyReadCompleteSideEffects = async (params: {
   devotionalId: string
   userId: string
@@ -2028,11 +2040,32 @@ export const markReadComplete = async (params: {
     throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
   }
 
-  const deliveryId = await resolveDeliveryIdByToken(prisma, {
-    userId: params.userId,
-    devotionalId: params.devotionalId,
-    deliveryToken: params.deliveryToken,
-  })
+  let deliveryId: string | null = null
+  let usedDeliveryFallback = false
+
+  try {
+    deliveryId = await resolveDeliveryIdByToken(prisma, {
+      userId: params.userId,
+      devotionalId: params.devotionalId,
+      deliveryToken: params.deliveryToken,
+    })
+  } catch (error) {
+    if (
+      error instanceof AppError &&
+      error.code === 'INVALID_DELIVERY_TOKEN' &&
+      params.deliveryToken
+    ) {
+      usedDeliveryFallback = true
+      console.warn('[ReadComplete] Falling back to unattributed read-complete due to invalid delivery token', {
+        devotionalId: params.devotionalId,
+        userId: params.userId,
+        hasDeliveryToken: true,
+        deliveryTokenPreview: previewDeliveryToken(params.deliveryToken),
+      })
+    } else {
+      throw error
+    }
+  }
 
   const created = await insertDevotionalReadComplete({
     devotionalId: params.devotionalId,
@@ -2041,9 +2074,20 @@ export const markReadComplete = async (params: {
   })
 
   if (!created) {
+    const readCompleteCount = await getCurrentReadCompleteCount(params.devotionalId)
+
+    if (usedDeliveryFallback) {
+      console.log('[ReadComplete] Completed with delivery fallback', {
+        devotionalId: params.devotionalId,
+        userId: params.userId,
+        readCompleteCreated: false,
+        readCompleteCount,
+      })
+    }
+
     return {
       readComplete: true,
-      readCompleteCount: await getCurrentReadCompleteCount(params.devotionalId),
+      readCompleteCount,
     }
   }
 
@@ -2071,6 +2115,15 @@ export const markReadComplete = async (params: {
       devotionalId: params.devotionalId,
       userId: params.userId,
       deviceId: params.deviceId,
+    })
+  }
+
+  if (usedDeliveryFallback) {
+    console.log('[ReadComplete] Completed with delivery fallback', {
+      devotionalId: params.devotionalId,
+      userId: params.userId,
+      readCompleteCreated: true,
+      readCompleteCount,
     })
   }
 
