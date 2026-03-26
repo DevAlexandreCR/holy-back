@@ -3,9 +3,14 @@ import {
   DevotionalStateTransitionSource,
   Prisma,
 } from '@prisma/client'
-import { AppError } from '../../common/errors'
 
-export const resolveDeliveryIdByToken = async (
+export type FeedDeliveryAttributionStatus =
+  | 'resolved'
+  | 'missing'
+  | 'invalid'
+  | 'mismatch'
+
+export const resolveFeedDeliveryAttribution = async (
   client: Pick<Prisma.TransactionClient, 'devotionalFeedDelivery'>,
   params: {
     userId: string
@@ -14,7 +19,10 @@ export const resolveDeliveryIdByToken = async (
   }
 ) => {
   if (!params.deliveryToken) {
-    return null
+    return {
+      deliveryId: null,
+      status: 'missing' as const,
+    }
   }
 
   const delivery = await client.devotionalFeedDelivery.findUnique({
@@ -28,15 +36,27 @@ export const resolveDeliveryIdByToken = async (
     },
   })
 
+  if (!delivery) {
+    return {
+      deliveryId: null,
+      status: 'invalid' as const,
+    }
+  }
+
   if (
-    !delivery ||
     delivery.userId !== params.userId ||
     delivery.devotionalId !== params.devotionalId
   ) {
-    throw new AppError('Invalid delivery token', 'INVALID_DELIVERY_TOKEN', 400)
+    return {
+      deliveryId: null,
+      status: 'mismatch' as const,
+    }
   }
 
-  return delivery.id
+  return {
+    deliveryId: delivery.id,
+    status: 'resolved' as const,
+  }
 }
 
 export const recordPublicationStateTransition = async (

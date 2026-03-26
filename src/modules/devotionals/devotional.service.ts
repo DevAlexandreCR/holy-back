@@ -33,8 +33,9 @@ import {
 } from './devotional.policy'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
 import {
+  FeedDeliveryAttributionStatus,
   recordPublicationStateTransition,
-  resolveDeliveryIdByToken,
+  resolveFeedDeliveryAttribution,
 } from './devotionalPhase3.service'
 import {
   createShareAttributionSource,
@@ -938,7 +939,7 @@ const insertDevotionalReadComplete = async (params: {
   return Number(created) > 0
 }
 
-const previewDeliveryToken = (token?: string | null) => {
+const previewFeedDeliveryToken = (token?: string | null) => {
   if (!token) {
     return null
   }
@@ -948,6 +949,58 @@ const previewDeliveryToken = (token?: string | null) => {
   }
 
   return `${token.slice(0, 8)}...${token.slice(-4)}`
+}
+
+const logIgnoredFeedDeliveryAttribution = (params: {
+  action: 'save' | 'share' | 'report' | 'read_complete'
+  devotionalId: string
+  userId: string
+  feedDeliveryToken?: string | null
+  status: FeedDeliveryAttributionStatus
+}) => {
+  if (params.status === 'resolved' || params.status === 'missing') {
+    return
+  }
+
+  console.warn(
+    '[DevotionalInteractions] Continuing without feed delivery attribution',
+    {
+      action: params.action,
+      devotionalId: params.devotionalId,
+      userId: params.userId,
+      attributionStatus: params.status,
+      hasFeedDeliveryToken: Boolean(params.feedDeliveryToken),
+      feedDeliveryTokenPreview: previewFeedDeliveryToken(
+        params.feedDeliveryToken
+      ),
+    }
+  )
+}
+
+const resolveInteractionFeedDeliveryId = async (
+  client: Pick<Prisma.TransactionClient, 'devotionalFeedDelivery'>,
+  params: {
+    action: 'save' | 'share' | 'report' | 'read_complete'
+    userId: string
+    devotionalId: string
+    deliveryToken?: string | null
+  }
+) => {
+  const attribution = await resolveFeedDeliveryAttribution(client, {
+    userId: params.userId,
+    devotionalId: params.devotionalId,
+    deliveryToken: params.deliveryToken,
+  })
+
+  logIgnoredFeedDeliveryAttribution({
+    action: params.action,
+    devotionalId: params.devotionalId,
+    userId: params.userId,
+    feedDeliveryToken: params.deliveryToken,
+    status: attribution.status,
+  })
+
+  return attribution.deliveryId
 }
 
 const applyReadCompleteSideEffects = async (params: {
@@ -2129,7 +2182,8 @@ export const saveDevotional = async (params: {
     })
 
     if (!existing) {
-      const deliveryId = await resolveDeliveryIdByToken(tx, {
+      const deliveryId = await resolveInteractionFeedDeliveryId(tx, {
+        action: 'save',
         userId: params.userId,
         devotionalId: params.devotionalId,
         deliveryToken: params.deliveryToken,
@@ -2206,7 +2260,8 @@ export const shareDevotional = async (params: {
   deliveryToken?: string | null
 }) => {
   return prisma.$transaction(async (tx) => {
-    const deliveryId = await resolveDeliveryIdByToken(tx, {
+    const deliveryId = await resolveInteractionFeedDeliveryId(tx, {
+      action: 'share',
       userId: params.userId,
       devotionalId: params.devotionalId,
       deliveryToken: params.deliveryToken,
@@ -2252,32 +2307,12 @@ export const markReadComplete = async (params: {
     throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
   }
 
-  let deliveryId: string | null = null
-  let usedDeliveryFallback = false
-
-  try {
-    deliveryId = await resolveDeliveryIdByToken(prisma, {
-      userId: params.userId,
-      devotionalId: params.devotionalId,
-      deliveryToken: params.deliveryToken,
-    })
-  } catch (error) {
-    if (
-      error instanceof AppError &&
-      error.code === 'INVALID_DELIVERY_TOKEN' &&
-      params.deliveryToken
-    ) {
-      usedDeliveryFallback = true
-      console.warn('[ReadComplete] Falling back to unattributed read-complete due to invalid delivery token', {
-        devotionalId: params.devotionalId,
-        userId: params.userId,
-        hasDeliveryToken: true,
-        deliveryTokenPreview: previewDeliveryToken(params.deliveryToken),
-      })
-    } else {
-      throw error
-    }
-  }
+  const deliveryId = await resolveInteractionFeedDeliveryId(prisma, {
+    action: 'read_complete',
+    userId: params.userId,
+    devotionalId: params.devotionalId,
+    deliveryToken: params.deliveryToken,
+  })
 
   const created = await insertDevotionalReadComplete({
     devotionalId: params.devotionalId,
@@ -2287,15 +2322,6 @@ export const markReadComplete = async (params: {
 
   if (!created) {
     const readCompleteCount = await getCurrentReadCompleteCount(params.devotionalId)
-
-    if (usedDeliveryFallback) {
-      console.log('[ReadComplete] Completed with delivery fallback', {
-        devotionalId: params.devotionalId,
-        userId: params.userId,
-        readCompleteCreated: false,
-        readCompleteCount,
-      })
-    }
 
     return {
       readComplete: true,
@@ -2327,15 +2353,6 @@ export const markReadComplete = async (params: {
       devotionalId: params.devotionalId,
       userId: params.userId,
       deviceId: params.deviceId,
-    })
-  }
-
-  if (usedDeliveryFallback) {
-    console.log('[ReadComplete] Completed with delivery fallback', {
-      devotionalId: params.devotionalId,
-      userId: params.userId,
-      readCompleteCreated: true,
-      readCompleteCount,
     })
   }
 
@@ -2389,7 +2406,8 @@ export const reportDevotional = async (params: {
       data: {
         devotionalId: params.devotionalId,
         userId: params.userId,
-        deliveryId: await resolveDeliveryIdByToken(tx, {
+        deliveryId: await resolveInteractionFeedDeliveryId(tx, {
+          action: 'report',
           userId: params.userId,
           devotionalId: params.devotionalId,
           deliveryToken: params.deliveryToken,
@@ -2480,24 +2498,15 @@ export const recordFeedEvents = async (params: {
         continue
       }
 
-      const delivery = await tx.devotionalFeedDelivery.findUnique({
-        where: { token: event.deliveryToken },
-        include: {
-          devotional: {
-            select: {
-              authorId: true,
-            },
-          },
-        },
+      const deliveryAttribution = await resolveFeedDeliveryAttribution(tx, {
+        userId: params.userId,
+        devotionalId: event.devotionalId,
+        deliveryToken: event.deliveryToken,
       })
 
-      if (
-        !delivery ||
-        delivery.userId !== params.userId ||
-        delivery.devotionalId !== event.devotionalId
-      ) {
+      if (!deliveryAttribution.deliveryId) {
         throw new AppError(
-          'Invalid delivery token',
+          'Invalid feed delivery token',
           'INVALID_DELIVERY_TOKEN',
           400
         )
@@ -2507,7 +2516,7 @@ export const recordFeedEvents = async (params: {
         data: {
           eventId: event.eventId,
           devotionalId: event.devotionalId,
-          deliveryId: delivery.id,
+          deliveryId: deliveryAttribution.deliveryId,
           userId: params.userId,
           type: event.type,
           occurredAt: event.occurredAt,
@@ -2545,23 +2554,29 @@ export const recordFeedEvents = async (params: {
             data: { uniqueImpressionCount: { increment: 1 } },
           })
 
-          const aggregateDate = event.occurredAt.toISOString().slice(0, 10)
-          await tx.devotionalAuthorImpressionDaily.upsert({
-            where: {
-              authorId_date: {
-                authorId: delivery.devotional.authorId,
-                date: aggregateDate,
-              },
-            },
-            create: {
-              authorId: delivery.devotional.authorId,
-              date: aggregateDate,
-              impressions: 1,
-            },
-            update: {
-              impressions: { increment: 1 },
-            },
+          const devotional = await tx.devotional.findUnique({
+            where: { id: event.devotionalId },
+            select: { authorId: true },
           })
+          const aggregateDate = event.occurredAt.toISOString().slice(0, 10)
+          if (devotional) {
+            await tx.devotionalAuthorImpressionDaily.upsert({
+              where: {
+                authorId_date: {
+                  authorId: devotional.authorId,
+                  date: aggregateDate,
+                },
+              },
+              create: {
+                authorId: devotional.authorId,
+                date: aggregateDate,
+                impressions: 1,
+              },
+              update: {
+                impressions: { increment: 1 },
+              },
+            })
+          }
         }
       }
     }
