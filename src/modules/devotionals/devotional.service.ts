@@ -1229,6 +1229,13 @@ export const createDevotional = async (params: {
       })
     })
 
+    console.log('[CreateDevotional] Created draft devotional; notifications are sent on publish', {
+      devotionalId: devotional.id,
+      authorId: params.authorId,
+      publicationState: devotional.publicationState,
+      moderationStatus: devotional.moderationStatus,
+    })
+
     return formatDevotional(devotional, {
       includeContent: true,
       viewerId: params.authorId,
@@ -1743,17 +1750,43 @@ export const publishDevotional = async (params: {
       DevotionalPublicationState.FEATURED,
     ].some((state) => state === result.publicationState)
   ) {
-    await sendDevotionalNotifications({
+    console.log('[PublishDevotional] Triggering follower notifications', {
+      devotionalId: result.id,
+      authorId: result.authorId,
+      publicationState: result.publicationState,
+      moderationStatus: result.moderationStatus,
+    })
+
+    const followerNotificationResult = await sendDevotionalNotifications({
       devotionalId: result.id,
       type: DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL,
     })
 
+    console.log('[PublishDevotional] Follower notifications finished', {
+      devotionalId: result.id,
+      type: DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL,
+      ...followerNotificationResult,
+    })
+
     if (result.publicationState === DevotionalPublicationState.FEATURED) {
-      await sendDevotionalNotifications({
+      const featuredNotificationResult = await sendDevotionalNotifications({
         devotionalId: result.id,
         type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
       })
+
+      console.log('[PublishDevotional] Featured notifications finished', {
+        devotionalId: result.id,
+        type: DevotionalNotificationType.FEATURED_DEVOTIONAL,
+        ...featuredNotificationResult,
+      })
     }
+  } else {
+    console.log('[PublishDevotional] Skipping notifications after publish', {
+      devotionalId: result.id,
+      authorId: result.authorId,
+      publicationState: result.publicationState,
+      moderationStatus: result.moderationStatus,
+    })
   }
 
   return formatDevotional(result, {

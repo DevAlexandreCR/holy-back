@@ -364,6 +364,14 @@ export const sendDevotionalNotifications = async (params: {
     throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
   }
 
+  console.log('[DevotionalNotifications] Starting send', {
+    devotionalId: devotional.id,
+    authorId: devotional.authorId,
+    type: params.type,
+    publicationState: devotional.publicationState,
+    moderationStatus: devotional.moderationStatus,
+  })
+
   if (
     devotional.moderationStatus !== DevotionalModerationStatus.CLEAR ||
     ![
@@ -372,6 +380,13 @@ export const sendDevotionalNotifications = async (params: {
       DevotionalPublicationState.FEATURED,
     ].some((state) => state === devotional.publicationState)
   ) {
+    console.log('[DevotionalNotifications] Skipping send because devotional is not eligible', {
+      devotionalId: devotional.id,
+      type: params.type,
+      publicationState: devotional.publicationState,
+      moderationStatus: devotional.moderationStatus,
+    })
+
     return {
       sent: 0,
       provider_accepted: 0,
@@ -395,6 +410,17 @@ export const sendDevotionalNotifications = async (params: {
   let providerAccepted = 0
   let failed = 0
   let tokenDeactivated = 0
+  let skippedByPreference = 0
+  let skippedByCooldown = 0
+  const failureCounts = new Map<string, number>()
+
+  console.log('[DevotionalNotifications] Resolved audience', {
+    devotionalId: devotional.id,
+    type: params.type,
+    targetUsers: userIds.length,
+    eligibleDeviceTokens: deviceTokens.length,
+    pushConfigured: config.notifications.isConfigured,
+  })
 
   for (const deviceToken of deviceTokens) {
     if (
@@ -403,6 +429,7 @@ export const sendDevotionalNotifications = async (params: {
         type: params.type,
       })
     ) {
+      skippedByPreference += 1
       continue
     }
 
@@ -412,6 +439,7 @@ export const sendDevotionalNotifications = async (params: {
       now,
     })
     if (!cooldownEligible) {
+      skippedByCooldown += 1
       continue
     }
 
@@ -464,6 +492,7 @@ export const sendDevotionalNotifications = async (params: {
 
     failed += 1
     const failureCode = providerResult.failureCode ?? 'FCM_REQUEST_FAILED'
+    failureCounts.set(failureCode, (failureCounts.get(failureCode) ?? 0) + 1)
     const updatePayload: Prisma.DevotionalNotificationSendUpdateInput = {
       failedAt: new Date(),
       failureCode,
@@ -485,6 +514,20 @@ export const sendDevotionalNotifications = async (params: {
       data: updatePayload,
     })
   }
+
+  console.log('[DevotionalNotifications] Completed send', {
+    devotionalId: devotional.id,
+    type: params.type,
+    targetUsers: userIds.length,
+    eligibleDeviceTokens: deviceTokens.length,
+    skippedByPreference,
+    skippedByCooldown,
+    sent,
+    providerAccepted,
+    failed,
+    tokenDeactivated,
+    failureCodes: Object.fromEntries(failureCounts),
+  })
 
   return {
     sent,
