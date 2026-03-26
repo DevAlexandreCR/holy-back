@@ -133,6 +133,39 @@ const rethrowKnownDevotionalWriteError = (error: unknown): never => {
   throw error
 }
 
+const RETRYABLE_WRITE_CONFLICT_ERROR_CODES = new Set(['P2034'])
+const RETRYABLE_WRITE_CONFLICT_MAX_ATTEMPTS = 5
+
+const isRetryableWriteConflictError = (error: unknown) =>
+  error instanceof Prisma.PrismaClientKnownRequestError &&
+  RETRYABLE_WRITE_CONFLICT_ERROR_CODES.has(error.code)
+
+const wait = (ms: number) =>
+  new Promise<void>((resolve) => {
+    setTimeout(resolve, ms)
+  })
+
+const withRetryableWriteConflict = async <T>(operation: () => Promise<T>) => {
+  let attempt = 0
+
+  while (true) {
+    try {
+      return await operation()
+    } catch (error) {
+      attempt += 1
+
+      if (
+        !isRetryableWriteConflictError(error) ||
+        attempt >= RETRYABLE_WRITE_CONFLICT_MAX_ATTEMPTS
+      ) {
+        throw error
+      }
+
+      await wait(50 * attempt)
+    }
+  }
+}
+
 const toIso = (value: Date | null | undefined) => (value ? value.toISOString() : null)
 
 const formatAuthor = (author: {
@@ -813,6 +846,79 @@ const upsertCreatorAffinity = async (
     },
   })
 }
+
+const getCurrentReadCompleteCount = async (devotionalId: string) => {
+  const updated = await prisma.devotional.findUnique({
+    where: { id: devotionalId },
+    select: { readCompleteCount: true },
+  })
+
+  return updated?.readCompleteCount ?? 0
+}
+
+const syncReadCompleteCount = async (devotionalId: string) => {
+  const readCompleteCount = await prisma.devotionalReadComplete.count({
+    where: { devotionalId },
+  })
+
+  const updated = await prisma.devotional.update({
+    where: { id: devotionalId },
+    data: { readCompleteCount },
+    select: { readCompleteCount: true },
+  })
+
+  return updated.readCompleteCount
+}
+
+const insertDevotionalReadComplete = async (params: {
+  devotionalId: string
+  userId: string
+  deliveryId?: string | null
+}) => {
+  const created = await withRetryableWriteConflict(() =>
+    prisma.$executeRaw`
+      INSERT IGNORE INTO devotional_read_completions (
+        id,
+        devotional_id,
+        user_id,
+        delivery_id,
+        created_at
+      )
+      VALUES (
+        ${crypto.randomUUID()},
+        ${params.devotionalId},
+        ${params.userId},
+        ${params.deliveryId ?? null},
+        NOW()
+      )
+    `
+  )
+
+  return Number(created) > 0
+}
+
+const applyReadCompleteSideEffects = async (params: {
+  devotionalId: string
+  userId: string
+  creatorId: string
+}) =>
+  withRetryableWriteConflict(() =>
+    prisma.$transaction(async (tx) => {
+      const updated = await tx.devotional.update({
+        where: { id: params.devotionalId },
+        data: { readCompleteCount: { increment: 1 } },
+        select: { readCompleteCount: true },
+      })
+
+      await upsertCreatorAffinity(tx, {
+        userId: params.userId,
+        creatorId: params.creatorId,
+        scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
+      })
+
+      return updated.readCompleteCount
+    })
+  )
 
 const listFollowingSelections = (params: {
   candidates: DevotionalWithRelations[]
@@ -1880,68 +1986,65 @@ export const markReadComplete = async (params: {
   shareToken?: string | null
   deviceId?: string | null
 }) => {
-  return prisma.$transaction(async (tx) => {
-    const devotional = await tx.devotional.findUnique({
-      where: { id: params.devotionalId },
-      select: { authorId: true },
-    })
+  const devotional = await prisma.devotional.findUnique({
+    where: { id: params.devotionalId },
+    select: { authorId: true },
+  })
 
-    if (!devotional) {
-      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
-    }
+  if (!devotional) {
+    throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+  }
 
-    const deliveryId = await resolveDeliveryIdByToken(tx, {
-      userId: params.userId,
-      devotionalId: params.devotionalId,
-      deliveryToken: params.deliveryToken,
-    })
+  const deliveryId = await resolveDeliveryIdByToken(prisma, {
+    userId: params.userId,
+    devotionalId: params.devotionalId,
+    deliveryToken: params.deliveryToken,
+  })
 
-    const created = await tx.devotionalReadComplete.createMany({
-      data: [
-        {
-          devotionalId: params.devotionalId,
-          userId: params.userId,
-          deliveryId,
-        },
-      ],
-      skipDuplicates: true,
-    })
+  const created = await insertDevotionalReadComplete({
+    devotionalId: params.devotionalId,
+    userId: params.userId,
+    deliveryId,
+  })
 
-    if (created.count > 0) {
-      const updated = await tx.devotional.update({
-        where: { id: params.devotionalId },
-        data: { readCompleteCount: { increment: 1 } },
-        select: { readCompleteCount: true },
-      })
-      await upsertCreatorAffinity(tx, {
-        userId: params.userId,
-        creatorId: devotional.authorId,
-        scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
-      })
-      if (params.shareToken) {
-        await recordFirstAttributedReadComplete({
-          token: params.shareToken,
-          devotionalId: params.devotionalId,
-          userId: params.userId,
-          deviceId: params.deviceId,
-        })
-      }
-      return {
-        readComplete: true,
-        readCompleteCount: updated.readCompleteCount,
-      }
-    }
-
-    const updated = await tx.devotional.findUnique({
-      where: { id: params.devotionalId },
-      select: { readCompleteCount: true },
-    })
-
+  if (!created) {
     return {
       readComplete: true,
-      readCompleteCount: updated?.readCompleteCount ?? 0,
+      readCompleteCount: await getCurrentReadCompleteCount(params.devotionalId),
     }
-  })
+  }
+
+  let readCompleteCount: number
+
+  try {
+    readCompleteCount = await applyReadCompleteSideEffects({
+      devotionalId: params.devotionalId,
+      userId: params.userId,
+      creatorId: devotional.authorId,
+    })
+  } catch (error) {
+    if (!isRetryableWriteConflictError(error)) {
+      throw error
+    }
+
+    readCompleteCount = await withRetryableWriteConflict(() =>
+      syncReadCompleteCount(params.devotionalId)
+    )
+  }
+
+  if (params.shareToken) {
+    await recordFirstAttributedReadComplete({
+      token: params.shareToken,
+      devotionalId: params.devotionalId,
+      userId: params.userId,
+      deviceId: params.deviceId,
+    })
+  }
+
+  return {
+    readComplete: true,
+    readCompleteCount,
+  }
 }
 
 export const reportDevotional = async (params: {

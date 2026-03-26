@@ -6,7 +6,7 @@ import {
 import { AppError } from '../../common/errors'
 
 export const resolveDeliveryIdByToken = async (
-  tx: Prisma.TransactionClient,
+  client: Pick<Prisma.TransactionClient, 'devotionalFeedDelivery'>,
   params: {
     userId: string
     devotionalId: string
@@ -17,7 +17,7 @@ export const resolveDeliveryIdByToken = async (
     return null
   }
 
-  const delivery = await tx.devotionalFeedDelivery.findUnique({
+  const delivery = await client.devotionalFeedDelivery.findUnique({
     where: {
       token: params.deliveryToken,
     },
