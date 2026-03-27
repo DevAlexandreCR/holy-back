@@ -933,3 +933,28 @@ model NotificationDailyMetric {
   @@index([notificationType, date])
   @@map("notification_daily_metrics")
 }
+
+model WebOutboundClick {
+  id               String   @id @db.Char(36)
+  target           String   @db.VarChar(64)
+  targetPlatform   String   @map("target_platform") @db.VarChar(32)
+  destinationUrl   String   @map("destination_url") @db.Text
+  ctaPlacement     String?  @map("cta_placement") @db.VarChar(191)
+  entryContext     String   @default("home") @map("entry_context") @db.VarChar(191)
+  lpVariant        String   @default("emotional") @map("lp_variant") @db.VarChar(191)
+  landingSessionId String?  @map("landing_session_id") @db.VarChar(191)
+  utmSource        String?  @map("utm_source") @db.VarChar(191)
+  utmMedium        String?  @map("utm_medium") @db.VarChar(191)
+  utmCampaign      String?  @map("utm_campaign") @db.VarChar(191)
+  utmContent       String?  @map("utm_content") @db.VarChar(191)
+  shareToken       String?  @map("share_token") @db.VarChar(191)
+  referer          String?  @db.Text
+  userAgent        String?  @map("user_agent") @db.Text
+  ipAddress        String?  @map("ip_address") @db.VarChar(191)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@index([target, createdAt])
+  @@index([entryContext, createdAt])
+  @@index([shareToken, createdAt])
+  @@map("web_outbound_clicks")
+}

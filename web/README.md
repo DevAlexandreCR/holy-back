@@ -41,6 +41,30 @@ Esta landing se sirve a través de nginx en el dominio principal `holyverso.com`
 
 Ver configuración en `docs/back/publish.md`.
 
+## 🧪 Preview local
+
+La forma correcta de ver la landing en local es servirla por HTTP a través del backend.
+
+### Flujo recomendado
+
+```bash
+# Desde la raíz del repo
+docker compose up backend
+```
+
+Luego abre:
+
+```text
+http://localhost:3000/
+```
+
+### Importante
+
+- No abras `holy-back/web/index.html` directamente con `file://`.
+- La landing usa rutas absolutas como `/styles.css`, `/script.js`, `/assets/...`, `/out/...` y `/.well-known/...`.
+- También depende de comportamiento de origen HTTP para redirects, tracking y deep links.
+- Si la abres como archivo local, verás errores esperados de recursos no encontrados y restricciones del navegador.
+
 ## 📱 Responsive
 
 La página es completamente responsive y se adapta a:

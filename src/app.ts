@@ -6,6 +6,7 @@ import bibleRouter from './modules/bible/bible.routes';
 import devotionalRouter from './modules/devotionals/devotional.routes';
 import devotionalModerationRouter from './modules/devotionals/devotionalModeration.routes';
 import insightsRouter from './modules/insights/insights.routes';
+import landingRedirectRouter from './modules/landing/landingRedirect.routes';
 import notificationRouter from './modules/notifications/notification.routes';
 import rolesRouter from './modules/roles/roles.routes';
 import shareAttributionRouter from './modules/shareAttribution/shareAttribution.routes';
@@ -16,6 +17,8 @@ import widgetRouter from './modules/widget/widget.routes';
 import { errorHandler } from './common/errorHandler';
 
 export const app = express();
+const webRoot = path.join(process.cwd(), 'web');
+const webWellKnownRoot = path.join(webRoot, '.well-known');
 
 app.use(express.json({ limit: '250kb' }));
 app.use('/storage', express.static(path.join(process.cwd(), 'storage')));
@@ -30,6 +33,7 @@ app.use('/bible', bibleRouter);
 app.use('/devotionals', devotionalRouter);
 app.use('/moderation', devotionalModerationRouter);
 app.use(insightsRouter);
+app.use(landingRedirectRouter);
 app.use(notificationRouter);
 app.use('/roles', rolesRouter);
 app.use(shareAttributionRouter);
@@ -37,5 +41,20 @@ app.use('/user', userRouter);
 app.use('/users', userProfileRouter);
 app.use('/verse', verseRouter);
 app.use('/widget', widgetRouter);
+
+app.use(
+  '/.well-known',
+  express.static(webWellKnownRoot, {
+    dotfiles: 'allow',
+  }),
+);
+app.use(
+  express.static(webRoot, {
+    index: false,
+  }),
+);
+app.get('/', (_req: Request, res: Response) => {
+  res.sendFile(path.join(webRoot, 'index.html'));
+});
 
 app.use(errorHandler);

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
 import { AppError } from '../../common/errors'
+import { buildTrackedStoreRedirectUrl } from '../landing/landingRedirect.service'
 import {
   getShareRedirectContext,
   recordShareAttributionAppOpen,
@@ -26,6 +27,8 @@ const buildRedirectHtml = (params: {
   appLink: string
   universalLink: string
   isAvailable: boolean
+  appStoreUrl: string
+  googlePlayUrl: string
 }) => {
   if (!params.isAvailable) {
     return `
@@ -41,13 +44,15 @@ const buildRedirectHtml = (params: {
     h1 { margin: 0 0 12px; color: #f8fafc; }
     p { margin: 0 0 12px; line-height: 1.5; color: #cbd5e1; }
     a { color: #fbbf24; font-weight: 700; text-decoration: none; }
+    .note { margin-top: 16px; font-size: 14px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Este devocional no está disponible</h1>
     <p>El contenido fue retirado de la vista pública o ya no se puede abrir.</p>
-    <a href="https://holyverso.com/#download">Abrir HolyVerso</a>
+    <a href="${params.googlePlayUrl}">Descargar HolyVerso</a>
+    <p class="note">Si estás en iPhone, también puedes descargarla desde <a href="${params.appStoreUrl}">App Store</a>.</p>
   </div>
 </body>
 </html>
@@ -70,15 +75,21 @@ const buildRedirectHtml = (params: {
     .btn { display: inline-flex; align-items: center; justify-content: center; margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: #fbbf24; color: #0f172a; text-decoration: none; font-weight: 800; }
     .subtle { color: #94a3b8; font-size: 14px; }
     .fallback { margin-top: 18px; }
+    .stores { display: flex; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+    .store-link { color: #cbd5e1; text-decoration: none; font-size: 14px; }
+    .note { margin-top: 16px; font-size: 14px; color: #94a3b8; }
   </style>
 </head>
 <body>
   <div class="card">
     <h1>${escapedTitle}</h1>
-    <p>Estamos abriendo este devocional en HolyVerso.</p>
+    <p>Alguien decidió enviarte esto hoy. Estamos abriendo el devocional en HolyVerso.</p>
     <a class="btn" href="${params.universalLink}" id="open-link">Abrir en la app</a>
-    <p class="subtle fallback">Si no se abre automáticamente, toca el botón o instala la app.</p>
-    <a class="subtle" href="https://holyverso.com/#download">Descargar HolyVerso</a>
+    <p class="subtle fallback">Si no se abre automáticamente, toca el botón o descarga la app.</p>
+    <div class="stores">
+      <a class="store-link" href="${params.appStoreUrl}">Descargar en App Store</a>
+      <a class="store-link" href="${params.googlePlayUrl}">Descargar en Google Play</a>
+    </div>
   </div>
   <script>
     (function () {
@@ -97,6 +108,12 @@ const buildRedirectHtml = (params: {
 
 export const shareRedirectHandler = async (req: Request, res: Response) => {
   const context = await getShareRedirectContext(req.params.token)
+  const trackedRedirectParams = {
+    entryContext: 'share',
+    lpVariant: 'emotional',
+    ctaPlacement: 'share_redirect_download',
+    shareToken: context.token,
+  }
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.send(
     buildRedirectHtml({
@@ -104,6 +121,14 @@ export const shareRedirectHandler = async (req: Request, res: Response) => {
       appLink: context.appLink,
       universalLink: context.universalLink,
       isAvailable: context.isAvailable,
+      appStoreUrl: buildTrackedStoreRedirectUrl({
+        target: 'app-store',
+        ...trackedRedirectParams,
+      }),
+      googlePlayUrl: buildTrackedStoreRedirectUrl({
+        target: 'google-play',
+        ...trackedRedirectParams,
+      }),
     })
   )
 }
