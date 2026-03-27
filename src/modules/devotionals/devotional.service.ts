@@ -109,6 +109,11 @@ type OffsetCursor = {
   offset: number
 }
 
+type SavedDevotionalCursor = {
+  createdAt: string
+  id: string
+}
+
 type FeedSelection = {
   devotional: DevotionalWithRelations
   recommendationReason: DevotionalRecommendationReason
@@ -578,6 +583,38 @@ const decodeOffsetCursor = (cursor?: string | null): OffsetCursor | null => {
 
 const getCursorOffset = (cursor?: string | null) =>
   Math.max(0, decodeOffsetCursor(cursor)?.offset ?? 0)
+
+const encodeSavedDevotionalCursor = (cursor: SavedDevotionalCursor) =>
+  Buffer.from(JSON.stringify(cursor), 'utf8').toString('base64url')
+
+const decodeSavedDevotionalCursor = (
+  cursor?: string | null
+): { createdAt: Date; id: string } | null => {
+  if (!cursor) return null
+
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(cursor, 'base64url').toString('utf8')
+    ) as Partial<SavedDevotionalCursor>
+    if (
+      typeof parsed.createdAt !== 'string' ||
+      typeof parsed.id !== 'string' ||
+      !parsed.createdAt ||
+      !parsed.id
+    ) {
+      return null
+    }
+
+    const createdAt = new Date(parsed.createdAt)
+    if (Number.isNaN(createdAt.getTime())) {
+      return null
+    }
+
+    return { createdAt, id: parsed.id }
+  } catch {
+    return null
+  }
+}
 
 const ensureImageAssetAttachable = async (
   tx: Prisma.TransactionClient,
@@ -1603,6 +1640,62 @@ export const listFeedDevotionals = async (params: {
         ? encodeOffsetCursor({ offset: nextOffset })
         : null,
     has_more: pageSelections.length > 0 && hasMore,
+  }
+}
+
+export const listSavedDevotionals = async (params: {
+  userId: string
+  cursor?: string | null
+  limit: number
+}) => {
+  const limit = Math.min(Math.max(params.limit, 1), DEVOTIONAL_MAX_PAGE_LIMIT)
+  const cursor = decodeSavedDevotionalCursor(params.cursor)
+
+  if (params.cursor && !cursor) {
+    throw new AppError('Invalid cursor', 'INVALID_CURSOR', 400)
+  }
+
+  const items = await prisma.devotionalSave.findMany({
+    where: {
+      userId: params.userId,
+      devotional: buildEligibleFeedWhere(),
+      ...(cursor
+        ? {
+            OR: [
+              { createdAt: { lt: cursor.createdAt } },
+              {
+                createdAt: cursor.createdAt,
+                id: { lt: cursor.id },
+              },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit + 1,
+    include: {
+      devotional: {
+        include: devotionalInclude(params.userId),
+      },
+    },
+  })
+
+  const pageItems = items.slice(0, limit)
+  const hasMore = items.length > limit
+  const lastItem = pageItems.length > 0 ? pageItems[pageItems.length - 1] : null
+
+  return {
+    items: pageItems.map((item) =>
+      formatDevotional(item.devotional, { viewerId: params.userId })
+    ),
+    next_cursor:
+      hasMore && lastItem
+        ? encodeSavedDevotionalCursor({
+            createdAt: lastItem.createdAt.toISOString(),
+            id: lastItem.id,
+          })
+        : null,
+    has_more: hasMore,
   }
 }
 

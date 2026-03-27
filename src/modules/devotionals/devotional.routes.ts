@@ -12,6 +12,7 @@ import {
   listCommentsHandler,
   listDevotionalsHandler,
   listFeedHandler,
+  listSavedDevotionalsHandler,
   publishDevotionalHandler,
   readCompleteHandler,
   recordFeedEventsHandler,
@@ -44,6 +45,7 @@ router.post('/feed/events', requireAuth, recordFeedEventsHandler)
 router.post('/upload-image', requireAuth, upload.single('image'), uploadImageHandler)
 
 router.get('/', requireAuth, listDevotionalsHandler)
+router.get('/saved', requireAuth, listSavedDevotionalsHandler)
 router.post('/', requireAuth, createDevotionalHandler)
 router.get('/:id', optionalAuth, getDevotionalHandler)
 router.put('/:id', requireAuth, updateDevotionalHandler)

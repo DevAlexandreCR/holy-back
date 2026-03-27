@@ -26,6 +26,7 @@ import {
   listComments,
   listDevotionals,
   listFeedDevotionals,
+  listSavedDevotionals,
   markReadComplete,
   publishDevotional,
   recordFeedEvents,
@@ -50,6 +51,7 @@ import {
   feedPaginationSchema,
   listDevotionalsSchema,
   paginationSchema,
+  savedDevotionalsPaginationSchema,
   updateDevotionalSchema,
 } from './devotional.validation'
 
@@ -172,6 +174,24 @@ export const listFeedHandler = async (req: Request, res: Response) => {
     cursor: query.cursor,
     limit,
     mode: query.mode,
+  })
+
+  res.json({ data: result })
+}
+
+export const listSavedDevotionalsHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  const query = parseOrThrow(savedDevotionalsPaginationSchema, req.query)
+  const limitRaw = query.limit ? Number(query.limit) : 20
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20
+
+  const result = await listSavedDevotionals({
+    userId: req.user!.sub,
+    cursor: query.cursor,
+    limit,
   })
 
   res.json({ data: result })

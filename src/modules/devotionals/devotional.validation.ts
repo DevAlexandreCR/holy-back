@@ -61,6 +61,11 @@ export const feedPaginationSchema = z.object({
   mode: z.enum(DEVOTIONAL_FEED_MODES).optional(),
 })
 
+export const savedDevotionalsPaginationSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
+})
+
 export const feedEventsSchema = z.object({
   events: z
     .array(
