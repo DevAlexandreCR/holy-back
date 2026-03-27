@@ -5,6 +5,7 @@ import {
   DevotionalFeedEventType,
   DevotionalImageAssetStatus,
   DevotionalImageModerationStatus,
+  DevotionalQualityGateStatus,
   DevotionalModerationActionType,
   DevotionalModerationStatus,
   DevotionalNotificationType,
@@ -23,7 +24,6 @@ import {
   DEVOTIONAL_MAX_CONTENT_BYTES,
   DEVOTIONAL_MAX_PAGE_LIMIT,
   DEVOTIONAL_PRIVILEGED_FEATURE_ROLES,
-  DEVOTIONAL_PREVIEW_MAX_CHARS,
   DEVOTIONAL_PUBLISHED_MANAGEMENT_STATES,
   DEVOTIONAL_WORDS_PER_MINUTE,
   DevotionalFeedMode,
@@ -31,6 +31,12 @@ import {
   devotionalModerationPolicy,
   devotionalRankingPolicy,
 } from './devotional.policy'
+import {
+  buildPreviewTextFromPlainText,
+  deriveDevotionalFeedContent,
+  extractPlainText,
+  qualityGateMessageForStatus,
+} from './devotionalFeedContent'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
 import {
   FeedDeliveryAttributionStatus,
@@ -274,40 +280,8 @@ const ensurePrimaryReference = (
   }
 }
 
-const extractContentOps = (content: unknown): Record<string, unknown>[] => {
-  if (Array.isArray(content)) {
-    return content.filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
-  }
-  if (
-    content &&
-    typeof content === 'object' &&
-    'ops' in content &&
-    Array.isArray((content as { ops?: unknown }).ops)
-  ) {
-    return (content as { ops: unknown[] }).ops.filter(
-      (item): item is Record<string, unknown> => !!item && typeof item === 'object'
-    )
-  }
-  return []
-}
-
-const extractPlainText = (content: unknown) => {
-  const buffer = extractContentOps(content)
-    .map((op) => (typeof op.insert === 'string' ? op.insert : ''))
-    .join('')
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .trim()
-
-  return buffer.replace(/\n{3,}/g, '\n\n')
-}
-
 const buildPreviewText = (content: unknown) => {
-  const text = extractPlainText(content).replace(/\s+/g, ' ').trim()
-  if (text.length <= DEVOTIONAL_PREVIEW_MAX_CHARS) {
-    return text
-  }
-  return `${text.slice(0, DEVOTIONAL_PREVIEW_MAX_CHARS).trimEnd()}...`
+  return buildPreviewTextFromPlainText(extractPlainText(content))
 }
 
 const estimateReadTime = (content: unknown) => {
@@ -442,11 +416,35 @@ const formatDevotional = (
     viewerRole?: UserRole | null
     deliveryToken?: string
     recommendationReason?: DevotionalRecommendationReason | null
+    feedContextReason?:
+      | 'FEATURED'
+      | 'TRENDING'
+      | 'SAVED_BY_OTHERS'
+      | 'HIGH_COMPLETION'
+      | 'HIGH_SHARE'
+      | 'FOLLOWED_AUTHOR'
+      | null
   } = {}
 ) => {
   const viewerState = formatViewerState(devotional)
   const imageUrl = resolveImageUrl(devotional)
   const authorRelationship = formatAuthorRelationship(devotional.author)
+  const derivedContent =
+    devotional.computedHook.trim() &&
+    devotional.optimizedPreviewText.trim() &&
+    devotional.hookSource
+      ? null
+      : deriveDevotionalFeedContent({
+          title: devotional.title,
+          content: devotional.content,
+        })
+  const computedHook =
+    devotional.computedHook.trim() || derivedContent?.computedHook || devotional.title
+  const optimizedPreviewText =
+    devotional.optimizedPreviewText.trim() ||
+    derivedContent?.optimizedPreviewText ||
+    buildPreviewText(devotional.content)
+  const hookSource = devotional.hookSource ?? derivedContent?.hookSource
 
   return {
     id: devotional.id,
@@ -466,6 +464,9 @@ const formatDevotional = (
     preview_image_url: imageUrl,
     cover_image_focus_y: devotional.coverImageFocusY,
     preview_text: buildPreviewText(devotional.content),
+    computed_hook: computedHook,
+    optimized_preview_text: optimizedPreviewText,
+    hook_source: hookSource,
     estimated_read_time: estimateReadTime(devotional.content),
     view_count: devotional.viewCount,
     published_at: toIso(devotional.publishedAt),
@@ -496,7 +497,47 @@ const formatDevotional = (
     counters: formatCounters(devotional),
     ...(options.deliveryToken ? { delivery_token: options.deliveryToken } : {}),
     recommendation_reason: options.recommendationReason ?? null,
+    feed_context_reason: options.feedContextReason ?? null,
   }
+}
+
+const resolveFeedContextReason = (devotional: DevotionalWithRelations) => {
+  if (devotional.publicationState === DevotionalPublicationState.FEATURED) {
+    return 'FEATURED' as const
+  }
+
+  if (devotional.publicationState === DevotionalPublicationState.TRENDING) {
+    return 'TRENDING' as const
+  }
+
+  const denominator = Math.max(
+    devotional.uniqueImpressionCount,
+    devotional.impressionCount,
+    25
+  )
+  const saveRate = devotional.saveCount / denominator
+  const readCompleteRate = devotional.readCompleteCount / denominator
+  const shareRate = devotional.shareCount / denominator
+
+  if (saveRate >= devotionalRankingPolicy.promotion.trending.saveRate) {
+    return 'SAVED_BY_OTHERS' as const
+  }
+
+  if (
+    readCompleteRate >= devotionalRankingPolicy.promotion.trending.readCompleteRate
+  ) {
+    return 'HIGH_COMPLETION' as const
+  }
+
+  if (shareRate >= devotionalRankingPolicy.promotion.featured.shareRate) {
+    return 'HIGH_SHARE' as const
+  }
+
+  if (devotional.author.followedBy.length > 0) {
+    return 'FOLLOWED_AUTHOR' as const
+  }
+
+  return null
 }
 
 const encodeOffsetCursor = (cursor: OffsetCursor) =>
@@ -1308,6 +1349,10 @@ export const createDevotional = async (params: {
 }) => {
   ensureContentSize(params.content)
   ensurePrimaryReference(params.verseReferences)
+  const derivedContent = deriveDevotionalFeedContent({
+    title: params.title,
+    content: params.content,
+  })
   try {
     const devotional = await prisma.$transaction(async (tx) => {
       await ensureImageAssetAttachable(tx, params.authorId, params.imageAssetId)
@@ -1316,6 +1361,10 @@ export const createDevotional = async (params: {
         data: {
           title: params.title.trim(),
           content: params.content,
+          computedHook: derivedContent.computedHook,
+          optimizedPreviewText: derivedContent.optimizedPreviewText,
+          hookSource: derivedContent.hookSource,
+          qualityGateStatus: derivedContent.qualityGateStatus,
           authorId: params.authorId,
           imageAssetId: params.imageAssetId ?? null,
           coverImageFocusY: params.coverImageFocusY ?? null,
@@ -1529,6 +1578,7 @@ export const listFeedDevotionals = async (params: {
         viewerId: params.userId,
         deliveryToken: token,
         recommendationReason,
+        feedContextReason: resolveFeedContextReason(devotional),
       })
     ),
     next_cursor:
@@ -1644,7 +1694,7 @@ export const updateDevotional = async (params: {
     const updated = await prisma.$transaction(async (tx) => {
       const existing = await tx.devotional.findUnique({
         where: { id: params.devotionalId },
-        select: { publicationState: true },
+        select: { publicationState: true, title: true, content: true },
       })
 
       if (!existing) {
@@ -1660,6 +1710,13 @@ export const updateDevotional = async (params: {
       }
 
       await ensureImageAssetAttachable(tx, params.viewerId, params.imageAssetId)
+
+      const nextTitle = params.title ?? existing.title
+      const nextContent = params.content ?? existing.content
+      const derivedContent = deriveDevotionalFeedContent({
+        title: nextTitle,
+        content: nextContent,
+      })
 
       if (params.verseReferences) {
         await tx.devotionalVerseReference.deleteMany({
@@ -1684,6 +1741,10 @@ export const updateDevotional = async (params: {
       if (params.content !== undefined) {
         data.content = params.content
       }
+      data.computedHook = derivedContent.computedHook
+      data.optimizedPreviewText = derivedContent.optimizedPreviewText
+      data.hookSource = derivedContent.hookSource
+      data.qualityGateStatus = derivedContent.qualityGateStatus
       if (params.imageAssetId !== undefined) {
         data.imageAsset = params.imageAssetId
           ? { connect: { id: params.imageAssetId } }
@@ -1761,6 +1822,32 @@ export const publishDevotional = async (params: {
       )
     }
 
+    const derivedContent = deriveDevotionalFeedContent({
+      title: devotional.title,
+      content: devotional.content,
+    })
+    const qualityGateMessage = qualityGateMessageForStatus(
+      derivedContent.qualityGateStatus
+    )
+
+    if (derivedContent.qualityGateStatus !== DevotionalQualityGateStatus.READY) {
+      await tx.devotional.update({
+        where: { id: devotional.id },
+        data: {
+          computedHook: derivedContent.computedHook,
+          optimizedPreviewText: derivedContent.optimizedPreviewText,
+          hookSource: derivedContent.hookSource,
+          qualityGateStatus: derivedContent.qualityGateStatus,
+        },
+      })
+
+      throw new AppError(
+        qualityGateMessage ?? 'This devotional is not ready for the feed yet.',
+        'DEVOTIONAL_QUALITY_GATE_FAILED',
+        400
+      )
+    }
+
     const textModeration = await moderateText(extractPlainText(devotional.content))
     if (
       textModeration.severity === 'HIGH' ||
@@ -1815,6 +1902,10 @@ export const publishDevotional = async (params: {
         publicationState,
         moderationStatus,
         moderationReason: textModeration.reason,
+        computedHook: derivedContent.computedHook,
+        optimizedPreviewText: derivedContent.optimizedPreviewText,
+        hookSource: derivedContent.hookSource,
+        qualityGateStatus: derivedContent.qualityGateStatus,
         moderatedAt:
           moderationStatus === DevotionalModerationStatus.CLEAR ? null : now,
         imageUrl: imageResult.imageUrl,

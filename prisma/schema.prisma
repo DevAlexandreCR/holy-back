@@ -110,6 +110,18 @@ enum DevotionalModerationActionType {
   IMAGE_REJECTED
 }
 
+enum DevotionalHookSource {
+  CONTENT_OPENING
+  TITLE_FALLBACK
+  CONTENT_TRUNCATION
+}
+
+enum DevotionalQualityGateStatus {
+  READY
+  NEEDS_MORE_REFLECTION
+  NEEDS_CLEARER_OPENING
+}
+
 model User {
   id                  String                @id @default(uuid()) @db.Char(36)
   name                String
@@ -304,6 +316,10 @@ model Devotional {
   id                     String                         @id @default(uuid()) @db.Char(36)
   title                  String
   content                Json
+  computedHook           String                         @default("") @map("computed_hook") @db.VarChar(140)
+  optimizedPreviewText   String                         @default("") @map("optimized_preview_text") @db.VarChar(160)
+  hookSource             DevotionalHookSource           @default(CONTENT_TRUNCATION) @map("hook_source")
+  qualityGateStatus      DevotionalQualityGateStatus    @default(READY) @map("quality_gate_status")
   authorId               String                         @map("author_id") @db.Char(36)
   author                 User                           @relation(fields: [authorId], references: [id])
   publicationState       DevotionalPublicationState     @default(DRAFT) @map("publication_state")
