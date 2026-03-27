@@ -1,0 +1,10 @@
+ALTER TABLE `devotionals`
+  MODIFY `hook_source` ENUM(
+    'CONTENT_OPENING',
+    'TITLE_FALLBACK',
+    'CONTENT_TRUNCATION',
+    'AI_GENERATED'
+  ) NOT NULL DEFAULT 'CONTENT_TRUNCATION';
+
+ALTER TABLE `devotionals`
+  ADD COLUMN `hook_model` VARCHAR(64) NULL AFTER `hook_source`;

@@ -32,11 +32,13 @@ import {
   devotionalRankingPolicy,
 } from './devotional.policy'
 import {
+  buildOptimizedPreviewTextFromPlainText,
   buildPreviewTextFromPlainText,
   deriveDevotionalFeedContent,
   extractPlainText,
   qualityGateMessageForStatus,
 } from './devotionalFeedContent'
+import { devotionalHookGenerator } from './devotionalHookGenerator.service'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
 import {
   FeedDeliveryAttributionStatus,
@@ -215,6 +217,21 @@ const formatVerseReference = (reference: {
   is_primary: reference.isPrimary,
   created_at: reference.createdAt.toISOString(),
 })
+
+const formatPrimaryReferenceLabel = (reference?: {
+  book: string
+  chapter: number
+  verseStart: number
+  verseEnd: number | null
+} | null) => {
+  if (!reference) {
+    return null
+  }
+
+  return `${reference.book} ${reference.chapter}:${reference.verseStart}${
+    reference.verseEnd ? `-${reference.verseEnd}` : ''
+  }`
+}
 
 const devotionalInclude = (viewerId?: string | null) =>
   Prisma.validator<Prisma.DevotionalInclude>()({
@@ -1713,10 +1730,14 @@ export const updateDevotional = async (params: {
 
       const nextTitle = params.title ?? existing.title
       const nextContent = params.content ?? existing.content
-      const derivedContent = deriveDevotionalFeedContent({
-        title: nextTitle,
-        content: nextContent,
-      })
+      const shouldRefreshDraftFeedContent =
+        existing.publicationState === DevotionalPublicationState.DRAFT
+      const derivedContent = shouldRefreshDraftFeedContent
+        ? deriveDevotionalFeedContent({
+            title: nextTitle,
+            content: nextContent,
+          })
+        : null
 
       if (params.verseReferences) {
         await tx.devotionalVerseReference.deleteMany({
@@ -1741,10 +1762,13 @@ export const updateDevotional = async (params: {
       if (params.content !== undefined) {
         data.content = params.content
       }
-      data.computedHook = derivedContent.computedHook
-      data.optimizedPreviewText = derivedContent.optimizedPreviewText
-      data.hookSource = derivedContent.hookSource
-      data.qualityGateStatus = derivedContent.qualityGateStatus
+      if (derivedContent) {
+        data.computedHook = derivedContent.computedHook
+        data.optimizedPreviewText = derivedContent.optimizedPreviewText
+        data.hookSource = derivedContent.hookSource
+        data.hookModel = null
+        data.qualityGateStatus = derivedContent.qualityGateStatus
+      }
       if (params.imageAssetId !== undefined) {
         data.imageAsset = params.imageAssetId
           ? { connect: { id: params.imageAssetId } }
@@ -1807,6 +1831,16 @@ export const publishDevotional = async (params: {
         moderationStatus: true,
         imageAssetId: true,
         firstPublishedAt: true,
+        verseReferences: {
+          where: { isPrimary: true },
+          orderBy: { createdAt: 'asc' },
+          select: {
+            book: true,
+            chapter: true,
+            verseStart: true,
+            verseEnd: true,
+          },
+        },
       },
     })
 
@@ -1873,6 +1907,20 @@ export const publishDevotional = async (params: {
       )
     }
 
+    const hookResult = await devotionalHookGenerator.generate({
+      title: devotional.title,
+      plainText: derivedContent.plainText,
+      primaryReference: formatPrimaryReferenceLabel(
+        devotional.verseReferences[0] ?? null
+      ),
+      fallbackHook: derivedContent.computedHook,
+      fallbackSource: derivedContent.hookSource,
+    })
+    const optimizedPreviewText = buildOptimizedPreviewTextFromPlainText({
+      plainText: derivedContent.plainText,
+      computedHook: hookResult.hook,
+    })
+
     const imageResult = await ensurePermanentImage(tx, devotional.imageAssetId)
     const now = new Date()
     const isPrivilegedLaunch = getsPrivilegedInitialVisibility(params.viewerRole)
@@ -1902,9 +1950,10 @@ export const publishDevotional = async (params: {
         publicationState,
         moderationStatus,
         moderationReason: textModeration.reason,
-        computedHook: derivedContent.computedHook,
-        optimizedPreviewText: derivedContent.optimizedPreviewText,
-        hookSource: derivedContent.hookSource,
+        computedHook: hookResult.hook,
+        optimizedPreviewText,
+        hookSource: hookResult.source,
+        hookModel: hookResult.model,
         qualityGateStatus: derivedContent.qualityGateStatus,
         moderatedAt:
           moderationStatus === DevotionalModerationStatus.CLEAR ? null : now,
@@ -1946,6 +1995,7 @@ export const publishDevotional = async (params: {
 
     return {
       devotional: updated,
+      hookResult,
       transitionedToUnderReview:
         devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW &&
         moderationStatus === DevotionalModerationStatus.UNDER_REVIEW,
@@ -1955,6 +2005,17 @@ export const publishDevotional = async (params: {
   await maybeSendReviewRequiredNotification({
     devotionalId: result.devotional.id,
     transitionedToUnderReview: result.transitionedToUnderReview,
+  })
+
+  console.log('[DevotionalHookGeneration] Publish hook result', {
+    devotionalId: result.devotional.id,
+    authorId: result.devotional.authorId,
+    model: result.hookResult.model,
+    latencyMs: result.hookResult.latencyMs,
+    usedFallback: result.hookResult.usedFallback,
+    hookSource: result.hookResult.source,
+    validationFailureReason: result.hookResult.validationFailureReason ?? null,
+    errorCode: result.hookResult.errorCode ?? null,
   })
 
   if (

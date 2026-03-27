@@ -114,6 +114,7 @@ enum DevotionalHookSource {
   CONTENT_OPENING
   TITLE_FALLBACK
   CONTENT_TRUNCATION
+  AI_GENERATED
 }
 
 enum DevotionalQualityGateStatus {
@@ -319,6 +320,7 @@ model Devotional {
   computedHook           String                         @default("") @map("computed_hook") @db.VarChar(140)
   optimizedPreviewText   String                         @default("") @map("optimized_preview_text") @db.VarChar(160)
   hookSource             DevotionalHookSource           @default(CONTENT_TRUNCATION) @map("hook_source")
+  hookModel              String?                        @map("hook_model") @db.VarChar(64)
   qualityGateStatus      DevotionalQualityGateStatus    @default(READY) @map("quality_gate_status")
   authorId               String                         @map("author_id") @db.Char(36)
   author                 User                           @relation(fields: [authorId], references: [id])

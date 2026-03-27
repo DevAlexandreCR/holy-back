@@ -123,6 +123,13 @@ const OPENAI_MODERATION_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_MODERATION_TIMEOUT_MS'], '8000'),
   'OPENAI_MODERATION_TIMEOUT_MS',
 );
+const OPENAI_DEVOTIONAL_HOOK_MODEL = readEnvOptional([
+  'OPENAI_DEVOTIONAL_HOOK_MODEL',
+]);
+const OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS = toNumber(
+  readEnvAny(['OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS'], '5000'),
+  'OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS',
+);
 const FCM_PROJECT_ID = readEnvOptional(['FCM_PROJECT_ID']);
 const FCM_CLIENT_EMAIL = readEnvOptional(['FCM_CLIENT_EMAIL']);
 const rawFcmPrivateKey =
@@ -172,6 +179,8 @@ export const config = {
     apiKey: OPENAI_API_KEY,
     moderationModel: OPENAI_MODERATION_MODEL,
     moderationTimeoutMs: OPENAI_MODERATION_TIMEOUT_MS,
+    devotionalHookModel: OPENAI_DEVOTIONAL_HOOK_MODEL,
+    devotionalHookTimeoutMs: OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS,
   },
   notifications: {
     fcmProjectId: FCM_PROJECT_ID,

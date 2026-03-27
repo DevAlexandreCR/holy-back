@@ -4,10 +4,11 @@ import {
 } from '@prisma/client'
 import { DEVOTIONAL_PREVIEW_MAX_CHARS } from './devotional.policy'
 
-const MIN_HOOK_LENGTH = 45
+const MIN_HOOK_LENGTH = 80
+const TARGET_HOOK_MIN_LENGTH = 120
+const RELAXED_MIN_HOOK_LENGTH = 45
 const MAX_HOOK_LENGTH = 140
-const FALLBACK_HOOK_MIN_LENGTH = 80
-const FALLBACK_HOOK_MAX_LENGTH = 120
+const FALLBACK_HOOK_MAX_LENGTH = 140
 const PREVIEW_MIN_LENGTH = 110
 const PREVIEW_MAX_LENGTH = 160
 
@@ -123,8 +124,6 @@ export const deriveDevotionalFeedContent = (params: {
     wordCount: words.length,
     sentenceCount,
     meaningfulParagraphs,
-    hookSource,
-    titleStrong,
   })
 
   return {
@@ -195,8 +194,6 @@ const resolveQualityGateStatus = (params: {
   wordCount: number
   sentenceCount: number
   meaningfulParagraphs: number
-  hookSource: DevotionalHookSource
-  titleStrong: boolean
 }) => {
   const hasEnoughReflection =
     params.plainTextLength >= 220 &&
@@ -207,39 +204,16 @@ const resolveQualityGateStatus = (params: {
     return DevotionalQualityGateStatus.NEEDS_MORE_REFLECTION
   }
 
-  if (
-    params.hookSource === DevotionalHookSource.CONTENT_TRUNCATION &&
-    !params.titleStrong
-  ) {
-    return DevotionalQualityGateStatus.NEEDS_CLEARER_OPENING
-  }
-
   return DevotionalQualityGateStatus.READY
 }
 
 const extractOpeningHook = (plainText: string) => {
   const candidates = extractSentenceCandidates(plainText)
 
-  for (const candidate of candidates) {
-    if (
-      candidate.cleaned.length >= MIN_HOOK_LENGTH &&
-      candidate.cleaned.length <= MAX_HOOK_LENGTH &&
-      isMeaningfulPhrase(candidate.cleaned)
-    ) {
-      return candidate.cleaned
-    }
-  }
-
-  for (const candidate of candidates) {
-    if (
-      candidate.cleaned.length >= Math.max(32, MIN_HOOK_LENGTH - 13) &&
-      isMeaningfulPhrase(candidate.cleaned)
-    ) {
-      return trimToWordBoundary(candidate.cleaned, MAX_HOOK_LENGTH)
-    }
-  }
-
-  return null
+  return (
+    selectPreferredMeaningfulSentence(candidates, MIN_HOOK_LENGTH) ??
+    selectPreferredMeaningfulSentence(candidates, RELAXED_MIN_HOOK_LENGTH)
+  )
 }
 
 const buildFallbackHook = (plainText: string) => {
@@ -248,20 +222,58 @@ const buildFallbackHook = (plainText: string) => {
     return ''
   }
 
+  const sentenceFallback = selectPreferredMeaningfulSentence(
+    extractSentenceCandidates(cleaned),
+    RELAXED_MIN_HOOK_LENGTH
+  )
+  if (sentenceFallback) {
+    return sentenceFallback
+  }
+
   if (cleaned.length <= FALLBACK_HOOK_MAX_LENGTH) {
     return cleaned
   }
 
-  const sentenceBreak = cleaned.indexOf('. ')
-  if (
-    sentenceBreak >= FALLBACK_HOOK_MIN_LENGTH &&
-    sentenceBreak <= FALLBACK_HOOK_MAX_LENGTH
-  ) {
-    return cleaned.slice(0, sentenceBreak + 1).trim()
-  }
-
   return trimToWordBoundary(cleaned, FALLBACK_HOOK_MAX_LENGTH)
 }
+
+export const buildDeterministicHookFallback = (params: {
+  title: string
+  plainText: string
+}) => {
+  const title = params.title.trim()
+  const plainText = collapseWhitespace(params.plainText)
+  const openingHook = extractOpeningHook(plainText)
+  const titleStrong = isStrongTitle(title, openingHook ?? undefined)
+
+  if (openingHook) {
+    return {
+      computedHook: openingHook,
+      hookSource: DevotionalHookSource.CONTENT_OPENING,
+    }
+  }
+
+  if (titleStrong) {
+    return {
+      computedHook: trimToWordBoundary(title, MAX_HOOK_LENGTH),
+      hookSource: DevotionalHookSource.TITLE_FALLBACK,
+    }
+  }
+
+  return {
+    computedHook: buildFallbackHook(plainText),
+    hookSource: DevotionalHookSource.CONTENT_TRUNCATION,
+  }
+}
+
+export const buildOptimizedPreviewTextFromPlainText = (params: {
+  plainText: string
+  computedHook: string
+}) =>
+  buildOptimizedPreviewText({
+    plainText: collapseWhitespace(params.plainText),
+    computedHook: params.computedHook,
+  })
 
 const buildOptimizedPreviewText = (params: {
   plainText: string
@@ -350,6 +362,44 @@ const cleanSentence = (value: string) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const sentenceScore = (value: string) => {
+  if (value.length >= TARGET_HOOK_MIN_LENGTH) {
+    return value.length + 1000
+  }
+
+  return value.length
+}
+
+const selectPreferredMeaningfulSentence = (
+  candidates: SentenceCandidate[],
+  minimumLength: number
+) => {
+  const eligible = candidates
+    .map((candidate, index) => ({ ...candidate, index }))
+    .filter(
+      (candidate) =>
+        candidate.cleaned.length >= minimumLength &&
+        candidate.cleaned.length <= MAX_HOOK_LENGTH &&
+        isMeaningfulPhrase(candidate.cleaned)
+    )
+
+  if (eligible.length === 0) {
+    return null
+  }
+
+  eligible.sort((left, right) => {
+    const scoreDifference =
+      sentenceScore(right.cleaned) - sentenceScore(left.cleaned)
+    if (scoreDifference !== 0) {
+      return scoreDifference
+    }
+
+    return left.index - right.index
+  })
+
+  return eligible[0]?.cleaned ?? null
+}
+
 const isStrongTitle = (title: string, hook?: string) => {
   const cleaned = title.trim()
   if (cleaned.length < 18) {
@@ -414,14 +464,25 @@ const trimToWordBoundary = (value: string, maxLength: number) => {
   return value.slice(0, maxLength).trim()
 }
 
-const appendEllipsisIfNeeded = (value: string) => {
+const appendEllipsisIfNeeded = (value: string, maxLength = PREVIEW_MAX_LENGTH) => {
   const trimmed = value.trim()
   if (!trimmed) {
     return ''
   }
 
+  if (trimmed.length >= maxLength) {
+    return `${trimToWordBoundary(trimmed, Math.max(maxLength - 3, 1))}...`
+  }
+
   if (/[.!?…]$/u.test(trimmed)) {
+    if (trimmed.length + 2 > maxLength) {
+      return `${trimToWordBoundary(trimmed, Math.max(maxLength - 3, 1))}...`
+    }
     return `${trimmed}..`
+  }
+
+  if (trimmed.length + 3 > maxLength) {
+    return `${trimToWordBoundary(trimmed, Math.max(maxLength - 3, 1))}...`
   }
 
   return `${trimmed}...`
