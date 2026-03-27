@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Tu momento diario con Dios, sin distracciones. Lee, guarda y comparte devocionales que conectan contigo hoy. HolyVerso está disponible en iOS y Android.">
-    <meta name="keywords" content="devocionales cristianos, app biblia, devocionales diarios, versículos, compartir devocionales, hábito espiritual, app cristiana iOS, app cristiana Android">
-    <meta property="og:title" content="HolyVerso - Tu momento diario con Dios, sin distracciones">
-    <meta property="og:description" content="Lee, guarda y comparte devocionales que hablan justo a lo que estás viviendo hoy.">
+    <meta name="description" content="Tu momento diario con Dios, sin distracciones. Devocionales que conectan contigo, widgets nativos y herramientas biblicas para volver cada dia.">
+    <meta name="keywords" content="devocionales cristianos, widgets biblia, versiculos diarios, app biblia sin anuncios, busqueda biblica, biblia iOS, biblia Android">
+    <meta property="og:title" content="HolyVerso - Tu momento diario con Dios">
+    <meta property="og:description" content="Devocionales que conectan contigo, widgets que te acompañan y herramientas bíblicas para volver cada día.">
     <meta property="og:image" content="https://holyverso.com/assets/og-image.png">
     <meta property="og:url" content="https://holyverso.com">
     <meta property="og:type" content="website">
-    <title>HolyVerso - Devocionales que conectan contigo hoy</title>
+    <title>HolyVerso - Devocionales, Widgets y Biblia para cada dia</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,12 +33,18 @@
                         <span class="logo-text">HolyVerso</span>
                     </div>
                     <div class="nav-links">
-                        <a href="#problem">Por qué conecta</a>
-                        <a href="#proof">Dentro de la app</a>
-                        <a href="#share">Compartir</a>
+                        <a href="#features">Caracteristicas</a>
+                        <a href="#faq">Preguntas</a>
+                        <a
+                            href="#widgets"
+                            data-track-click="cta_click"
+                            data-cta-placement="nav_widgets"
+                        >
+                            Widgets
+                        </a>
                         <a
                             href="#download"
-                            class="nav-download js-smart-download"
+                            class="js-smart-download"
                             data-track-click="cta_click"
                             data-cta-placement="nav_download"
                             data-scroll-target="download"
@@ -51,272 +57,530 @@
         </nav>
 
         <div class="container hero-container">
-            <div class="hero-copy" data-reveal>
+            <div class="hero-content">
                 <div class="badge">Disponible en iOS y Android</div>
                 <h1 class="hero-title">
                     Tu momento diario con Dios,
-                    <span class="gradient-text">sin distracciones</span>
+                    <br><span class="gradient-text">sin distracciones</span>
                 </h1>
                 <p class="hero-subtitle">
-                    Lee, guarda y comparte devocionales que hablan justo a lo que estás viviendo hoy.
+                    Devocionales que conectan contigo, widgets nativos y herramientas biblicas para volver a Dios cada dia sin ruido.
                 </p>
-                <a
-                    href="#download"
-                    class="btn btn-primary js-smart-download"
-                    data-track-click="cta_click"
-                    data-cta-placement="hero_primary"
-                    data-scroll-target="download"
-                >
-                    Descargar ahora
-                </a>
-                <p class="hero-note">Gratis, sin anuncios y pensado para volver cada día.</p>
+                <div class="hero-highlights" data-aos="fade-up">
+                    <span class="hero-highlight">Devocionales que si conectan</span>
+                    <span class="hero-highlight">Widgets en tu pantalla</span>
+                    <span class="hero-highlight">Busqueda por referencias</span>
+                </div>
+                <div class="hero-buttons">
+                    <a
+                        href="#download"
+                        class="btn btn-primary js-smart-download"
+                        data-track-click="cta_click"
+                        data-cta-placement="hero_primary"
+                        data-scroll-target="download"
+                    >
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 14L5 9H15L10 14Z" fill="currentColor"/>
+                            <path d="M10 2V13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M3 18H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                        Descargar App
+                    </a>
+                    <a
+                        href="#widgets"
+                        class="btn btn-secondary"
+                        data-track-click="cta_click"
+                        data-cta-placement="hero_widgets"
+                    >
+                        Ver Widgets
+                    </a>
+                </div>
             </div>
 
-            <div class="hero-visual" data-reveal>
-                <div class="phone-shell">
+            <div class="hero-visual">
+                <div class="phone-mockup">
                     <div class="phone-screen">
-                        <div class="feed-topbar">
-                            <span class="feed-chip active">Para ti</span>
-                            <span class="feed-chip">Guardados</span>
-                        </div>
-
-                        <article class="feed-card featured-card">
-                            <div class="feed-card-header">
-                                <div class="feed-avatar">A</div>
-                                <div>
-                                    <p class="feed-author">Ana Lucía</p>
-                                    <p class="feed-meta">Hace 2 horas</p>
-                                </div>
+                        <div class="verse-card animate-float">
+                            <div class="verse-header">
+                                <span class="verse-date">Para ti</span>
+                                <div class="verse-icon">Pr</div>
                             </div>
-                            <h2 class="feed-title">Cuando sientes que no puedes con todo</h2>
-                            <p class="feed-text">
-                                Hoy no necesitas hacerlo perfecto. Solo dar un paso más con Dios en medio de lo que sientes.
+                            <p class="verse-text">
+                                "Hoy no necesitas hacerlo perfecto. Solo dar un paso mas con Dios en medio de lo que sientes."
                             </p>
-                            <div class="feed-actions">
+                            <p class="verse-reference">Ana Lucia · Devocional de hoy</p>
+                            <div class="verse-engagement">
                                 <span>❤️ 128</span>
                                 <span>🔖 46</span>
                                 <span>↗ 19</span>
                             </div>
-                        </article>
-
-                        <article class="feed-card">
-                            <div class="feed-card-header">
-                                <div class="feed-avatar accent">M</div>
-                                <div>
-                                    <p class="feed-author">Mateo R.</p>
-                                    <p class="feed-meta">Hace 5 horas</p>
-                                </div>
-                            </div>
-                            <p class="feed-text small">
-                                “No todo cambió hoy, pero ya no me siento igual después de leer esto.”
-                            </p>
-                            <div class="feed-actions">
-                                <span>❤️ 84</span>
-                                <span>🔖 32</span>
-                            </div>
-                        </article>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="section section-problem" id="problem" data-track="section_view" data-track-label="problem">
-        <div class="container narrow" data-reveal>
-            <p class="section-kicker">A veces no es falta de ganas</p>
-            <h2 class="section-title">Intentas acercarte a Dios, pero terminas distraído entre mil cosas.</h2>
-            <p class="section-copy">
-                Lees, pero no conectas. Guardas versículos, pero los olvidas. Y lo que más necesitas hoy termina perdido entre el ruido.
-            </p>
-        </div>
-    </section>
-
-    <section class="section section-solution" id="solution" data-track="section_view" data-track-label="solution">
-        <div class="container split-layout">
-            <div class="split-copy" data-reveal>
-                <p class="section-kicker">Lo que cambia aquí</p>
-                <h2 class="section-title">Encuentras devocionales que sí conectan contigo. En segundos.</h2>
-                <p class="section-copy">
-                    Sin perderte buscando. Sin sentir que tienes que entrar con energía perfecta. Abres HolyVerso y encuentras algo que sí te habla hoy.
-                </p>
-                <ul class="benefit-list">
-                    <li>Abres y conectas rápido</li>
-                    <li>Guardas lo que quieres volver a leer</li>
-                    <li>Compárteselo a alguien cuando sabes que lo necesita</li>
-                </ul>
-            </div>
-
-            <div class="solution-panel" data-reveal>
-                <div class="solution-card">
-                    <span class="solution-pill">Para ti</span>
-                    <h3>Lo que necesitas hoy, más fácil de encontrar</h3>
-                    <p>
-                        Devocionales claros, cercanos y listos para quedarse contigo durante el día.
-                    </p>
-                    <div class="solution-preview">
-                        <div class="solution-preview-line wide"></div>
-                        <div class="solution-preview-line"></div>
-                        <div class="solution-preview-line short"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="section section-proof" id="proof" data-track="section_view" data-track-label="proof">
+    <section class="trust-badges" data-track="section_view" data-track-label="trust_badges">
         <div class="container">
-            <div class="section-heading" data-reveal>
-                <p class="section-kicker">Así se ve dentro de HolyVerso</p>
-                <h2 class="section-title">Devocionales que se sienten cercanos, no genéricos.</h2>
-                <p class="section-copy">
-                    Cada uno está pensado para ayudarte a conectar, guardar lo que te tocó y volver cuando lo necesites.
-                </p>
+            <div class="badges-row" data-aos="fade-up">
+                <div class="badge-item">
+                    <span class="badge-icon">✅</span>
+                    <span class="badge-text">100% Gratis</span>
+                </div>
+                <div class="badge-item">
+                    <span class="badge-icon">🚫</span>
+                    <span class="badge-text">Sin anuncios</span>
+                </div>
+                <div class="badge-item">
+                    <span class="badge-icon">🔒</span>
+                    <span class="badge-text">Sin cuenta requerida</span>
+                </div>
+                <div class="badge-item">
+                    <span class="badge-icon">📱</span>
+                    <span class="badge-text">Funciona offline</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features" data-track="section_view" data-track-label="features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Claridad diaria para volver a Dios sin ruido</h2>
+                <p class="section-subtitle">Una mezcla de devocionales, versiculos, widgets y lectura biblica para sostener el habito espiritual durante el dia.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" data-aos="fade-up" data-delay="0">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <circle cx="24" cy="24" r="20" stroke="#F4D27A" stroke-width="2" opacity="0.3"/>
+                            <path d="M24 14V24L30 30" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Versiculo Diario</h3>
+                    <p class="feature-description">
+                        Un momento breve para empezar el dia con una palabra clara y facil de recordar.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="100">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <rect x="12" y="12" width="24" height="24" rx="4" stroke="#7EA9E1" stroke-width="2"/>
+                            <path d="M12 20H36M20 12V36" stroke="#7EA9E1" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Widgets Personalizables</h3>
+                    <p class="feature-description">
+                        Lleva la Palabra a tu pantalla de inicio con widgets elegantes que te vuelven a enfocar durante el dia.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="200">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 8L18 28H30L24 40" stroke="#F4D27A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Multiples Versiones</h3>
+                    <p class="feature-description">
+                        Profundiza en el mismo pasaje desde distintas traducciones para entenderlo mejor.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="300">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 34C29.5228 34 34 29.5228 34 24C34 18.4772 29.5228 14 24 14C18.4772 14 14 18.4772 14 24C14 29.5228 18.4772 34 24 34Z" stroke="#7EA9E1" stroke-width="2"/>
+                            <path d="M24 18V24L28 28" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Sin Distracciones</h3>
+                    <p class="feature-description">
+                        Una experiencia limpia para que leas, ores y vuelvas a Dios sin ruido alrededor.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="400">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M16 20L24 28L32 20" stroke="#F4D27A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Modo Oscuro</h3>
+                    <p class="feature-description">
+                        Lee de dia o de noche con una interfaz que se adapta a ti y no te cansa.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="500">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M24 14L28 22H36L30 28L32 36L24 30L16 36L18 28L12 22H20L24 14Z" stroke="#7EA9E1" stroke-width="2" stroke-linejoin="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Biblioteca Personal</h3>
+                    <p class="feature-description">
+                        Guarda lo que te hablo hoy para volver cuando lo necesites otra vez.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features features-extended" id="new-features" data-track="section_view" data-track-label="new_features">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Devocionales que conectan y herramientas que sostienen el habito</h2>
+                <p class="section-subtitle">HolyVerso no se queda en un solo formato: te acompana con reflexion, lectura, widgets y formas simples de compartir.</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card" data-aos="fade-up" data-delay="0">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <circle cx="22" cy="22" r="9" stroke="#F4D27A" stroke-width="2"/>
+                            <path d="M29 29L36 36" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 19H24M22 17V21" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Busqueda de Referencias</h3>
+                    <p class="feature-description">
+                        Encuentra rapido un pasaje como Juan 3:16 o Salmos 23 cuando sabes lo que quieres volver a leer.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="100">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M16 12H30C32.2091 12 34 13.7909 34 16V34H18C16.8954 34 16 33.1046 16 32V12Z" stroke="#7EA9E1" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M14 16H16" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 20H30" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 26H30" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M20 32H30" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M22 14C23.5 14 24.5 15.5 24 17C23.5 18.5 22 19 21 18" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Devocionales que conectan</h3>
+                    <p class="feature-description">
+                        Reflexiones cortas y profundas para sentir que esto si tiene que ver con lo que estas viviendo.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="200">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <rect x="10" y="14" width="20" height="18" rx="3" stroke="#F4D27A" stroke-width="2"/>
+                            <path d="M16 20H24M16 24H22" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M30 28L36 32M30 20L36 16" stroke="#F4D27A" stroke-width="2" stroke-linecap="round"/>
+                            <circle cx="36" cy="16" r="2.5" stroke="#F4D27A" stroke-width="2"/>
+                            <circle cx="36" cy="32" r="2.5" stroke="#F4D27A" stroke-width="2"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Comparte lo que importa</h3>
+                    <p class="feature-description">
+                        Guarda o comparte un devocional cuando sientes que tambien puede llegarle a alguien mas hoy.
+                    </p>
+                </div>
+
+                <div class="feature-card" data-aos="fade-up" data-delay="300">
+                    <div class="feature-icon">
+                        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                            <path d="M12 16C12 13.7909 13.7909 12 16 12H34V34C34 36.2091 32.2091 38 30 38H12V16Z" stroke="#7EA9E1" stroke-width="2" stroke-linejoin="round"/>
+                            <path d="M18 18H28M18 24H30M18 30H26" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                            <path d="M14 16H16" stroke="#7EA9E1" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <h3 class="feature-title">Lector de Capitulos</h3>
+                    <p class="feature-description">
+                        Cuando quieres profundizar, puedes leer pasajes completos sin perder el foco.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="devotional-proof" id="proof" data-track="section_view" data-track-label="proof">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Devocionales que se sienten cercanos, no genericos</h2>
+                <p class="section-subtitle">Asi se ve cuando algo te habla justo en el momento en que lo necesitas y puedes volver a ello despues.</p>
             </div>
 
             <div class="proof-grid">
-                <article class="proof-card" data-reveal>
+                <article class="proof-card" data-aos="fade-up" data-delay="0">
                     <div class="proof-header">
-                        <div class="feed-avatar">S</div>
+                        <div class="proof-avatar">A</div>
                         <div>
-                            <p class="feed-author">Sara M.</p>
-                            <p class="feed-meta">“Hoy entendí esto…”</p>
+                            <p class="proof-name">Ana Lucia</p>
+                            <p class="proof-context">Hace 2 horas</p>
                         </div>
                     </div>
-                    <p class="proof-text">
-                        No todo se resuelve de inmediato, pero sí puedes descansar un momento y recordar que Dios no te soltó.
-                    </p>
-                    <div class="proof-actions">
-                        <span>❤️ 120</span>
-                        <span>🔖 45</span>
-                        <span>↗ 17</span>
+                    <p class="proof-copy">Hoy entendi que descansar tambien es una forma de confiar. No tengo que cargarlo todo yo.</p>
+                    <div class="proof-stats">
+                        <span>❤️ 128</span>
+                        <span>🔖 46</span>
+                        <span>↗ 19</span>
                     </div>
                 </article>
 
-                <article class="proof-card" data-reveal>
+                <article class="proof-card" data-aos="fade-up" data-delay="100">
                     <div class="proof-header">
-                        <div class="feed-avatar accent">D</div>
+                        <div class="proof-avatar accent">M</div>
                         <div>
-                            <p class="feed-author">Daniel C.</p>
-                            <p class="feed-meta">“Esto me llegó justo”</p>
+                            <p class="proof-name">Mateo R.</p>
+                            <p class="proof-context">Hace 5 horas</p>
                         </div>
                     </div>
-                    <p class="proof-text">
-                        A veces la paz empieza cuando dejas de exigirte tanto y vuelves a escuchar lo que Dios ya te estaba diciendo.
-                    </p>
-                    <div class="proof-actions">
-                        <span>❤️ 96</span>
-                        <span>🔖 38</span>
-                        <span>↗ 12</span>
+                    <p class="proof-copy">No todo cambio hoy, pero ya no me siento igual despues de leer esto. Eso ya es mucho.</p>
+                    <div class="proof-stats">
+                        <span>❤️ 84</span>
+                        <span>🔖 32</span>
+                        <span>↗ 11</span>
                     </div>
                 </article>
 
-                <article class="proof-card" data-reveal>
+                <article class="proof-card" data-aos="fade-up" data-delay="200">
                     <div class="proof-header">
-                        <div class="feed-avatar">L</div>
+                        <div class="proof-avatar">L</div>
                         <div>
-                            <p class="feed-author">Laura P.</p>
-                            <p class="feed-meta">“Lo guardé para volver”</p>
+                            <p class="proof-name">Laura P.</p>
+                            <p class="proof-context">Guardado para volver</p>
                         </div>
                     </div>
-                    <p class="proof-text">
-                        Este fue de esos devocionales que no se quedan en la pantalla. Se quedan contigo cuando el día se pone pesado.
-                    </p>
-                    <div class="proof-actions">
-                        <span>❤️ 88</span>
+                    <p class="proof-copy">Fue de esos devocionales que no se quedan en la pantalla. Se quedan contigo el resto del dia.</p>
+                    <div class="proof-stats">
+                        <span>❤️ 97</span>
                         <span>🔖 41</span>
-                        <span>↗ 9</span>
+                        <span>↗ 14</span>
                     </div>
                 </article>
             </div>
         </div>
     </section>
 
-    <section class="section section-loop" id="loop" data-track="section_view" data-track-label="value_loop">
+    <section class="widgets" id="widgets" data-track="section_view" data-track-label="widgets">
         <div class="container">
-            <div class="section-heading" data-reveal>
-                <p class="section-kicker">Lo que pasa después</p>
-                <h2 class="section-title">Lees algo que te impacta y no se queda ahí.</h2>
+            <div class="section-header">
+                <h2 class="section-title">Widgets para tu pantalla de inicio</h2>
+                <p class="section-subtitle">Manten la Palabra siempre visible con widgets hermosos, funcionales y listos para devolverte enfoque.</p>
             </div>
 
-            <div class="loop-grid">
-                <div class="loop-step" data-reveal>
-                    <span class="loop-number">1</span>
-                    <h3>Lees</h3>
-                    <p>Encuentras algo que sí habla a tu momento.</p>
+            <div class="widgets-showcase">
+                <div class="widget-platform" data-aos="fade-right">
+                    <div class="platform-header">
+                        <div class="platform-icon ios-icon">
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <path d="M28.5 8.5C27.3 9.8 25.2 10.8 23.5 10.8C23.3 8.9 24.2 6.9 25.3 5.6C26.5 4.2 28.7 3.2 30.3 3C30.5 5 29.7 7.1 28.5 8.5Z" fill="currentColor"/>
+                                <path d="M30.2 11C27.3 11 25.8 12.5 24 12.5C22.1 12.5 20.3 11 17.8 11C14.8 11 11.9 13 10.2 16C7.8 20.2 8.4 27.5 12.5 33.5C13.9 35.5 15.7 37.8 18 37.8C20.1 37.8 20.8 36.5 23.5 36.5C26.3 36.5 26.8 37.8 29 37.8C31.3 37.8 33.1 35.8 34.5 33.8C36.1 31.5 36.7 29.3 36.8 29.2C36.7 29.2 31.8 27.3 31.7 21.8C31.7 17.3 35.5 15.2 35.7 15C33.6 12.2 30.5 11 30.2 11Z" fill="currentColor"/>
+                            </svg>
+                        </div>
+                        <h3>iOS Widget</h3>
+                    </div>
+                    <div class="widget-preview ios-widget">
+                        <div class="widget-content">
+                            <div class="widget-header">
+                                <span class="widget-app">HolyVerso</span>
+                                <span class="widget-time">Hoy</span>
+                            </div>
+                            <p class="widget-verse">"Encomienda a Jehova tu camino, y confia en el"</p>
+                            <p class="widget-ref">Salmos 37:5</p>
+                        </div>
+                    </div>
+                    <div class="widget-steps">
+                        <h4>Como agregar en iOS:</h4>
+                        <ol>
+                            <li>Manten presionada la pantalla de inicio</li>
+                            <li>Toca el boton <strong>+</strong> en la esquina superior</li>
+                            <li>Busca <strong>HolyVerso</strong></li>
+                            <li>Selecciona el tamano del widget</li>
+                            <li>Toca <strong>Agregar Widget</strong></li>
+                            <li>Colocalo donde prefieras</li>
+                        </ol>
+                    </div>
                 </div>
-                <div class="loop-step" data-reveal>
-                    <span class="loop-number">2</span>
-                    <h3>Guardas</h3>
-                    <p>Lo dejas cerca para volver cuando lo necesites.</p>
-                </div>
-                <div class="loop-step" data-reveal>
-                    <span class="loop-number">3</span>
-                    <h3>Compartes</h3>
-                    <p>Se lo envías a alguien porque sabes que puede tocarle también.</p>
-                </div>
-                <div class="loop-step" data-reveal>
-                    <span class="loop-number">4</span>
-                    <h3>Permanece</h3>
-                    <p>Ese momento se convierte en parte de tu día, no en otro contenido más.</p>
-                </div>
-            </div>
-        </div>
-    </section>
 
-    <section class="section section-share" id="share" data-track="section_view" data-track-label="share">
-        <div class="container split-layout">
-            <div class="share-visual" data-reveal>
-                <div class="message-card">
-                    <p class="message-label">Mensaje recibido</p>
-                    <p class="message-body">“Pensé en ti cuando leí esto. Tal vez hoy lo necesitabas.”</p>
-                    <div class="message-preview">
-                        <p class="message-preview-title">HolyVerso</p>
-                        <p class="message-preview-copy">Abre el devocional y léelo en la app.</p>
+                <div class="widget-platform" data-aos="fade-left">
+                    <div class="platform-header">
+                        <div class="platform-icon android-icon">
+                            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+                                <path d="M8 12H32V28H8V12Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                <circle cx="13" cy="18" r="1.5" fill="currentColor"/>
+                                <circle cx="27" cy="18" r="1.5" fill="currentColor"/>
+                                <path d="M11 8L14 12M29 8L26 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M12 28V34M28 28V34" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                <path d="M5 14V26M35 14V26" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                            </svg>
+                        </div>
+                        <h3>Android Widget</h3>
+                    </div>
+                    <div class="widget-preview android-widget">
+                        <div class="widget-content">
+                            <div class="widget-header">
+                                <span class="widget-app">HolyVerso</span>
+                                <span class="widget-time">Hoy</span>
+                            </div>
+                            <p class="widget-verse">"Encomienda a Jehova tu camino, y confia en el"</p>
+                            <p class="widget-ref">Salmos 37:5</p>
+                        </div>
+                    </div>
+                    <div class="widget-steps">
+                        <h4>Como agregar en Android:</h4>
+                        <ol>
+                            <li>Manten presionada la pantalla de inicio</li>
+                            <li>Toca <strong>Widgets</strong></li>
+                            <li>Busca y manten presionado <strong>HolyVerso</strong></li>
+                            <li>Arrastra el widget a la pantalla</li>
+                            <li>Ajusta el tamano si es necesario</li>
+                            <li>Suelta para colocarlo</li>
+                        </ol>
                     </div>
                 </div>
             </div>
 
-            <div class="split-copy" data-reveal>
-                <p class="section-kicker">El diferencial real</p>
-                <h2 class="section-title">No es solo contenido. Es algo que alguien decidió enviarte.</h2>
-                <p class="section-copy">
-                    Por eso compartir importa tanto aquí. No se siente como reenviar algo más. Se siente como acompañar a alguien en el momento exacto.
-                </p>
+            <div class="widget-tips" data-aos="fade-up">
+                <h3>Consejos para widgets</h3>
+                <div class="tips-grid">
+                    <div class="tip">
+                        <span class="tip-icon">🔄</span>
+                        <p>Los widgets se actualizan automaticamente cada dia con un nuevo versiculo</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">📱</span>
+                        <p>Puedes agregar multiples widgets con diferentes tamanos</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">🎨</span>
+                        <p>Los widgets se adaptan al tema claro u oscuro de tu dispositivo</p>
+                    </div>
+                    <div class="tip">
+                        <span class="tip-icon">👆</span>
+                        <p>Toca el widget para abrir la app y ver mas detalles del versiculo</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="section section-utility" id="utility" data-track="section_view" data-track-label="utility">
-        <div class="container narrow" data-reveal>
-            <p class="section-kicker">Y cuando quieras profundizar</p>
-            <h2 class="section-title">También tienes herramientas que acompañan el hábito.</h2>
-            <div class="utility-chips">
-                <span class="utility-chip">Widgets diarios</span>
-                <span class="utility-chip">Búsqueda bíblica</span>
-                <span class="utility-chip">Lectura sin conexión</span>
-                <span class="utility-chip">Múltiples versiones</span>
-            </div>
-        </div>
-    </section>
-
-    <section class="section section-download" id="download" data-track="section_view" data-track-label="download">
+    <section class="faq" id="faq" data-track="section_view" data-track-label="faq">
         <div class="container">
-            <div class="download-card" data-reveal>
-                <img src="/assets/logo.png" alt="HolyVerso" width="84" height="84" class="logo-image-large">
-                <p class="section-kicker">Empieza hoy</p>
-                <h2 class="section-title">Un momento al día puede cambiar todo.</h2>
-                <a
-                    href="#store-links"
-                    class="btn btn-primary js-smart-download"
-                    data-track-click="cta_click"
-                    data-cta-placement="final_primary"
-                    data-scroll-target="store-links"
-                >
-                    Descargar ahora
-                </a>
-                <p class="download-note">Si estás en computador, elige tu tienda debajo.</p>
+            <div class="section-header">
+                <h2 class="section-title">Preguntas frecuentes</h2>
+                <p class="section-subtitle">Todo lo que necesitas saber sobre devocionales, widgets y lectura biblica en HolyVerso</p>
+            </div>
 
-                <div class="store-buttons" id="store-links">
+            <div class="faq-list">
+                <div class="faq-item" data-aos="fade-up" data-delay="0">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-1">
+                        <span>Es realmente gratis?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-1">
+                        <p>Si. HolyVerso es 100% gratis para siempre, sin compras dentro de la app ni suscripciones.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="100">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-2">
+                        <span>Por que es gratis?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-2">
+                        <p>Nuestro objetivo es compartir la Palabra sin barreras. El proyecto se sostiene con apoyo voluntario.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="200">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-3">
+                        <span>Necesito crear cuenta?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-3">
+                        <p>No. Puedes usar la app de inmediato. Crear cuenta es opcional para respaldar tus ajustes.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="300">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-4">
+                        <span>Funciona sin internet?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-4">
+                        <p>Si. HolyVerso es offline first: guarda contenido clave para que puedas leer incluso sin conexion.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="400">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-5">
+                        <span>Hay devocionales para lo que estoy viviendo hoy?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-5">
+                        <p>Si. Encontraras reflexiones y devocionales pensados para conectar con lo que estas viviendo y para volver a leer despues.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="500">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-6">
+                        <span>Como funciona la busqueda?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-6">
+                        <p>Escribe una referencia como Juan 3:16 o Salmos 23 y obtendras el pasaje al instante.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="600">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-7">
+                        <span>Los widgets consumen bateria?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-7">
+                        <p>Los widgets estan optimizados para consumo minimo y se actualizan una vez al dia.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-aos="fade-up" data-delay="700">
+                    <button class="faq-question" aria-expanded="false" aria-controls="faq-answer-8">
+                        <span>Puedo sugerir nuevas funciones?</span>
+                        <svg class="faq-icon" width="20" height="20" viewBox="0 0 20 20" fill="none">
+                            <path d="M10 4V16M4 10H16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <div class="faq-answer" id="faq-answer-8">
+                        <p>Claro. Escribenos desde la app o en redes para compartir tus ideas.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="download" id="download" data-track="section_view" data-track-label="download">
+        <div class="container">
+            <div class="download-content" data-aos="zoom-in">
+                <div class="download-icon">
+                    <img src="/assets/logo.png" alt="HolyVerso" width="80" height="80" class="logo-image-large">
+                </div>
+                <h2 class="download-title">Empieza hoy. Un momento al dia puede cambiar todo.</h2>
+                <p class="download-subtitle">Devocionales, widgets y Biblia en un solo lugar para volver a Dios cada dia con mas claridad.</p>
+
+                <div class="download-buttons">
                     <a
                         href="/out/app-store?cta_placement=download_app_store&entry_context=home&lp_variant=emotional"
                         class="store-button"
@@ -324,9 +588,16 @@
                         data-track-click="cta_click"
                         data-cta-placement="download_app_store"
                     >
-                        <span class="store-eyebrow">Disponible en</span>
-                        <span class="store-name">App Store</span>
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                            <path d="M21.5 6.5C20.6 7.4 19.1 8.1 17.8 8.1C17.7 6.7 18.4 5.2 19.2 4.2C20.1 3.2 21.5 2.4 22.7 2.3C22.9 3.8 22.3 5.3 21.5 6.5Z" fill="currentColor"/>
+                            <path d="M22.7 8.3C20.5 8.3 19.4 9.4 18 9.4C16.6 9.4 15.2 8.3 13.4 8.3C11.1 8.3 8.9 9.8 7.7 12C5.8 15.2 6.3 20.6 9.4 25.1C10.4 26.6 11.8 28.4 13.5 28.4C15.1 28.4 15.6 27.4 17.6 27.4C19.7 27.4 20.1 28.4 21.8 28.4C23.5 28.4 24.8 26.8 25.9 25.4C27.1 23.6 27.5 21.9 27.6 21.9C27.5 21.9 23.8 20.5 23.8 16.3C23.8 13 26.6 11.4 26.8 11.3C25.2 9.2 22.9 8.3 22.7 8.3Z" fill="currentColor"/>
+                        </svg>
+                        <div class="store-text">
+                            <span class="store-available">Disponible en</span>
+                            <span class="store-name">App Store</span>
+                        </div>
                     </a>
+
                     <a
                         href="/out/google-play?cta_placement=download_google_play&entry_context=home&lp_variant=emotional"
                         class="store-button"
@@ -334,29 +605,94 @@
                         data-track-click="cta_click"
                         data-cta-placement="download_google_play"
                     >
-                        <span class="store-eyebrow">Disponible en</span>
-                        <span class="store-name">Google Play</span>
+                        <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+                            <path d="M4 4.5L16.5 15L4 25.5V4.5Z" fill="currentColor"/>
+                            <path d="M16.5 15L20.5 11L26 14L16.5 15Z" fill="currentColor" opacity="0.8"/>
+                            <path d="M16.5 15L20.5 19L26 16L16.5 15Z" fill="currentColor" opacity="0.6"/>
+                            <path d="M4 4.5L16.5 15L20.5 11L7 4L4 4.5Z" fill="currentColor" opacity="0.4"/>
+                            <path d="M4 25.5L16.5 15L20.5 19L7 26L4 25.5Z" fill="currentColor" opacity="0.4"/>
+                        </svg>
+                        <div class="store-text">
+                            <span class="store-available">Disponible en</span>
+                            <span class="store-name">Google Play</span>
+                        </div>
                     </a>
+                </div>
+
+                <div class="download-stats">
+                    <div class="stat">
+                        <div class="stat-number">50K+</div>
+                        <div class="stat-label">Descargas</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">4.8★</div>
+                        <div class="stat-label">Calificacion</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">10+</div>
+                        <div class="stat-label">Versiones</div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
 
     <footer class="footer">
-        <div class="container footer-content">
-            <div>
-                <div class="logo footer-logo">
-                    <img src="/assets/logo.png" alt="HolyVerso" width="36" height="36" class="logo-image">
-                    <span class="logo-text">HolyVerso</span>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="logo">
+                        <img src="/assets/logo.png" alt="HolyVerso" width="36" height="36" class="logo-image">
+                        <span class="logo-text">HolyVerso</span>
+                    </div>
+                    <p class="footer-tagline">Claridad diaria, conexion emocional y una fe que vuelve a ti durante el dia.</p>
                 </div>
-                <p class="footer-copy">Claridad diaria, conexión emocional y un hábito espiritual que sí quieres repetir.</p>
+
+                <div class="footer-links">
+                    <div class="link-group">
+                        <h4>Producto</h4>
+                        <a href="#features">Caracteristicas</a>
+                        <a href="#proof">Devocionales</a>
+                        <a href="#widgets">Widgets</a>
+                        <a href="#download">Descargar</a>
+                    </div>
+
+                    <div class="link-group">
+                        <h4>Soporte</h4>
+                        <a href="#faq">Preguntas frecuentes</a>
+                        <a href="#download">Tiendas</a>
+                        <a href="#hero">Inicio</a>
+                    </div>
+
+                    <div class="link-group">
+                        <h4>Explorar</h4>
+                        <a href="#new-features">Novedades</a>
+                        <a href="#proof">Lo que se vive</a>
+                        <a href="#widgets">Pantalla de inicio</a>
+                    </div>
+                </div>
             </div>
 
-            <div class="footer-links">
-                <a href="#problem">Por qué conecta</a>
-                <a href="#proof">Dentro de la app</a>
-                <a href="#share">Compartir</a>
-                <a href="#download">Descargar</a>
+            <div class="footer-bottom">
+                <p>&copy; 2025 HolyVerso by Gorda. Todos los derechos reservados.</p>
+                <div class="social-links">
+                    <a href="#" aria-label="Facebook">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 0C4.477 0 0 4.477 0 10c0 4.991 3.657 9.128 8.438 9.879V12.89h-2.54V10h2.54V7.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V10h2.773l-.443 2.89h-2.33v6.989C16.343 19.129 20 14.99 20 10c0-5.523-4.477-10-10-10z"/>
+                        </svg>
+                    </a>
+                    <a href="#" aria-label="Instagram">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 0C7.284 0 6.944.012 5.877.06 4.813.109 4.086.278 3.45.525a4.92 4.92 0 00-1.772 1.153A4.92 4.92 0 00.525 3.45C.278 4.086.109 4.813.06 5.877.012 6.944 0 7.284 0 10s.012 3.056.06 4.123c.049 1.064.218 1.791.465 2.427a4.92 4.92 0 001.153 1.772 4.92 4.92 0 001.772 1.153c.636.247 1.363.416 2.427.465C6.944 19.988 7.284 20 10 20s3.056-.012 4.123-.06c1.064-.049 1.791-.218 2.427-.465a4.92 4.92 0 001.772-1.153 4.92 4.92 0 001.153-1.772c.247-.636.416-1.363.465-2.427.048-1.067.06-1.407.06-4.123s-.012-3.056-.06-4.123c-.049-1.064-.218-1.791-.465-2.427a4.92 4.92 0 00-1.153-1.772A4.92 4.92 0 0016.55.525C15.914.278 15.187.109 14.123.06 13.056.012 12.716 0 10 0zm0 1.802c2.67 0 2.986.01 4.04.058.975.045 1.504.207 1.857.344.467.181.8.398 1.15.748.35.35.567.683.748 1.15.137.353.3.882.344 1.857.048 1.054.058 1.37.058 4.04 0 2.67-.01 2.986-.058 4.04-.045.975-.207 1.504-.344 1.857-.181.467-.398.8-.748 1.15-.35.35-.683.567-1.15.748-.353.137-.882.3-1.857.344-1.054.048-1.37.058-4.04.058-2.67 0-2.986-.01-4.04-.058-.975-.045-1.504-.207-1.857-.344a3.097 3.097 0 01-1.15-.748 3.097 3.097 0 01-.748-1.15c-.137-.353-.3-.882-.344-1.857-.048-1.054-.058-1.37-.058-4.04 0-2.67.01-2.986.058-4.04.045-.975.207-1.504.344-1.857.181-.467.398-.8.748-1.15.35-.35.683-.567 1.15-.748.353-.137.882-.3 1.857-.344 1.054-.048 1.37-.058 4.04-.058z"/>
+                            <path d="M10 13.333a3.333 3.333 0 110-6.666 3.333 3.333 0 010 6.666zM10 5a5 5 0 100 10 5 5 0 000-10zm6.406-1.845a1.44 1.44 0 11-2.88 0 1.44 1.44 0 012.88 0z"/>
+                        </svg>
+                    </a>
+                    <a href="#" aria-label="Twitter">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M6.29 18.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0020 3.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.073 4.073 0 01.8 7.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 010 16.407a11.616 11.616 0 006.29 1.84"/>
+                        </svg>
+                    </a>
+                </div>
             </div>
         </div>
     </footer>
