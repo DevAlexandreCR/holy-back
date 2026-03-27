@@ -2820,6 +2820,50 @@ export const getCommentAuthorId = async (commentId: string) => {
   return comment
 }
 
+const getEffectiveSkipSignal = ({
+  skipCount,
+  uniqueImpressionCount,
+  ageHours,
+}: {
+  skipCount: number
+  uniqueImpressionCount: number
+  ageHours: number
+}) => {
+  const skipStabilization = devotionalRankingPolicy.skipStabilization
+  const stabilizedSkipRate =
+    skipCount /
+    Math.max(
+      uniqueImpressionCount,
+      skipStabilization.minimumRateImpressions
+    )
+
+  let volumeMultiplier = 1
+  if (
+    uniqueImpressionCount <
+    skipStabilization.neutralBelowUniqueImpressions
+  ) {
+    volumeMultiplier = 0
+  } else if (
+    uniqueImpressionCount < skipStabilization.fullPenaltyAtUniqueImpressions
+  ) {
+    volumeMultiplier = skipStabilization.rampMultiplier
+  }
+
+  const freshnessMultiplier =
+    ageHours < skipStabilization.freshnessGraceHours
+      ? skipStabilization.freshnessMultiplier
+      : 1
+
+  const effectiveSkipRate =
+    stabilizedSkipRate * volumeMultiplier * freshnessMultiplier
+
+  return {
+    effectiveSkipRate,
+    skipPenalty:
+      effectiveSkipRate * devotionalRankingPolicy.scoreWeights.skipPenalty,
+  }
+}
+
 export const rescoreDevotionals = async () => {
   const authorImpressions = await getAuthorImpressionsLast24h()
   const candidates = await prisma.devotional.findMany({
@@ -2865,7 +2909,8 @@ export const rescoreDevotionals = async () => {
               (1000 * 60 * 60)
           )
         : 0
-      const uniqueImpressions = Math.max(devotional.uniqueImpressionCount, 1)
+      const uniqueImpressionCount = devotional.uniqueImpressionCount
+      const uniqueImpressions = Math.max(uniqueImpressionCount, 1)
       const weightedEngagement =
         devotional.likeCount * devotionalRankingPolicy.scoreWeights.like +
         devotional.commentCount * devotionalRankingPolicy.scoreWeights.comment +
@@ -2875,7 +2920,11 @@ export const rescoreDevotionals = async () => {
           devotionalRankingPolicy.scoreWeights.readComplete
       const qualityRate = weightedEngagement / Math.max(uniqueImpressions, 25)
       const freshness = 1 / (1 + ageHours / 24)
-      const skipRate = devotional.skipCount / uniqueImpressions
+      const { effectiveSkipRate, skipPenalty } = getEffectiveSkipSignal({
+        skipCount: devotional.skipCount,
+        uniqueImpressionCount,
+        ageHours,
+      })
       const readCompleteRate = devotional.readCompleteCount / uniqueImpressions
       const saveRate = devotional.saveCount / uniqueImpressions
       const shareRate = devotional.shareCount / uniqueImpressions
@@ -2892,31 +2941,31 @@ export const rescoreDevotionals = async () => {
           devotionalRankingPolicy.scoreWeights.qualityRateMultiplier -
         devotional.reportCount *
           devotionalRankingPolicy.scoreWeights.reportPenalty -
-        skipRate * devotionalRankingPolicy.scoreWeights.skipPenalty -
+        skipPenalty -
         authorPenalty
 
       let publicationState = devotional.publicationState
       let featuredUntil = devotional.featuredUntil
 
       const qualifiesFeatured =
-        uniqueImpressions >=
+        uniqueImpressionCount >=
           devotionalRankingPolicy.promotion.featured.uniqueImpressions &&
         score >= devotionalRankingPolicy.promotion.featured.score &&
         readCompleteRate >=
           devotionalRankingPolicy.promotion.featured.readCompleteRate &&
         shareRate >= devotionalRankingPolicy.promotion.featured.shareRate &&
         reportRate < devotionalRankingPolicy.promotion.featured.reportRate &&
-        skipRate < devotionalRankingPolicy.promotion.featured.skipRate
+        effectiveSkipRate < devotionalRankingPolicy.promotion.featured.skipRate
 
       const qualifiesTrending =
-        uniqueImpressions >=
+        uniqueImpressionCount >=
           devotionalRankingPolicy.promotion.trending.uniqueImpressions &&
         score >= devotionalRankingPolicy.promotion.trending.score &&
         readCompleteRate >=
           devotionalRankingPolicy.promotion.trending.readCompleteRate &&
         saveRate >= devotionalRankingPolicy.promotion.trending.saveRate &&
         reportRate < devotionalRankingPolicy.promotion.trending.reportRate &&
-        skipRate < devotionalRankingPolicy.promotion.trending.skipRate
+        effectiveSkipRate < devotionalRankingPolicy.promotion.trending.skipRate
 
       if (publicationState === DevotionalPublicationState.FEATURED) {
         const featureExpired =

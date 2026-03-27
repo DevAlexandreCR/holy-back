@@ -83,9 +83,9 @@ export const devotionalNotificationPolicy = {
 } as const
 
 export const devotionalRankingReviewPolicy = {
-  version: 'phase3-v1',
-  effectiveDate: '2026-03-25',
-  reason: 'Phase 3 launch baseline for production tuning.',
+  version: 'phase3-v2',
+  effectiveDate: '2026-03-27',
+  reason: 'Added early-stage skip stabilization for low-volume exploration.',
   metricsReviewed: [
     'D1 retention',
     'D7 retention',
@@ -103,6 +103,14 @@ export const devotionalRankingReviewPolicy = {
 export const devotionalRankingPolicy = {
   featureDurationHours: 48,
   privilegedLaunchScore: 1000,
+  skipStabilization: {
+    minimumRateImpressions: 50,
+    neutralBelowUniqueImpressions: 50,
+    fullPenaltyAtUniqueImpressions: 100,
+    rampMultiplier: 0.5,
+    freshnessGraceHours: 6,
+    freshnessMultiplier: 0.5,
+  },
   promotion: {
     trending: {
       uniqueImpressions: 250,
