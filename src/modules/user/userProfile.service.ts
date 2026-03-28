@@ -106,6 +106,9 @@ const resolvePublishedDevotionalsCount = (creatorId: string) =>
         in: ['PUBLISHED_LOW_REACH', 'TRENDING', 'FEATURED'],
       },
       moderationStatus: 'CLEAR',
+      author: {
+        isBlocked: false,
+      },
     },
   })
 
@@ -310,6 +313,9 @@ export const updateMyCreatorProfile = async (params: {
             in: ['PUBLISHED_LOW_REACH', 'TRENDING', 'FEATURED'],
           },
           moderationStatus: 'CLEAR',
+          author: {
+            isBlocked: false,
+          },
         },
       })
 
@@ -413,6 +419,9 @@ export const followCreator = async (params: {
             in: ['PUBLISHED_LOW_REACH', 'TRENDING', 'FEATURED'],
           },
           moderationStatus: 'CLEAR',
+          author: {
+            isBlocked: false,
+          },
         },
       }),
     ])
@@ -482,6 +491,9 @@ export const unfollowCreator = async (params: {
             in: ['PUBLISHED_LOW_REACH', 'TRENDING', 'FEATURED'],
           },
           moderationStatus: 'CLEAR',
+          author: {
+            isBlocked: false,
+          },
         },
       }),
     ])

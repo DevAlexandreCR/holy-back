@@ -7,6 +7,10 @@ import { hashPassword, verifyPassword } from './password';
 import { signAccessToken, signRefreshToken } from './jwt';
 import { ensureSettings } from '../user/userSettings.service';
 import { sendResetPasswordEmail } from './resetEmail.service';
+import {
+  formatUserModeration,
+  userModerationSelect,
+} from '../user/userModeration.service';
 
 type RegisterInput = {
   name: string;
@@ -30,11 +34,23 @@ const toAuthPayload = (user: User) => ({
   role: user.role,
 });
 
-const sanitizeUser = (user: User) => ({
+const sanitizeUser = (user: User & {
+  blockedByUser?: { id: string; name: string; email: string } | null
+  unblockedByUser?: { id: string; name: string; email: string } | null
+}) => ({
   id: user.id,
   name: user.name,
   email: user.email,
   role: user.role,
+  ...formatUserModeration({
+    isBlocked: user.isBlocked,
+    blockedReason: user.blockedReason,
+    blockedAt: user.blockedAt,
+    blockedByUser: user.blockedByUser,
+    unblockedReason: user.unblockedReason,
+    unblockedAt: user.unblockedAt,
+    unblockedByUser: user.unblockedByUser,
+  }),
 });
 
 const ensureUniqueEmail = async (email: string): Promise<void> => {
@@ -79,7 +95,25 @@ export const registerUser = async (input: RegisterInput) => {
 };
 
 export const loginUser = async (input: LoginInput) => {
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  const user = await prisma.user.findUnique({
+    where: { email: input.email },
+    include: {
+      blockedByUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+      unblockedByUser: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+        },
+      },
+    },
+  });
   if (!user) {
     throw new AppError('Invalid email or password', 'INVALID_CREDENTIALS', 401);
   }
@@ -168,7 +202,17 @@ export const resetPassword = async (input: ResetPasswordInput) => {
 };
 
 export const getUserWithSettings = async (userId: string) => {
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      deletedAt: true,
+      ...userModerationSelect,
+    },
+  });
 
   if (!user) {
     throw new AppError('User not found', 'USER_NOT_FOUND', 404);
@@ -181,7 +225,13 @@ export const getUserWithSettings = async (userId: string) => {
   const settings = await ensureSettings(user.id);
 
   return {
-    user: sanitizeUser(user),
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      ...formatUserModeration(user),
+    },
     settings: {
       preferred_version_id: settings.preferredVersionId,
       timezone: settings.timezone,

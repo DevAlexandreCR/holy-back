@@ -14,6 +14,11 @@ enum UserRole {
   ADMIN
 }
 
+enum UserModerationActionType {
+  BLOCK
+  UNBLOCK
+}
+
 enum DevotionalPublicationState {
   DRAFT
   PUBLISHED_LOW_REACH
@@ -124,103 +129,116 @@ enum DevotionalQualityGateStatus {
 }
 
 model User {
-  id                  String                @id @default(uuid()) @db.Char(36)
-  name                String
-  email               String                @unique
-  passwordHash        String                @map("password_hash")
-  role                UserRole              @default(USER)
-  handle              String?               @unique @db.VarChar(30)
-  creatorBio          String?               @map("creator_bio") @db.VarChar(280)
-  creatorAvatarUrl    String?               @map("creator_avatar_url")
-  creatorProfileUpdatedAt DateTime?         @map("creator_profile_updated_at")
-  followersCount      Int                   @default(0) @map("followers_count")
-  followingCount      Int                   @default(0) @map("following_count")
-  createdAt           DateTime              @default(now()) @map("created_at")
-  updatedAt           DateTime              @updatedAt @map("updated_at")
-  resetToken          String?               @map("reset_token")
-  resetTokenExpiresAt DateTime?             @map("reset_token_expires_at")
-  deletedAt           DateTime?             @map("deleted_at")
-  deletedReason       String?               @map("deleted_reason")
-  settings            UserSettings?
-  verseHistory        UserVerseHistory[]
-  themePreferences    UserThemePreference[]
-  savedVerses         UserSavedVerse[]
-  devotionals         Devotional[]
-  moderatedDevotionals Devotional[]              @relation("DevotionalModerator")
-  devotionalLikes     DevotionalLike[]
-  devotionalComments  DevotionalComment[]
-  devotionalViews     DevotionalView[]
-  devotionalImageAssets DevotionalImageAsset[]
-  devotionalFeedDeliveries DevotionalFeedDelivery[]
-  devotionalFeedEvents DevotionalFeedEvent[]
-  devotionalUniqueImpressions DevotionalUniqueImpression[]
-  devotionalShareEvents DevotionalShareEvent[]
-  devotionalSaves DevotionalSave[]
-  devotionalReadCompletions DevotionalReadComplete[]
-  devotionalReports DevotionalReport[]
-  devotionalModerationActions DevotionalModerationAction[]
+  id                              String                             @id @default(uuid()) @db.Char(36)
+  name                            String
+  email                           String                             @unique
+  passwordHash                    String                             @map("password_hash")
+  role                            UserRole                           @default(USER)
+  isBlocked                       Boolean                            @default(false) @map("is_blocked")
+  blockedReason                   String?                            @map("blocked_reason") @db.VarChar(500)
+  blockedBy                       String?                            @map("blocked_by") @db.Char(36)
+  blockedAt                       DateTime?                          @map("blocked_at")
+  unblockedReason                 String?                            @map("unblocked_reason") @db.VarChar(500)
+  unblockedBy                     String?                            @map("unblocked_by") @db.Char(36)
+  unblockedAt                     DateTime?                          @map("unblocked_at")
+  handle                          String?                            @unique @db.VarChar(30)
+  creatorBio                      String?                            @map("creator_bio") @db.VarChar(280)
+  creatorAvatarUrl                String?                            @map("creator_avatar_url")
+  creatorProfileUpdatedAt         DateTime?                          @map("creator_profile_updated_at")
+  followersCount                  Int                                @default(0) @map("followers_count")
+  followingCount                  Int                                @default(0) @map("following_count")
+  createdAt                       DateTime                           @default(now()) @map("created_at")
+  updatedAt                       DateTime                           @updatedAt @map("updated_at")
+  resetToken                      String?                            @map("reset_token")
+  resetTokenExpiresAt             DateTime?                          @map("reset_token_expires_at")
+  deletedAt                       DateTime?                          @map("deleted_at")
+  deletedReason                   String?                            @map("deleted_reason")
+  blockedByUser                   User?                              @relation("UserBlockActor", fields: [blockedBy], references: [id])
+  blockedUsers                    User[]                             @relation("UserBlockActor")
+  unblockedByUser                 User?                              @relation("UserUnblockActor", fields: [unblockedBy], references: [id])
+  unblockedUsers                  User[]                             @relation("UserUnblockActor")
+  settings                        UserSettings?
+  verseHistory                    UserVerseHistory[]
+  themePreferences                UserThemePreference[]
+  savedVerses                     UserSavedVerse[]
+  devotionals                     Devotional[]
+  moderatedDevotionals            Devotional[]                       @relation("DevotionalModerator")
+  devotionalLikes                 DevotionalLike[]
+  devotionalComments              DevotionalComment[]
+  devotionalViews                 DevotionalView[]
+  devotionalImageAssets           DevotionalImageAsset[]
+  devotionalFeedDeliveries        DevotionalFeedDelivery[]
+  devotionalFeedEvents            DevotionalFeedEvent[]
+  devotionalUniqueImpressions     DevotionalUniqueImpression[]
+  devotionalShareEvents           DevotionalShareEvent[]
+  devotionalSaves                 DevotionalSave[]
+  devotionalReadCompletions       DevotionalReadComplete[]
+  devotionalReports               DevotionalReport[]
+  devotionalModerationActions     DevotionalModerationAction[]
   devotionalAuthorImpressionDaily DevotionalAuthorImpressionDaily[]
-  creatorAvatarAssets CreatorAvatarAsset[]
-  followedBy UserFollow[]                   @relation("UserFollowFollowed")
-  following UserFollow[]                    @relation("UserFollowFollower")
-  creatorAffinities UserCreatorAffinity[]   @relation("UserCreatorAffinityCreator")
-  viewerAffinities UserCreatorAffinity[]    @relation("UserCreatorAffinityUser")
-  deviceTokens DeviceToken[]
-  appSessionEvents AppSessionEvent[]
-  notificationSends DevotionalNotificationSend[]
-  shareAttributionSources DevotionalShareAttributionSource[] @relation("ShareAttributionSharer")
-  shareAttributionEvents DevotionalShareAttributionEvent[] @relation("ShareAttributionUser")
-  creatorDailyMetrics CreatorDailyMetric[]
-  userActivityDailyMetrics UserActivityDailyMetric[]
+  creatorAvatarAssets             CreatorAvatarAsset[]
+  followedBy                      UserFollow[]                       @relation("UserFollowFollowed")
+  following                       UserFollow[]                       @relation("UserFollowFollower")
+  creatorAffinities               UserCreatorAffinity[]              @relation("UserCreatorAffinityCreator")
+  viewerAffinities                UserCreatorAffinity[]              @relation("UserCreatorAffinityUser")
+  deviceTokens                    DeviceToken[]
+  appSessionEvents                AppSessionEvent[]
+  notificationSends               DevotionalNotificationSend[]
+  userModerationActionsReceived   UserModerationAction[]             @relation("UserModerationActionTarget")
+  userModerationActionsTaken      UserModerationAction[]             @relation("UserModerationActionActor")
+  shareAttributionSources         DevotionalShareAttributionSource[] @relation("ShareAttributionSharer")
+  shareAttributionEvents          DevotionalShareAttributionEvent[]  @relation("ShareAttributionUser")
+  creatorDailyMetrics             CreatorDailyMetric[]
+  userActivityDailyMetrics        UserActivityDailyMetric[]
 
   @@map("users")
 }
 
 model BibleVersion {
-  id           Int                @id @default(autoincrement())
-  apiCode      String             @unique @map("api_code")
-  name         String
-  language     String
-  isActive     Boolean            @default(true) @map("is_active")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-  settings     UserSettings[]
-  cachedTexts  CachedVerseText[]
-  userHistory  UserVerseHistory[]
-  savedVerses  UserSavedVerse[]
+  id          Int                @id @default(autoincrement())
+  apiCode     String             @unique @map("api_code")
+  name        String
+  language    String
+  isActive    Boolean            @default(true) @map("is_active")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  settings    UserSettings[]
+  cachedTexts CachedVerseText[]
+  userHistory UserVerseHistory[]
+  savedVerses UserSavedVerse[]
 
   @@map("bible_versions")
 }
 
 model UserSettings {
-  id                 Int           @id @default(autoincrement())
-  userId             String        @map("user_id")
-  preferredVersionId Int?          @map("preferred_version_id")
-  timezone           String?
-  widgetFontSize     String?       @default("large") @map("widget_font_size")
-  devotionalNotificationsEnabled Boolean @default(true) @map("devotional_notifications_enabled")
-  followedCreatorNotificationsEnabled Boolean @default(true) @map("followed_creator_notifications_enabled")
-  featuredDevotionalNotificationsEnabled Boolean @default(true) @map("featured_devotional_notifications_enabled")
-  authorModerationNotificationsEnabled Boolean @default(true) @map("author_moderation_notifications_enabled")
-  editorReviewNotificationsEnabled Boolean @default(true) @map("editor_review_notifications_enabled")
-  createdAt          DateTime      @default(now()) @map("created_at")
-  updatedAt          DateTime      @updatedAt @map("updated_at")
-  user               User          @relation(fields: [userId], references: [id])
-  preferredVersion   BibleVersion? @relation(fields: [preferredVersionId], references: [id])
+  id                                     Int           @id @default(autoincrement())
+  userId                                 String        @map("user_id")
+  preferredVersionId                     Int?          @map("preferred_version_id")
+  timezone                               String?
+  widgetFontSize                         String?       @default("large") @map("widget_font_size")
+  devotionalNotificationsEnabled         Boolean       @default(true) @map("devotional_notifications_enabled")
+  followedCreatorNotificationsEnabled    Boolean       @default(true) @map("followed_creator_notifications_enabled")
+  featuredDevotionalNotificationsEnabled Boolean       @default(true) @map("featured_devotional_notifications_enabled")
+  authorModerationNotificationsEnabled   Boolean       @default(true) @map("author_moderation_notifications_enabled")
+  editorReviewNotificationsEnabled       Boolean       @default(true) @map("editor_review_notifications_enabled")
+  createdAt                              DateTime      @default(now()) @map("created_at")
+  updatedAt                              DateTime      @updatedAt @map("updated_at")
+  user                                   User          @relation(fields: [userId], references: [id])
+  preferredVersion                       BibleVersion? @relation(fields: [preferredVersionId], references: [id])
 
   @@unique([userId])
   @@map("user_settings")
 }
 
 model LibraryVerse {
-  id           Int                @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   book         String
   chapter      Int
-  verseFrom    Int                @map("verse_from")
-  verseTo      Int                @map("verse_to")
+  verseFrom    Int      @map("verse_from")
+  verseTo      Int      @map("verse_to")
   theme        String
-  referenceKey String             @unique @map("reference_key")
-  createdAt    DateTime           @default(now()) @map("created_at")
+  referenceKey String   @unique @map("reference_key")
+  createdAt    DateTime @default(now()) @map("created_at")
 
   cachedVerses CachedVerseText[]
   userHistory  UserVerseHistory[]
@@ -232,17 +250,17 @@ model LibraryVerse {
 }
 
 model CachedVerseText {
-  id             Int           @id @default(autoincrement())
-  libraryVerseId Int           @map("library_verse_id")
-  versionId      Int           @map("version_id")
-  text           String        @db.Text
+  id             Int      @id @default(autoincrement())
+  libraryVerseId Int      @map("library_verse_id")
+  versionId      Int      @map("version_id")
+  text           String   @db.Text
   reference      String
-  apiMetadata    Json?         @map("api_metadata")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
+  apiMetadata    Json?    @map("api_metadata")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
 
-  libraryVerse   LibraryVerse  @relation(fields: [libraryVerseId], references: [id])
-  version        BibleVersion  @relation(fields: [versionId], references: [id])
+  libraryVerse LibraryVerse @relation(fields: [libraryVerseId], references: [id])
+  version      BibleVersion @relation(fields: [versionId], references: [id])
 
   @@unique([libraryVerseId, versionId])
   @@index([versionId])
@@ -251,20 +269,20 @@ model CachedVerseText {
 }
 
 model UserVerseHistory {
-  id             Int           @id @default(autoincrement())
-  userId         String        @map("user_id")
-  libraryVerseId Int           @map("library_verse_id")
-  versionId      Int           @map("version_id")
+  id             Int       @id @default(autoincrement())
+  userId         String    @map("user_id")
+  libraryVerseId Int       @map("library_verse_id")
+  versionId      Int       @map("version_id")
   date           String
-  shownAt        DateTime      @default(now()) @map("shown_at")
-  liked          Boolean       @default(false)
-  likedAt        DateTime?     @map("liked_at")
-  shared         Boolean       @default(false)
-  sharedAt       DateTime?     @map("shared_at")
+  shownAt        DateTime  @default(now()) @map("shown_at")
+  liked          Boolean   @default(false)
+  likedAt        DateTime? @map("liked_at")
+  shared         Boolean   @default(false)
+  sharedAt       DateTime? @map("shared_at")
 
-  user           User          @relation(fields: [userId], references: [id])
-  libraryVerse   LibraryVerse  @relation(fields: [libraryVerseId], references: [id])
-  version        BibleVersion  @relation(fields: [versionId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  libraryVerse LibraryVerse @relation(fields: [libraryVerseId], references: [id])
+  version      BibleVersion @relation(fields: [versionId], references: [id])
 
   @@unique([userId, libraryVerseId])
   @@unique([userId, date])
@@ -286,7 +304,7 @@ model UserThemePreference {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  user            User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 
   @@unique([userId, theme])
   @@index([userId, score])
@@ -294,19 +312,19 @@ model UserThemePreference {
 }
 
 model UserSavedVerse {
-  id             Int          @id @default(autoincrement())
-  userId         String       @map("user_id")
-  libraryVerseId Int          @map("library_verse_id")
-  versionId      Int          @map("version_id")
+  id             Int      @id @default(autoincrement())
+  userId         String   @map("user_id")
+  libraryVerseId Int      @map("library_verse_id")
+  versionId      Int      @map("version_id")
   reference      String
-  text           String       @db.Text
+  text           String   @db.Text
   theme          String
-  source         String       @default("daily_verse")
-  savedAt        DateTime     @default(now()) @map("saved_at")
+  source         String   @default("daily_verse")
+  savedAt        DateTime @default(now()) @map("saved_at")
 
-  user           User         @relation(fields: [userId], references: [id])
-  libraryVerse   LibraryVerse @relation(fields: [libraryVerseId], references: [id])
-  version        BibleVersion @relation(fields: [versionId], references: [id])
+  user         User         @relation(fields: [userId], references: [id])
+  libraryVerse LibraryVerse @relation(fields: [libraryVerseId], references: [id])
+  version      BibleVersion @relation(fields: [versionId], references: [id])
 
   @@unique([userId, libraryVerseId])
   @@index([userId, savedAt])
@@ -314,61 +332,61 @@ model UserSavedVerse {
 }
 
 model Devotional {
-  id                     String                         @id @default(uuid()) @db.Char(36)
-  title                  String
-  content                Json
-  computedHook           String                         @default("") @map("computed_hook") @db.VarChar(140)
-  optimizedPreviewText   String                         @default("") @map("optimized_preview_text") @db.VarChar(160)
-  hookSource             DevotionalHookSource           @default(CONTENT_TRUNCATION) @map("hook_source")
-  hookModel              String?                        @map("hook_model") @db.VarChar(64)
-  qualityGateStatus      DevotionalQualityGateStatus    @default(READY) @map("quality_gate_status")
-  authorId               String                         @map("author_id") @db.Char(36)
-  author                 User                           @relation(fields: [authorId], references: [id])
-  publicationState       DevotionalPublicationState     @default(DRAFT) @map("publication_state")
-  moderationStatus       DevotionalModerationStatus     @default(CLEAR) @map("moderation_status")
-  moderationReason       String?                        @map("moderation_reason")
-  moderatedBy            String?                        @map("moderated_by") @db.Char(36)
-  moderatedByUser        User?                          @relation("DevotionalModerator", fields: [moderatedBy], references: [id])
-  moderatedAt            DateTime?                      @map("moderated_at")
-  imageUrl               String?                        @map("image_url")
-  imageAssetId           String?                        @unique @map("image_asset_id") @db.Char(36)
-  imageAsset             DevotionalImageAsset?          @relation(fields: [imageAssetId], references: [id])
-  imageModerationStatus  DevotionalImageModerationStatus @default(PENDING) @map("image_moderation_status")
-  imageModerationResultRaw Json?                        @map("image_moderation_result_raw")
-  coverImageFocusY       Float?                         @map("cover_image_focus_y")
-  viewCount              Int                            @default(0) @map("view_count")
-  rankingScore           Float                          @default(0) @map("ranking_score")
-  lastScoredAt           DateTime?                      @map("last_scored_at")
-  featuredUntil          DateTime?                      @map("featured_until")
-  publishedAt            DateTime?                      @map("published_at")
-  firstPublishedAt       DateTime?                      @map("first_published_at")
-  likeCount              Int                            @default(0) @map("like_count")
-  commentCount           Int                            @default(0) @map("comment_count")
-  shareCount             Int                            @default(0) @map("share_count")
-  saveCount              Int                            @default(0) @map("save_count")
-  readCompleteCount      Int                            @default(0) @map("read_complete_count")
-  skipCount              Int                            @default(0) @map("skip_count")
-  reportCount            Int                            @default(0) @map("report_count")
-  impressionCount        Int                            @default(0) @map("impression_count")
-  uniqueImpressionCount  Int                            @default(0) @map("unique_impression_count")
-  createdAt              DateTime                       @default(now()) @map("created_at")
-  updatedAt              DateTime                       @updatedAt @map("updated_at")
+  id                       String                          @id @default(uuid()) @db.Char(36)
+  title                    String
+  content                  Json
+  computedHook             String                          @default("") @map("computed_hook") @db.VarChar(140)
+  optimizedPreviewText     String                          @default("") @map("optimized_preview_text") @db.VarChar(160)
+  hookSource               DevotionalHookSource            @default(CONTENT_TRUNCATION) @map("hook_source")
+  hookModel                String?                         @map("hook_model") @db.VarChar(64)
+  qualityGateStatus        DevotionalQualityGateStatus     @default(READY) @map("quality_gate_status")
+  authorId                 String                          @map("author_id") @db.Char(36)
+  author                   User                            @relation(fields: [authorId], references: [id])
+  publicationState         DevotionalPublicationState      @default(DRAFT) @map("publication_state")
+  moderationStatus         DevotionalModerationStatus      @default(CLEAR) @map("moderation_status")
+  moderationReason         String?                         @map("moderation_reason")
+  moderatedBy              String?                         @map("moderated_by") @db.Char(36)
+  moderatedByUser          User?                           @relation("DevotionalModerator", fields: [moderatedBy], references: [id])
+  moderatedAt              DateTime?                       @map("moderated_at")
+  imageUrl                 String?                         @map("image_url")
+  imageAssetId             String?                         @unique @map("image_asset_id") @db.Char(36)
+  imageAsset               DevotionalImageAsset?           @relation(fields: [imageAssetId], references: [id])
+  imageModerationStatus    DevotionalImageModerationStatus @default(PENDING) @map("image_moderation_status")
+  imageModerationResultRaw Json?                           @map("image_moderation_result_raw")
+  coverImageFocusY         Float?                          @map("cover_image_focus_y")
+  viewCount                Int                             @default(0) @map("view_count")
+  rankingScore             Float                           @default(0) @map("ranking_score")
+  lastScoredAt             DateTime?                       @map("last_scored_at")
+  featuredUntil            DateTime?                       @map("featured_until")
+  publishedAt              DateTime?                       @map("published_at")
+  firstPublishedAt         DateTime?                       @map("first_published_at")
+  likeCount                Int                             @default(0) @map("like_count")
+  commentCount             Int                             @default(0) @map("comment_count")
+  shareCount               Int                             @default(0) @map("share_count")
+  saveCount                Int                             @default(0) @map("save_count")
+  readCompleteCount        Int                             @default(0) @map("read_complete_count")
+  skipCount                Int                             @default(0) @map("skip_count")
+  reportCount              Int                             @default(0) @map("report_count")
+  impressionCount          Int                             @default(0) @map("impression_count")
+  uniqueImpressionCount    Int                             @default(0) @map("unique_impression_count")
+  createdAt                DateTime                        @default(now()) @map("created_at")
+  updatedAt                DateTime                        @updatedAt @map("updated_at")
 
-  verseReferences        DevotionalVerseReference[]
-  likes                  DevotionalLike[]
-  comments               DevotionalComment[]
-  views                  DevotionalView[]
-  feedDeliveries         DevotionalFeedDelivery[]
-  feedEvents             DevotionalFeedEvent[]
-  uniqueImpressions      DevotionalUniqueImpression[]
-  shareEvents            DevotionalShareEvent[]
-  saves                  DevotionalSave[]
-  readCompletions        DevotionalReadComplete[]
-  reports                DevotionalReport[]
-  moderationActions      DevotionalModerationAction[]
-  notificationSends      DevotionalNotificationSend[]
-  stateTransitionEvents  DevotionalStateTransitionEvent[]
-  dailyMetrics           DevotionalDailyMetric[]
+  verseReferences         DevotionalVerseReference[]
+  likes                   DevotionalLike[]
+  comments                DevotionalComment[]
+  views                   DevotionalView[]
+  feedDeliveries          DevotionalFeedDelivery[]
+  feedEvents              DevotionalFeedEvent[]
+  uniqueImpressions       DevotionalUniqueImpression[]
+  shareEvents             DevotionalShareEvent[]
+  saves                   DevotionalSave[]
+  readCompletions         DevotionalReadComplete[]
+  reports                 DevotionalReport[]
+  moderationActions       DevotionalModerationAction[]
+  notificationSends       DevotionalNotificationSend[]
+  stateTransitionEvents   DevotionalStateTransitionEvent[]
+  dailyMetrics            DevotionalDailyMetric[]
   shareAttributionSources DevotionalShareAttributionSource[]
 
   @@index([publicationState, moderationStatus, rankingScore, lastScoredAt], map: "devotions_feed_rank_idx")
@@ -394,13 +412,13 @@ model DevotionalVerseReference {
 }
 
 model DevotionalLike {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([devotionalId, userId])
   @@index([devotionalId])
@@ -409,15 +427,15 @@ model DevotionalLike {
 }
 
 model DevotionalComment {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  content      String     @db.Text
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  content      String   @db.Text
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([devotionalId])
   @@index([userId])
@@ -425,14 +443,14 @@ model DevotionalComment {
 }
 
 model DevotionalView {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  viewDate     String     @map("view_date")
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  viewDate     String   @map("view_date")
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([devotionalId, userId, viewDate])
   @@index([devotionalId])
@@ -441,25 +459,25 @@ model DevotionalView {
 }
 
 model DevotionalImageAsset {
-  id                    String                        @id @default(uuid()) @db.Char(36)
-  userId                String                        @map("user_id") @db.Char(36)
-  user                  User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status                DevotionalImageAssetStatus    @default(PENDING)
+  id                    String                          @id @default(uuid()) @db.Char(36)
+  userId                String                          @map("user_id") @db.Char(36)
+  user                  User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                DevotionalImageAssetStatus      @default(PENDING)
   imageModerationStatus DevotionalImageModerationStatus @default(PENDING) @map("image_moderation_status")
-  moderationResultRaw   Json?                         @map("moderation_result_raw")
-  mimeType              String                        @map("mime_type")
-  tempPath              String                        @map("temp_path")
-  tempUrl               String                        @map("temp_url")
-  permanentPath         String?                       @map("permanent_path")
-  permanentUrl          String?                       @map("permanent_url")
+  moderationResultRaw   Json?                           @map("moderation_result_raw")
+  mimeType              String                          @map("mime_type")
+  tempPath              String                          @map("temp_path")
+  tempUrl               String                          @map("temp_url")
+  permanentPath         String?                         @map("permanent_path")
+  permanentUrl          String?                         @map("permanent_url")
   width                 Int?
   height                Int?
-  expiresAt             DateTime?                     @map("expires_at")
-  usedAt                DateTime?                     @map("used_at")
-  createdAt             DateTime                      @default(now()) @map("created_at")
-  updatedAt             DateTime                      @updatedAt @map("updated_at")
+  expiresAt             DateTime?                       @map("expires_at")
+  usedAt                DateTime?                       @map("used_at")
+  createdAt             DateTime                        @default(now()) @map("created_at")
+  updatedAt             DateTime                        @updatedAt @map("updated_at")
 
-  devotional            Devotional?
+  devotional Devotional?
 
   @@index([userId, status])
   @@index([expiresAt])
@@ -467,23 +485,23 @@ model DevotionalImageAsset {
 }
 
 model CreatorAvatarAsset {
-  id                    String                        @id @default(uuid()) @db.Char(36)
-  userId                String                        @map("user_id") @db.Char(36)
-  user                  User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  status                DevotionalImageAssetStatus    @default(PENDING)
+  id                    String                          @id @default(uuid()) @db.Char(36)
+  userId                String                          @map("user_id") @db.Char(36)
+  user                  User                            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                DevotionalImageAssetStatus      @default(PENDING)
   imageModerationStatus DevotionalImageModerationStatus @default(PENDING) @map("image_moderation_status")
-  moderationResultRaw   Json?                         @map("moderation_result_raw")
-  mimeType              String                        @map("mime_type")
-  tempPath              String                        @map("temp_path")
-  tempUrl               String                        @map("temp_url")
-  permanentPath         String?                       @map("permanent_path")
-  permanentUrl          String?                       @map("permanent_url")
+  moderationResultRaw   Json?                           @map("moderation_result_raw")
+  mimeType              String                          @map("mime_type")
+  tempPath              String                          @map("temp_path")
+  tempUrl               String                          @map("temp_url")
+  permanentPath         String?                         @map("permanent_path")
+  permanentUrl          String?                         @map("permanent_url")
   width                 Int?
   height                Int?
-  expiresAt             DateTime?                     @map("expires_at")
-  usedAt                DateTime?                     @map("used_at")
-  createdAt             DateTime                      @default(now()) @map("created_at")
-  updatedAt             DateTime                      @updatedAt @map("updated_at")
+  expiresAt             DateTime?                       @map("expires_at")
+  usedAt                DateTime?                       @map("used_at")
+  createdAt             DateTime                        @default(now()) @map("created_at")
+  updatedAt             DateTime                        @updatedAt @map("updated_at")
 
   @@index([userId, status])
   @@index([expiresAt])
@@ -491,13 +509,13 @@ model CreatorAvatarAsset {
 }
 
 model UserFollow {
-  id         String    @id @default(uuid()) @db.Char(36)
-  followerId String    @map("follower_id") @db.Char(36)
-  followedId String    @map("followed_id") @db.Char(36)
-  createdAt  DateTime  @default(now()) @map("created_at")
+  id         String   @id @default(uuid()) @db.Char(36)
+  followerId String   @map("follower_id") @db.Char(36)
+  followedId String   @map("followed_id") @db.Char(36)
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  follower   User      @relation("UserFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
-  followed   User      @relation("UserFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
+  follower User @relation("UserFollowFollower", fields: [followerId], references: [id], onDelete: Cascade)
+  followed User @relation("UserFollowFollowed", fields: [followedId], references: [id], onDelete: Cascade)
 
   @@unique([followerId, followedId])
   @@index([followedId, createdAt])
@@ -506,16 +524,16 @@ model UserFollow {
 }
 
 model UserCreatorAffinity {
-  id           String    @id @default(uuid()) @db.Char(36)
-  userId       String    @map("user_id") @db.Char(36)
-  creatorId    String    @map("creator_id") @db.Char(36)
-  score        Float     @default(0)
-  lastSignalAt DateTime  @default(now()) @map("last_signal_at")
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  creatorId    String   @map("creator_id") @db.Char(36)
+  score        Float    @default(0)
+  lastSignalAt DateTime @default(now()) @map("last_signal_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  user         User      @relation("UserCreatorAffinityUser", fields: [userId], references: [id], onDelete: Cascade)
-  creator      User      @relation("UserCreatorAffinityCreator", fields: [creatorId], references: [id], onDelete: Cascade)
+  user    User @relation("UserCreatorAffinityUser", fields: [userId], references: [id], onDelete: Cascade)
+  creator User @relation("UserCreatorAffinityCreator", fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@unique([userId, creatorId])
   @@index([userId, score])
@@ -524,22 +542,22 @@ model UserCreatorAffinity {
 }
 
 model DevotionalFeedDelivery {
-  id           String     @id @default(uuid()) @db.Char(36)
-  token        String     @unique
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  feedMode     String     @map("feed_mode")
-  recommendationReason String? @map("recommendation_reason")
-  rankingScore Float      @default(0) @map("ranking_score")
-  deliveredAt  DateTime   @default(now()) @map("delivered_at")
+  id                   String   @id @default(uuid()) @db.Char(36)
+  token                String   @unique
+  devotionalId         String   @map("devotional_id") @db.Char(36)
+  userId               String   @map("user_id") @db.Char(36)
+  feedMode             String   @map("feed_mode")
+  recommendationReason String?  @map("recommendation_reason")
+  rankingScore         Float    @default(0) @map("ranking_score")
+  deliveredAt          DateTime @default(now()) @map("delivered_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  events       DevotionalFeedEvent[]
-  saves        DevotionalSave[]
-  shares       DevotionalShareEvent[]
+  devotional      Devotional               @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events          DevotionalFeedEvent[]
+  saves           DevotionalSave[]
+  shares          DevotionalShareEvent[]
   readCompletions DevotionalReadComplete[]
-  reports      DevotionalReport[]
+  reports         DevotionalReport[]
 
   @@index([userId, deliveredAt])
   @@index([devotionalId, deliveredAt])
@@ -548,18 +566,18 @@ model DevotionalFeedDelivery {
 }
 
 model DevotionalFeedEvent {
-  id          String                  @id @default(uuid()) @db.Char(36)
-  eventId     String                  @unique @map("event_id")
-  devotionalId String                 @map("devotional_id") @db.Char(36)
-  deliveryId  String                  @map("delivery_id") @db.Char(36)
-  userId      String                  @map("user_id") @db.Char(36)
-  type        DevotionalFeedEventType
-  occurredAt  DateTime                @map("occurred_at")
-  createdAt   DateTime                @default(now()) @map("created_at")
+  id           String                  @id @default(uuid()) @db.Char(36)
+  eventId      String                  @unique @map("event_id")
+  devotionalId String                  @map("devotional_id") @db.Char(36)
+  deliveryId   String                  @map("delivery_id") @db.Char(36)
+  userId       String                  @map("user_id") @db.Char(36)
+  type         DevotionalFeedEventType
+  occurredAt   DateTime                @map("occurred_at")
+  createdAt    DateTime                @default(now()) @map("created_at")
 
-  devotional  Devotional              @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  delivery    DevotionalFeedDelivery  @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
-  user        User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional             @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  delivery   DevotionalFeedDelivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([devotionalId, type, occurredAt])
   @@index([userId, occurredAt])
@@ -567,13 +585,13 @@ model DevotionalFeedEvent {
 }
 
 model DevotionalUniqueImpression {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  firstSeenAt  DateTime   @default(now()) @map("first_seen_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  firstSeenAt  DateTime @default(now()) @map("first_seen_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([devotionalId, userId])
   @@index([userId, firstSeenAt])
@@ -581,15 +599,15 @@ model DevotionalUniqueImpression {
 }
 
 model DevotionalSave {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  deliveryId   String?    @map("delivery_id") @db.Char(36)
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  deliveryId   String?  @map("delivery_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  devotional Devotional              @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery   DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
@@ -598,15 +616,15 @@ model DevotionalSave {
 }
 
 model DevotionalShareEvent {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  deliveryId   String?    @map("delivery_id") @db.Char(36)
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  deliveryId   String?  @map("delivery_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  devotional Devotional              @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery   DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@index([devotionalId, createdAt])
   @@index([userId, createdAt])
@@ -615,15 +633,15 @@ model DevotionalShareEvent {
 }
 
 model DevotionalReadComplete {
-  id           String     @id @default(uuid()) @db.Char(36)
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  userId       String     @map("user_id") @db.Char(36)
-  deliveryId   String?    @map("delivery_id") @db.Char(36)
-  createdAt    DateTime   @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  userId       String   @map("user_id") @db.Char(36)
+  deliveryId   String?  @map("delivery_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional   Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  devotional Devotional              @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery   DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
@@ -644,9 +662,9 @@ model DevotionalReport {
   createdAt    DateTime               @default(now()) @map("created_at")
   updatedAt    DateTime               @updatedAt @map("updated_at")
 
-  devotional   Devotional             @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user         User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  delivery     DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
+  devotional Devotional              @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  delivery   DevotionalFeedDelivery? @relation(fields: [deliveryId], references: [id], onDelete: SetNull)
 
   @@unique([devotionalId, userId])
   @@index([status, createdAt])
@@ -663,23 +681,38 @@ model DevotionalModerationAction {
   metadata     Json?
   createdAt    DateTime                       @default(now()) @map("created_at")
 
-  devotional   Devotional                     @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  actor        User?                          @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  actor      User?      @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([devotionalId, createdAt])
   @@index([actorId, createdAt])
   @@map("devotional_moderation_actions")
 }
 
-model DevotionalAuthorImpressionDaily {
-  id         Int      @id @default(autoincrement())
-  authorId   String   @map("author_id") @db.Char(36)
-  date       String
-  impressions Int     @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+model UserModerationAction {
+  id         String                   @id @default(uuid()) @db.Char(36)
+  userId     String                   @map("user_id") @db.Char(36)
+  actorId    String?                  @map("actor_id") @db.Char(36)
+  actionType UserModerationActionType @map("action_type")
+  reason     String                   @db.VarChar(500)
+  createdAt  DateTime                 @default(now()) @map("created_at")
+  user       User                     @relation("UserModerationActionTarget", fields: [userId], references: [id], onDelete: Cascade)
+  actor      User?                    @relation("UserModerationActionActor", fields: [actorId], references: [id], onDelete: SetNull)
 
-  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt], map: "user_moderation_actions_user_id_created_at_idx")
+  @@index([actorId, createdAt], map: "user_moderation_actions_actor_id_created_at_idx")
+  @@map("user_moderation_actions")
+}
+
+model DevotionalAuthorImpressionDaily {
+  id          Int      @id @default(autoincrement())
+  authorId    String   @map("author_id") @db.Char(36)
+  date        String
+  impressions Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@unique([authorId, date])
   @@index([date])
@@ -698,8 +731,8 @@ model DeviceToken {
   createdAt              DateTime                 @default(now()) @map("created_at")
   updatedAt              DateTime                 @updatedAt @map("updated_at")
 
-  user                   User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  notificationSends      DevotionalNotificationSend[]
+  user              User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationSends DevotionalNotificationSend[]
 
   @@index([userId, isActive])
   @@index([osPermissionStatus, isActive])
@@ -707,28 +740,28 @@ model DeviceToken {
 }
 
 model DevotionalNotificationSend {
-  id                 String                    @id @default(uuid()) @db.Char(36)
-  devotionalId       String                    @map("devotional_id") @db.Char(36)
-  userId             String                    @map("user_id") @db.Char(36)
-  deviceTokenId      String                    @map("device_token_id") @db.Char(36)
+  id                 String                     @id @default(uuid()) @db.Char(36)
+  devotionalId       String                     @map("devotional_id") @db.Char(36)
+  userId             String                     @map("user_id") @db.Char(36)
+  deviceTokenId      String                     @map("device_token_id") @db.Char(36)
   type               DevotionalNotificationType
   title              String
   body               String
-  imageUrl           String?                   @map("image_url")
-  providerMessageId  String?                   @map("provider_message_id")
-  sentAt             DateTime                  @default(now()) @map("sent_at")
-  providerAcceptedAt DateTime?                 @map("provider_accepted_at")
-  openedAt           DateTime?                 @map("opened_at")
-  failedAt           DateTime?                 @map("failed_at")
-  failureCode        String?                   @map("failure_code")
-  tokenDeactivatedAt DateTime?                 @map("token_deactivated_at")
+  imageUrl           String?                    @map("image_url")
+  providerMessageId  String?                    @map("provider_message_id")
+  sentAt             DateTime                   @default(now()) @map("sent_at")
+  providerAcceptedAt DateTime?                  @map("provider_accepted_at")
+  openedAt           DateTime?                  @map("opened_at")
+  failedAt           DateTime?                  @map("failed_at")
+  failureCode        String?                    @map("failure_code")
+  tokenDeactivatedAt DateTime?                  @map("token_deactivated_at")
   payload            Json?
-  createdAt          DateTime                  @default(now()) @map("created_at")
-  updatedAt          DateTime                  @updatedAt @map("updated_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
 
-  devotional         Devotional                @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  user               User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deviceToken        DeviceToken               @relation(fields: [deviceTokenId], references: [id], onDelete: Cascade)
+  devotional  Devotional  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceToken DeviceToken @relation(fields: [deviceTokenId], references: [id], onDelete: Cascade)
 
   @@index([type, sentAt])
   @@index([userId, type, sentAt])
@@ -738,28 +771,28 @@ model DevotionalNotificationSend {
 
 model AppSessionEvent {
   id         String   @id @default(uuid()) @db.Char(36)
-  userId      String   @map("user_id") @db.Char(36)
-  deviceId    String?  @map("device_id")
-  occurredAt  DateTime @default(now()) @map("occurred_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+  userId     String   @map("user_id") @db.Char(36)
+  deviceId   String?  @map("device_id")
+  occurredAt DateTime @default(now()) @map("occurred_at")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, occurredAt])
   @@map("app_session_events")
 }
 
 model DevotionalStateTransitionEvent {
-  id                   String                         @id @default(uuid()) @db.Char(36)
-  devotionalId         String                         @map("devotional_id") @db.Char(36)
-  fromPublicationState DevotionalPublicationState?    @map("from_publication_state")
-  toPublicationState   DevotionalPublicationState     @map("to_publication_state")
+  id                   String                          @id @default(uuid()) @db.Char(36)
+  devotionalId         String                          @map("devotional_id") @db.Char(36)
+  fromPublicationState DevotionalPublicationState?     @map("from_publication_state")
+  toPublicationState   DevotionalPublicationState      @map("to_publication_state")
   source               DevotionalStateTransitionSource
   metadata             Json?
-  occurredAt           DateTime                       @default(now()) @map("occurred_at")
-  createdAt            DateTime                       @default(now()) @map("created_at")
+  occurredAt           DateTime                        @default(now()) @map("occurred_at")
+  createdAt            DateTime                        @default(now()) @map("created_at")
 
-  devotional           Devotional                     @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
 
   @@index([devotionalId, occurredAt])
   @@index([toPublicationState, occurredAt])
@@ -767,15 +800,15 @@ model DevotionalStateTransitionEvent {
 }
 
 model DevotionalShareAttributionSource {
-  id          String                           @id @default(uuid()) @db.Char(36)
-  token       String                           @unique
-  devotionalId String                          @map("devotional_id") @db.Char(36)
-  sharerUserId String                          @map("sharer_user_id") @db.Char(36)
-  createdAt   DateTime                         @default(now()) @map("created_at")
+  id           String   @id @default(uuid()) @db.Char(36)
+  token        String   @unique
+  devotionalId String   @map("devotional_id") @db.Char(36)
+  sharerUserId String   @map("sharer_user_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at")
 
-  devotional  Devotional                       @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
-  sharerUser  User                             @relation("ShareAttributionSharer", fields: [sharerUserId], references: [id], onDelete: Cascade)
-  events      DevotionalShareAttributionEvent[]
+  devotional Devotional                        @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  sharerUser User                              @relation("ShareAttributionSharer", fields: [sharerUserId], references: [id], onDelete: Cascade)
+  events     DevotionalShareAttributionEvent[]
 
   @@index([devotionalId, createdAt])
   @@index([sharerUserId, createdAt])
@@ -784,17 +817,17 @@ model DevotionalShareAttributionSource {
 
 model DevotionalShareAttributionEvent {
   id         String                    @id @default(uuid()) @db.Char(36)
-  sourceId    String                    @map("source_id") @db.Char(36)
+  sourceId   String                    @map("source_id") @db.Char(36)
   type       ShareAttributionEventType
-  userId     String?                    @map("user_id") @db.Char(36)
-  deviceId   String?                    @map("device_id")
-  dedupKey   String?                    @map("dedup_key")
+  userId     String?                   @map("user_id") @db.Char(36)
+  deviceId   String?                   @map("device_id")
+  dedupKey   String?                   @map("dedup_key")
   metadata   Json?
-  occurredAt DateTime                   @default(now()) @map("occurred_at")
-  createdAt  DateTime                   @default(now()) @map("created_at")
+  occurredAt DateTime                  @default(now()) @map("occurred_at")
+  createdAt  DateTime                  @default(now()) @map("created_at")
 
-  source     DevotionalShareAttributionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
-  user       User?                      @relation("ShareAttributionUser", fields: [userId], references: [id], onDelete: SetNull)
+  source DevotionalShareAttributionSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  user   User?                            @relation("ShareAttributionUser", fields: [userId], references: [id], onDelete: SetNull)
 
   @@unique([sourceId, type, dedupKey])
   @@index([type, occurredAt])
@@ -803,22 +836,22 @@ model DevotionalShareAttributionEvent {
 }
 
 model DevotionalDailyMetric {
-  id                Int        @id @default(autoincrement())
+  id                Int      @id @default(autoincrement())
   date              String
-  devotionalId      String     @map("devotional_id") @db.Char(36)
-  impressions       Int        @default(0)
-  uniqueImpressions Int        @default(0) @map("unique_impressions")
-  opens             Int        @default(0)
-  readCompletes     Int        @default(0) @map("read_completes")
-  likes             Int        @default(0)
-  comments          Int        @default(0)
-  saves             Int        @default(0)
-  shares            Int        @default(0)
-  reports           Int        @default(0)
-  createdAt         DateTime   @default(now()) @map("created_at")
-  updatedAt         DateTime   @updatedAt @map("updated_at")
+  devotionalId      String   @map("devotional_id") @db.Char(36)
+  impressions       Int      @default(0)
+  uniqueImpressions Int      @default(0) @map("unique_impressions")
+  opens             Int      @default(0)
+  readCompletes     Int      @default(0) @map("read_completes")
+  likes             Int      @default(0)
+  comments          Int      @default(0)
+  saves             Int      @default(0)
+  shares            Int      @default(0)
+  reports           Int      @default(0)
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
 
-  devotional        Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
 
   @@unique([date, devotionalId])
   @@index([devotionalId, date])
@@ -826,22 +859,22 @@ model DevotionalDailyMetric {
 }
 
 model CreatorDailyMetric {
-  id                   Int      @id @default(autoincrement())
-  date                 String
-  creatorId            String   @map("creator_id") @db.Char(36)
-  publishedDevotionals Int      @default(0) @map("published_devotionals")
-  impressions          Int      @default(0)
-  uniqueImpressions    Int      @default(0) @map("unique_impressions")
-  opens                Int      @default(0)
-  readCompletes        Int      @default(0) @map("read_completes")
-  saves                Int      @default(0)
-  shares               Int      @default(0)
-  newFollowers         Int      @default(0) @map("new_followers")
-  followersTotalSnapshot Int    @default(0) @map("followers_total_snapshot")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                     Int      @id @default(autoincrement())
+  date                   String
+  creatorId              String   @map("creator_id") @db.Char(36)
+  publishedDevotionals   Int      @default(0) @map("published_devotionals")
+  impressions            Int      @default(0)
+  uniqueImpressions      Int      @default(0) @map("unique_impressions")
+  opens                  Int      @default(0)
+  readCompletes          Int      @default(0) @map("read_completes")
+  saves                  Int      @default(0)
+  shares                 Int      @default(0)
+  newFollowers           Int      @default(0) @map("new_followers")
+  followersTotalSnapshot Int      @default(0) @map("followers_total_snapshot")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
-  creator              User     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  creator User @relation(fields: [creatorId], references: [id], onDelete: Cascade)
 
   @@unique([date, creatorId])
   @@index([creatorId, date])
@@ -887,15 +920,15 @@ model ForYouReasonDailyMetric {
 }
 
 model UserActivityDailyMetric {
-  id                   Int      @id @default(autoincrement())
-  date                 String
-  userId               String   @map("user_id") @db.Char(36)
-  sessions             Int      @default(0)
-  hadDevotionalActivity Boolean @default(false) @map("had_devotional_activity")
-  createdAt            DateTime @default(now()) @map("created_at")
-  updatedAt            DateTime @updatedAt @map("updated_at")
+  id                    Int      @id @default(autoincrement())
+  date                  String
+  userId                String   @map("user_id") @db.Char(36)
+  sessions              Int      @default(0)
+  hadDevotionalActivity Boolean  @default(false) @map("had_devotional_activity")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
 
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([date, userId])
   @@index([userId, date])
@@ -903,31 +936,31 @@ model UserActivityDailyMetric {
 }
 
 model ShareAttributionDailyMetric {
-  id                    Int      @id @default(autoincrement())
-  date                  String   @unique
-  linkOpens             Int      @default(0) @map("link_opens")
-  appOpens              Int      @default(0) @map("app_opens")
-  installsDetected      Int      @default(0) @map("installs_detected")
-  registrationsAttributed Int    @default(0) @map("registrations_attributed")
-  firstDevotionalOpens  Int      @default(0) @map("first_devotional_opens")
-  firstReadCompletes    Int      @default(0) @map("first_read_completes")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                      Int      @id @default(autoincrement())
+  date                    String   @unique
+  linkOpens               Int      @default(0) @map("link_opens")
+  appOpens                Int      @default(0) @map("app_opens")
+  installsDetected        Int      @default(0) @map("installs_detected")
+  registrationsAttributed Int      @default(0) @map("registrations_attributed")
+  firstDevotionalOpens    Int      @default(0) @map("first_devotional_opens")
+  firstReadCompletes      Int      @default(0) @map("first_read_completes")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   @@map("share_attribution_daily_metrics")
 }
 
 model NotificationDailyMetric {
-  id                Int                       @id @default(autoincrement())
-  date              String
-  notificationType  DevotionalNotificationType @map("notification_type")
-  sent              Int                       @default(0)
-  providerAccepted  Int                       @default(0) @map("provider_accepted")
-  opened            Int                       @default(0)
-  failed            Int                       @default(0)
-  tokenDeactivated  Int                       @default(0) @map("token_deactivated")
-  createdAt         DateTime                  @default(now()) @map("created_at")
-  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  id               Int                        @id @default(autoincrement())
+  date             String
+  notificationType DevotionalNotificationType @map("notification_type")
+  sent             Int                        @default(0)
+  providerAccepted Int                        @default(0) @map("provider_accepted")
+  opened           Int                        @default(0)
+  failed           Int                        @default(0)
+  tokenDeactivated Int                        @default(0) @map("token_deactivated")
+  createdAt        DateTime                   @default(now()) @map("created_at")
+  updatedAt        DateTime                   @updatedAt @map("updated_at")
 
   @@unique([date, notificationType])
   @@index([notificationType, date])

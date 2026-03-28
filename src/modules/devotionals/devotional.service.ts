@@ -51,6 +51,11 @@ import {
   recordFirstAttributedReadComplete,
 } from '../shareAttribution/shareAttribution.service'
 import { sendDevotionalNotifications } from '../notifications/notification.service'
+import {
+  AuthorBlockRecommendation,
+  resolveAuthorBlockRecommendation,
+  resolveAuthorBlockRecommendations,
+} from '../user/userModeration.service'
 
 export const DEVOTIONAL_MANAGEMENT_STATUSES = [
   'DRAFT',
@@ -438,6 +443,7 @@ const formatDevotional = (
     viewerRole?: UserRole | null
     deliveryToken?: string
     recommendationReason?: DevotionalRecommendationReason | null
+    authorBlockRecommendation?: AuthorBlockRecommendation | null
     feedContextReason?:
       | 'FEATURED'
       | 'TRENDING'
@@ -519,6 +525,7 @@ const formatDevotional = (
     counters: formatCounters(devotional),
     ...(options.deliveryToken ? { delivery_token: options.deliveryToken } : {}),
     recommendation_reason: options.recommendationReason ?? null,
+    author_block_recommendation: options.authorBlockRecommendation ?? null,
     feed_context_reason: options.feedContextReason ?? null,
   }
 }
@@ -867,6 +874,9 @@ const compareStringsDesc = (left: string, right: string) =>
 const buildEligibleFeedWhere = (): Prisma.DevotionalWhereInput => ({
   publicationState: { in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES] },
   moderationStatus: DevotionalModerationStatus.CLEAR,
+  author: {
+    isBlocked: false,
+  },
 })
 
 const getDiscoveryReason = (
@@ -1483,11 +1493,18 @@ export const listDevotionals = async (params: {
     prisma.devotional.count({ where }),
   ])
 
+  const recommendationByAuthorId =
+    params.status === 'UNDER_REVIEW' && isPrivilegedViewer(params.viewerRole)
+      ? await resolveAuthorBlockRecommendations(items.map((item) => item.authorId))
+      : null
+
   return {
     items: items.map((item) =>
       formatDevotional(item, {
         viewerId: params.viewerId,
         viewerRole: params.viewerRole,
+        authorBlockRecommendation:
+          recommendationByAuthorId?.get(item.authorId) ?? null,
       })
     ),
     page,
@@ -1769,10 +1786,17 @@ export const getDevotionalById = async (params: {
     }
   }
 
+  const authorBlockRecommendation =
+    isPrivilegedViewer(params.viewerRole) &&
+    devotional.moderationStatus === DevotionalModerationStatus.UNDER_REVIEW
+      ? await resolveAuthorBlockRecommendation(devotional.authorId)
+      : null
+
   return formatDevotional(devotional, {
     includeContent: true,
     viewerId: params.viewerId,
     viewerRole: params.viewerRole,
+    authorBlockRecommendation,
   })
 }
 
@@ -3026,6 +3050,9 @@ export const rescoreDevotionals = async () => {
         in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES],
       },
       moderationStatus: DevotionalModerationStatus.CLEAR,
+      author: {
+        isBlocked: false,
+      },
     },
     select: {
       id: true,

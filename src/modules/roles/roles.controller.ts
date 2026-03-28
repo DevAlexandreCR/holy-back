@@ -4,9 +4,19 @@ import { Prisma, UserRole } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
 import { canManageRole, getRolePermissions } from '../../common/utils/permissions'
+import {
+  blockUser,
+  formatUserModeration,
+  unblockUser,
+  userModerationSelect,
+} from '../user/userModeration.service'
 
 const updateRoleSchema = z.object({
   role: z.nativeEnum(UserRole),
+})
+
+const moderationReasonSchema = z.object({
+  reason: z.string().trim().min(1).max(500),
 })
 
 const listSchema = z.object({
@@ -73,15 +83,23 @@ export const updateUserRole = async (req: Request, res: Response) => {
   const updatedUser = await prisma.user.update({
     where: { id: userId },
     data: { role: body.role },
-    select: { id: true, email: true, role: true, updatedAt: true },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      updatedAt: true,
+      ...userModerationSelect,
+    },
   })
 
   res.json({
     data: {
+      id: updatedUser.id,
       userId: updatedUser.id,
       email: updatedUser.email,
       role: updatedUser.role,
       updatedAt: updatedUser.updatedAt,
+      ...formatUserModeration(updatedUser),
     },
   })
 }
@@ -110,6 +128,8 @@ export const listUsersWithRoles = async (req: Request, res: Response) => {
         name: true,
         role: true,
         createdAt: true,
+        updatedAt: true,
+        ...userModerationSelect,
       },
       skip,
       take: query.limit,
@@ -120,13 +140,75 @@ export const listUsersWithRoles = async (req: Request, res: Response) => {
 
   res.json({
     data: {
-      users,
+      users: users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        ...formatUserModeration(user),
+      })),
       pagination: {
         page: query.page,
         limit: query.limit,
         total,
         totalPages: Math.ceil(total / query.limit),
       },
+    },
+  })
+}
+
+export const blockUserHandler = async (req: Request, res: Response) => {
+  if (!req.user || !req.user.role) {
+    throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
+  }
+
+  const { userId } = req.params
+  const body = parseOrThrow(moderationReasonSchema, req.body)
+  const updatedUser = await blockUser({
+    userId,
+    actorId: req.user.sub,
+    reason: body.reason,
+  })
+
+  res.json({
+    data: {
+      id: updatedUser.id,
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+      ...formatUserModeration(updatedUser),
+    },
+  })
+}
+
+export const unblockUserHandler = async (req: Request, res: Response) => {
+  if (!req.user || !req.user.role) {
+    throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
+  }
+
+  const { userId } = req.params
+  const body = parseOrThrow(moderationReasonSchema, req.body)
+  const updatedUser = await unblockUser({
+    userId,
+    actorId: req.user.sub,
+    reason: body.reason,
+  })
+
+  res.json({
+    data: {
+      id: updatedUser.id,
+      userId: updatedUser.id,
+      email: updatedUser.email,
+      name: updatedUser.name,
+      role: updatedUser.role,
+      createdAt: updatedUser.createdAt,
+      updatedAt: updatedUser.updatedAt,
+      ...formatUserModeration(updatedUser),
     },
   })
 }

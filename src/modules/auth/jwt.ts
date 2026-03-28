@@ -6,6 +6,7 @@ export type AuthTokenPayload = {
   sub: string;
   email: string;
   role?: UserRole;
+  isBlocked?: boolean;
 };
 
 type TokenType = 'access' | 'refresh';
