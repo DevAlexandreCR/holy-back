@@ -39,6 +39,7 @@ import {
   qualityGateMessageForStatus,
 } from './devotionalFeedContent'
 import { devotionalHookGenerator } from './devotionalHookGenerator.service'
+import { formatPrimaryReferenceLabel } from './devotionalReference'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
 import {
   FeedDeliveryAttributionStatus,
@@ -227,21 +228,6 @@ const formatVerseReference = (reference: {
   is_primary: reference.isPrimary,
   created_at: reference.createdAt.toISOString(),
 })
-
-const formatPrimaryReferenceLabel = (reference?: {
-  book: string
-  chapter: number
-  verseStart: number
-  verseEnd: number | null
-} | null) => {
-  if (!reference) {
-    return null
-  }
-
-  return `${reference.book} ${reference.chapter}:${reference.verseStart}${
-    reference.verseEnd ? `-${reference.verseEnd}` : ''
-  }`
-}
 
 const devotionalInclude = (viewerId?: string | null) =>
   Prisma.validator<Prisma.DevotionalInclude>()({

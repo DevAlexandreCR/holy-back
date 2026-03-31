@@ -1,14 +1,28 @@
 import { z } from 'zod'
 
+const creatorHandleUpdateSchema = z.preprocess((value) => {
+  if (typeof value === 'string' && value.trim().length === 0) {
+    return undefined
+  }
+
+  return value
+}, z.string().max(60).optional())
+
 export const creatorProfileUpdateSchema = z
   .object({
-    handle: z.string().min(1).max(60).optional(),
+    handle: creatorHandleUpdateSchema,
     bio: z.string().max(280).optional().nullable(),
     avatar_asset_id: z.string().uuid().optional().nullable(),
   })
-  .refine((value) => Object.keys(value).length > 0, {
-    message: 'At least one field is required',
-  })
+  .refine(
+    (value) =>
+      value.handle !== undefined ||
+      value.bio !== undefined ||
+      value.avatar_asset_id !== undefined,
+    {
+      message: 'At least one field is required',
+    }
+  )
 
 export const creatorProfilePaginationSchema = z.object({
   cursor: z.string().optional(),
