@@ -69,6 +69,7 @@ export const updateSettings = async (
       | 'devotionalNotificationsEnabled'
       | 'followedCreatorNotificationsEnabled'
       | 'featuredDevotionalNotificationsEnabled'
+      | 'streakRiskNotificationsEnabled'
       | 'authorModerationNotificationsEnabled'
       | 'editorReviewNotificationsEnabled'
     >

@@ -2,6 +2,7 @@ import crypto from 'crypto'
 import { promises as fs } from 'fs'
 import path from 'path'
 import {
+  DevotionalAffinitySignalType,
   DevotionalFeedEventType,
   DevotionalImageAssetStatus,
   DevotionalImageModerationStatus,
@@ -47,6 +48,11 @@ import {
   recordPublicationStateTransition,
   resolveFeedDeliveryAttribution,
 } from './devotionalPhase3.service'
+import {
+  applyDevotionalAffinitySignal,
+  getFeedAffinityBoostByDevotionalId,
+} from './devotionalPersonalization.service'
+import { triggerDevotionalTagAssignment } from './devotionalTagging.service'
 import {
   createShareAttributionSource,
   recordFirstAttributedDevotionalOpen,
@@ -1100,6 +1106,7 @@ const listForYouSelections = (params: {
   limit: number
   followedAuthorIds: Set<string>
   affinityByCreatorId: Map<string, number>
+  affinityBoostByDevotionalId: Map<string, number>
   lowReachAuthorIds: Set<string>
 }) => {
   const personalizedBucket = params.candidates
@@ -1117,6 +1124,7 @@ const listForYouSelections = (params: {
           : 0) +
         (params.affinityByCreatorId.get(left.authorId) ?? 0) *
           devotionalFeedPolicy.forYou.affinityScoreMultiplier +
+        (params.affinityBoostByDevotionalId.get(left.id) ?? 0) +
         (isActiveFeatured(left) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
       const rightScore =
         right.rankingScore +
@@ -1125,6 +1133,7 @@ const listForYouSelections = (params: {
           : 0) +
         (params.affinityByCreatorId.get(right.authorId) ?? 0) *
           devotionalFeedPolicy.forYou.affinityScoreMultiplier +
+        (params.affinityBoostByDevotionalId.get(right.id) ?? 0) +
         (isActiveFeatured(right) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
 
       const scoreComparison = compareNumbersDesc(leftScore, rightScore)
@@ -1518,6 +1527,10 @@ export const listFeedDevotionals = async (params: {
     const affinityByCreatorId = new Map(
       affinityRows.map((item) => [item.creatorId, item.score])
     )
+    const affinityBoostByDevotionalId = await getFeedAffinityBoostByDevotionalId({
+      userId: params.userId,
+      devotionalIds: fetchedCandidates.map((item) => item.id),
+    })
     const authorImpressionsLast24h = await getAuthorImpressionsLast24h()
     const lowReachAuthorIds = new Set<string>()
 
@@ -1536,6 +1549,7 @@ export const listFeedDevotionals = async (params: {
       limit: selectionWindow,
       followedAuthorIds,
       affinityByCreatorId,
+      affinityBoostByDevotionalId,
       lowReachAuthorIds,
     })
   }
@@ -2105,6 +2119,8 @@ export const publishDevotional = async (params: {
     })
   }
 
+  void triggerDevotionalTagAssignment(result.devotional.id)
+
   return formatDevotional(result.devotional, {
     includeContent: true,
     viewerId: params.viewerId,
@@ -2224,6 +2240,7 @@ export const approveDevotionalReview = async (params: {
     devotionalId: result.id,
     type: DevotionalNotificationType.AUTHOR_DEVOTIONAL_APPROVED,
   })
+  void triggerDevotionalTagAssignment(result.id)
 
   return formatDevotional(result, {
     includeContent: true,
@@ -2398,6 +2415,11 @@ export const saveDevotional = async (params: {
         creatorId: devotional.authorId,
         scoreDelta: devotionalFeedPolicy.affinitySignals.save,
       })
+      await applyDevotionalAffinitySignal(tx, {
+        userId: params.userId,
+        devotionalId: params.devotionalId,
+        signalType: DevotionalAffinitySignalType.SAVE,
+      })
       return { saved: true, saveCount: updated.saveCount }
     }
 
@@ -2452,6 +2474,15 @@ export const shareDevotional = async (params: {
   deliveryToken?: string | null
 }) => {
   return prisma.$transaction(async (tx) => {
+    const devotional = await tx.devotional.findUnique({
+      where: { id: params.devotionalId },
+      select: { id: true },
+    })
+
+    if (!devotional) {
+      throw new AppError('Devotional not found', 'DEVOTIONAL_NOT_FOUND', 404)
+    }
+
     const deliveryId = await resolveInteractionFeedDeliveryId(tx, {
       action: 'share',
       userId: params.userId,
@@ -2477,6 +2508,12 @@ export const shareDevotional = async (params: {
       where: { id: params.devotionalId },
       data: { shareCount: { increment: 1 } },
       select: { shareCount: true },
+    })
+
+    await applyDevotionalAffinitySignal(tx, {
+      userId: params.userId,
+      devotionalId: devotional.id,
+      signalType: DevotionalAffinitySignalType.SHARE,
     })
 
     return { shareCount: updated.shareCount, shareUrl: shareSource.shareUrl }
@@ -2516,6 +2553,16 @@ export const markReadComplete = async (params: {
         scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
       }),
   })
+
+  if (engagement.created) {
+    await prisma.$transaction(async (tx) => {
+      await applyDevotionalAffinitySignal(tx, {
+        userId: params.userId,
+        devotionalId: params.devotionalId,
+        signalType: DevotionalAffinitySignalType.READ_COMPLETE,
+      })
+    })
+  }
 
   const readCompleteCount = engagement.created
     ? engagement.readCompleteCount

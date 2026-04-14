@@ -8,9 +8,21 @@ import {
   runDailyAggregatesOnce,
 } from './jobs/dailyAggregatesJob';
 import {
+  registerDevotionalDailyFeatureCandidatesJob,
+  runDevotionalDailyFeatureCandidatesOnce,
+} from './jobs/devotionalDailyFeatureCandidatesJob';
+import {
   registerDevotionalRankingJob,
   runDevotionalRankingOnce,
 } from './jobs/devotionalRankingJob';
+import {
+  registerDevotionalStreakRiskJob,
+  runDevotionalStreakRiskOnce,
+} from './jobs/devotionalStreakRiskJob';
+import {
+  registerDevotionalTagAffinityDecayJob,
+  runDevotionalTagAffinityDecayOnce,
+} from './jobs/devotionalTagAffinityDecayJob';
 import {
   registerUserStreakMaintenanceJob,
   runUserStreakMaintenanceOnce,
@@ -25,6 +37,15 @@ let devotionalRankingJob:
 let dailyAggregatesJob:
   | ReturnType<typeof registerDailyAggregatesJob>
   | undefined;
+let devotionalDailyFeatureCandidatesJob:
+  | ReturnType<typeof registerDevotionalDailyFeatureCandidatesJob>
+  | undefined;
+let devotionalTagAffinityDecayJob:
+  | ReturnType<typeof registerDevotionalTagAffinityDecayJob>
+  | undefined;
+let devotionalStreakRiskJob:
+  | ReturnType<typeof registerDevotionalStreakRiskJob>
+  | undefined;
 let userStreakMaintenanceJob:
   | ReturnType<typeof registerUserStreakMaintenanceJob>
   | undefined;
@@ -35,7 +56,10 @@ const start = async (): Promise<void> => {
     await syncBibleVersionsOnce();
     await runDevotionalRankingOnce();
     await runDailyAggregatesOnce();
+    await runDevotionalDailyFeatureCandidatesOnce();
+    await runDevotionalTagAffinityDecayOnce();
     await runUserStreakMaintenanceOnce();
+    await runDevotionalStreakRiskOnce();
     server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on port ${port}`);
@@ -43,7 +67,11 @@ const start = async (): Promise<void> => {
     bibleVersionsJob = registerBibleVersionsJob();
     devotionalRankingJob = registerDevotionalRankingJob();
     dailyAggregatesJob = registerDailyAggregatesJob();
+    devotionalDailyFeatureCandidatesJob =
+      registerDevotionalDailyFeatureCandidatesJob();
+    devotionalTagAffinityDecayJob = registerDevotionalTagAffinityDecayJob();
     userStreakMaintenanceJob = registerUserStreakMaintenanceJob();
+    devotionalStreakRiskJob = registerDevotionalStreakRiskJob();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to start server', error);
@@ -64,8 +92,17 @@ const shutdown = async (signal: string): Promise<void> => {
     if (dailyAggregatesJob) {
       dailyAggregatesJob.stop();
     }
+    if (devotionalDailyFeatureCandidatesJob) {
+      devotionalDailyFeatureCandidatesJob.stop();
+    }
+    if (devotionalTagAffinityDecayJob) {
+      devotionalTagAffinityDecayJob.stop();
+    }
     if (userStreakMaintenanceJob) {
       userStreakMaintenanceJob.stop();
+    }
+    if (devotionalStreakRiskJob) {
+      devotionalStreakRiskJob.stop();
     }
     if (server) {
       await new Promise<void>((resolve) => server?.close(() => resolve()));

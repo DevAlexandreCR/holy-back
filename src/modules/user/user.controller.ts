@@ -23,6 +23,7 @@ const formatSettings = (settings: {
   devotionalNotificationsEnabled: boolean
   followedCreatorNotificationsEnabled: boolean
   featuredDevotionalNotificationsEnabled: boolean
+  streakRiskNotificationsEnabled: boolean
   authorModerationNotificationsEnabled: boolean
   editorReviewNotificationsEnabled: boolean
 }) => ({
@@ -34,6 +35,7 @@ const formatSettings = (settings: {
     settings.followedCreatorNotificationsEnabled,
   featured_devotional_notifications_enabled:
     settings.featuredDevotionalNotificationsEnabled,
+  streak_risk_notifications_enabled: settings.streakRiskNotificationsEnabled,
   author_moderation_notifications_enabled:
     settings.authorModerationNotificationsEnabled,
   editor_review_notifications_enabled:

@@ -12,6 +12,11 @@ import {
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
 import { config } from '../../config/env'
+import { reconcileUserStreak } from '../devotionals/devotionalEngagement.service'
+import {
+  resolveDailyFeaturedForUser,
+  resolveUserLocalDayContext,
+} from '../devotionals/devotionalPersonalization.service'
 import { ensureSettings, updateSettings } from '../user/userSettings.service'
 import { devotionalNotificationPolicy } from '../devotionals/devotional.policy'
 import { sendPushMessage } from './notification.provider'
@@ -25,6 +30,7 @@ const formatNotificationPreferences = (settings: {
   devotionalNotificationsEnabled: boolean
   followedCreatorNotificationsEnabled: boolean
   featuredDevotionalNotificationsEnabled: boolean
+  streakRiskNotificationsEnabled: boolean
   authorModerationNotificationsEnabled: boolean
   editorReviewNotificationsEnabled: boolean
 }) => ({
@@ -33,6 +39,7 @@ const formatNotificationPreferences = (settings: {
     settings.followedCreatorNotificationsEnabled,
   featured_devotional_notifications_enabled:
     settings.featuredDevotionalNotificationsEnabled,
+  streak_risk_notifications_enabled: settings.streakRiskNotificationsEnabled,
   author_moderation_notifications_enabled:
     settings.authorModerationNotificationsEnabled,
   editor_review_notifications_enabled:
@@ -47,6 +54,10 @@ const buildNotificationBody = (devotional: { title: string; author: { name: stri
   [DevotionalNotificationType.FEATURED_DEVOTIONAL]: {
     title: devotionalNotificationPolicy.titleTemplates.featured,
     body: devotional.title,
+  },
+  [DevotionalNotificationType.STREAK_AT_RISK]: {
+    title: devotionalNotificationPolicy.titleTemplates.streakRisk,
+    body: `Retoma "${devotional.title}" y protege tu racha de hoy.`,
   },
   [DevotionalNotificationType.EDITOR_DEVOTIONAL_REVIEW_REQUIRED]: {
     title: devotionalNotificationPolicy.titleTemplates.editorReviewRequired,
@@ -289,6 +300,7 @@ const isPreferenceEnabled = (params: {
     devotionalNotificationsEnabled: boolean
     followedCreatorNotificationsEnabled: boolean
     featuredDevotionalNotificationsEnabled: boolean
+    streakRiskNotificationsEnabled: boolean
     authorModerationNotificationsEnabled: boolean
     editorReviewNotificationsEnabled: boolean
   } | null
@@ -308,6 +320,13 @@ const isPreferenceEnabled = (params: {
     return (
       settings?.devotionalNotificationsEnabled === true &&
       settings.featuredDevotionalNotificationsEnabled
+    )
+  }
+
+  if (params.type === DevotionalNotificationType.STREAK_AT_RISK) {
+    return (
+      settings?.devotionalNotificationsEnabled === true &&
+      settings.streakRiskNotificationsEnabled
     )
   }
 
@@ -334,7 +353,8 @@ const isNotificationEligibleForDevotional = (params: {
 }) => {
   if (
     params.type === DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL ||
-    params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL
+    params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL ||
+    params.type === DevotionalNotificationType.STREAK_AT_RISK
   ) {
     return (
       params.moderationStatus === DevotionalModerationStatus.CLEAR &&
@@ -374,6 +394,7 @@ export const updateNotificationPreferences = async (
     devotional_notifications_enabled: boolean
     followed_creator_notifications_enabled: boolean
     featured_devotional_notifications_enabled: boolean
+    streak_risk_notifications_enabled: boolean
     author_moderation_notifications_enabled: boolean
     editor_review_notifications_enabled: boolean
   }
@@ -384,6 +405,7 @@ export const updateNotificationPreferences = async (
       input.followed_creator_notifications_enabled,
     featuredDevotionalNotificationsEnabled:
       input.featured_devotional_notifications_enabled,
+    streakRiskNotificationsEnabled: input.streak_risk_notifications_enabled,
     authorModerationNotificationsEnabled:
       input.author_moderation_notifications_enabled,
     editorReviewNotificationsEnabled: input.editor_review_notifications_enabled,
@@ -672,6 +694,228 @@ export const sendDevotionalNotifications = async (params: {
   })
 
   return {
+    sent,
+    provider_accepted: providerAccepted,
+    failed,
+    token_deactivated: tokenDeactivated,
+  }
+}
+
+export const sendStreakRiskNotifications = async (now = new Date()) => {
+  let processedUsers = 0
+  let eligibleUsers = 0
+  let sent = 0
+  let providerAccepted = 0
+  let failed = 0
+  let tokenDeactivated = 0
+  let cursorUserId: string | undefined
+
+  while (true) {
+    const streaks = await prisma.userStreak.findMany({
+      where: {
+        currentStreak: {
+          gte: 2,
+        },
+      },
+      orderBy: {
+        userId: 'asc',
+      },
+      take: 100,
+      ...(cursorUserId
+        ? {
+            cursor: { userId: cursorUserId },
+            skip: 1,
+          }
+        : {}),
+      select: { userId: true },
+    })
+
+    if (streaks.length === 0) {
+      break
+    }
+
+    for (const streak of streaks) {
+      processedUsers += 1
+
+      const reconciled = await reconcileUserStreak({ userId: streak.userId })
+      if (reconciled.currentStreak < 2) {
+        continue
+      }
+
+      const context = await resolveUserLocalDayContext(prisma, streak.userId, now)
+      if (context.localHour < 18) {
+        continue
+      }
+
+      const deviceTokens = await listEligibleDeviceTokens([streak.userId])
+      if (deviceTokens.length === 0) {
+        continue
+      }
+
+      const settings = deviceTokens[0]?.user.settings
+      if (
+        !settings ||
+        settings.devotionalNotificationsEnabled !== true ||
+        settings.streakRiskNotificationsEnabled !== true
+      ) {
+        continue
+      }
+
+      const completedTodayCount = await prisma.devotionalReadComplete.count({
+        where: {
+          userId: streak.userId,
+          createdAt: {
+            gte: context.dayWindowStart,
+            lt: context.nextDayWindowStart,
+          },
+        },
+      })
+      if (completedTodayCount > 0) {
+        continue
+      }
+
+      const acceptedToday = await prisma.devotionalNotificationSend.count({
+        where: {
+          userId: streak.userId,
+          type: DevotionalNotificationType.STREAK_AT_RISK,
+          providerAcceptedAt: {
+            gte: context.dayWindowStart,
+            lt: context.nextDayWindowStart,
+          },
+        },
+      })
+      if (acceptedToday > 0) {
+        continue
+      }
+
+      const dailyFeatured = await resolveDailyFeaturedForUser({
+        userId: streak.userId,
+        now,
+      })
+      if (!dailyFeatured) {
+        continue
+      }
+
+      const devotional = await prisma.devotional.findUnique({
+        where: { id: dailyFeatured.devotional.id },
+        include: {
+          author: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
+
+      if (
+        !devotional ||
+        !isNotificationEligibleForDevotional({
+          type: DevotionalNotificationType.STREAK_AT_RISK,
+          moderationStatus: devotional.moderationStatus,
+          publicationState: devotional.publicationState,
+        })
+      ) {
+        continue
+      }
+
+      eligibleUsers += 1
+      const messageTemplates = buildNotificationBody(devotional)
+      const payload = messageTemplates[DevotionalNotificationType.STREAK_AT_RISK]
+      const imageUrl = await resolveImageUrl({
+        devotionalId: devotional.id,
+        value: devotional.imageUrl,
+      })
+
+      for (const deviceToken of deviceTokens) {
+        const createdSend = await prisma.devotionalNotificationSend.create({
+          data: {
+            devotionalId: devotional.id,
+            userId: deviceToken.userId,
+            deviceTokenId: deviceToken.id,
+            type: DevotionalNotificationType.STREAK_AT_RISK,
+            title: payload.title,
+            body: payload.body,
+            imageUrl,
+            payload: {
+              type: DevotionalNotificationType.STREAK_AT_RISK,
+              title: payload.title,
+              body: payload.body,
+              devotional_id: devotional.id,
+              image_url: imageUrl,
+              local_date: context.localToday,
+            },
+          },
+        })
+
+        sent += 1
+
+        const providerResult = await sendPushMessage({
+          token: deviceToken.token,
+          title: payload.title,
+          body: payload.body,
+          imageUrl,
+          data: {
+            type: DevotionalNotificationType.STREAK_AT_RISK,
+            title: payload.title,
+            body: payload.body,
+            devotional_id: devotional.id,
+            ...(imageUrl ? { image_url: imageUrl } : {}),
+          },
+        })
+
+        if (providerResult.providerAccepted) {
+          providerAccepted += 1
+          await prisma.devotionalNotificationSend.update({
+            where: { id: createdSend.id },
+            data: {
+              providerAcceptedAt: new Date(),
+              providerMessageId: providerResult.providerMessageId ?? null,
+            },
+          })
+          continue
+        }
+
+        failed += 1
+        const failureCode = providerResult.failureCode ?? 'FCM_REQUEST_FAILED'
+        const updatePayload: Prisma.DevotionalNotificationSendUpdateInput = {
+          failedAt: new Date(),
+          failureCode,
+        }
+
+        if (providerResult.shouldDeactivateToken) {
+          tokenDeactivated += 1
+          updatePayload.tokenDeactivatedAt = new Date()
+          await prisma.deviceToken.update({
+            where: { id: deviceToken.id },
+            data: {
+              isActive: false,
+            },
+          })
+        }
+
+        await prisma.devotionalNotificationSend.update({
+          where: { id: createdSend.id },
+          data: updatePayload,
+        })
+      }
+    }
+
+    cursorUserId = streaks[streaks.length - 1]?.userId
+  }
+
+  console.log('[DevotionalNotifications] Completed streak-risk send', {
+    processedUsers,
+    eligibleUsers,
+    sent,
+    providerAccepted,
+    failed,
+    tokenDeactivated,
+  })
+
+  return {
+    processed_users: processedUsers,
+    eligible_users: eligibleUsers,
     sent,
     provider_accepted: providerAccepted,
     failed,

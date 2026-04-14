@@ -1,6 +1,7 @@
 import crypto from 'crypto'
 import { Prisma, UserStreak, UserStreakFreezeEventType } from '@prisma/client'
 import { prisma } from '../../config/db'
+import { resolveDailyFeaturedForUser } from './devotionalPersonalization.service'
 
 const DEFAULT_STREAK_TIMEZONE = 'America/Bogota'
 const STREAK_FREEZE_PROGRESS_TARGET = 7
@@ -448,6 +449,16 @@ export const getDevotionalFeedHeader = async (params: { userId: string }) => {
         dayWindowStart: context.dayWindowStart,
         nextDayWindowStart: context.nextDayWindowStart,
       })
+      const dailyFeatured = await resolveDailyFeaturedForUser({
+        userId: params.userId,
+        now: new Date(),
+        db: tx,
+      })
+      const primaryCtaType = !dailyFeatured
+        ? 'BROWSE_FEED'
+        : completedToday
+          ? 'DAY_COMPLETED'
+          : 'OPEN_DAILY_FEATURED'
 
       return {
         streak: {
@@ -456,11 +467,16 @@ export const getDevotionalFeedHeader = async (params: { userId: string }) => {
           streak_freeze_count: streak.streakFreezeCount,
         },
         completed_today: completedToday,
-        daily_featured: null,
+        daily_featured: dailyFeatured?.devotional ?? null,
         primary_cta: {
-          type: completedToday ? 'DAY_COMPLETED' : 'COMPLETE_TODAY',
-          label: completedToday ? 'Día completado' : 'Completa tu día',
-          devotional_id: null,
+          type: primaryCtaType,
+          label:
+            primaryCtaType === 'BROWSE_FEED'
+              ? 'Seguir explorando'
+              : completedToday
+                ? 'Día completado'
+                : 'Completa tu día',
+          devotional_id: dailyFeatured?.devotional.id ?? null,
         },
       }
     })

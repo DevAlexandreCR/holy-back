@@ -76,6 +76,7 @@ export const devotionalNotificationPolicy = {
   titleTemplates: {
     followedCreator: 'Nuevo devocional de alguien que sigues',
     featured: 'Devocional destacado para ti',
+    streakRisk: 'No pierdas tu racha hoy',
     editorReviewRequired: 'Nuevo devocional en revisión',
     authorApproved: 'Tu devocional fue aprobado',
     authorRestricted: 'Tu devocional fue restringido',

@@ -67,9 +67,21 @@ enum DeviceOsPermissionStatus {
 enum DevotionalNotificationType {
   FOLLOWED_CREATOR_NEW_DEVOTIONAL
   FEATURED_DEVOTIONAL
+  STREAK_AT_RISK
   EDITOR_DEVOTIONAL_REVIEW_REQUIRED
   AUTHOR_DEVOTIONAL_APPROVED
   AUTHOR_DEVOTIONAL_RESTRICTED
+}
+
+enum DevotionalDailyFeaturedSelectionMode {
+  BASE_SCORE
+  BASE_SCORE_PLUS_AFFINITY
+}
+
+enum DevotionalAffinitySignalType {
+  READ_COMPLETE
+  SAVE
+  SHARE
 }
 
 enum ShareAttributionEventType {
@@ -191,6 +203,9 @@ model User {
   deviceTokens                    DeviceToken[]
   appSessionEvents                AppSessionEvent[]
   notificationSends               DevotionalNotificationSend[]
+  devotionalTagAffinities         UserDevotionalTagAffinity[]
+  dailyFeaturedDevotionals        UserDailyFeaturedDevotional[]
+  devotionalAffinitySignalEvents  DevotionalAffinitySignalEvent[]
   userModerationActionsReceived   UserModerationAction[]             @relation("UserModerationActionTarget")
   userModerationActionsTaken      UserModerationAction[]             @relation("UserModerationActionActor")
   shareAttributionSources         DevotionalShareAttributionSource[] @relation("ShareAttributionSharer")
@@ -228,6 +243,7 @@ model UserSettings {
   devotionalNotificationsEnabled         Boolean       @default(true) @map("devotional_notifications_enabled")
   followedCreatorNotificationsEnabled    Boolean       @default(true) @map("followed_creator_notifications_enabled")
   featuredDevotionalNotificationsEnabled Boolean       @default(true) @map("featured_devotional_notifications_enabled")
+  streakRiskNotificationsEnabled         Boolean       @default(true) @map("streak_risk_notifications_enabled")
   authorModerationNotificationsEnabled   Boolean       @default(true) @map("author_moderation_notifications_enabled")
   editorReviewNotificationsEnabled       Boolean       @default(true) @map("editor_review_notifications_enabled")
   createdAt                              DateTime      @default(now()) @map("created_at")
@@ -432,12 +448,102 @@ model Devotional {
   stateTransitionEvents   DevotionalStateTransitionEvent[]
   dailyMetrics            DevotionalDailyMetric[]
   shareAttributionSources DevotionalShareAttributionSource[]
+  tagAssignments          DevotionalTagAssignment[]
+  dailyFeatureCandidates  DevotionalDailyFeatureCandidate[]
+  dailyFeaturedLocks      UserDailyFeaturedDevotional[]
+  affinitySignalEvents    DevotionalAffinitySignalEvent[]
 
   @@index([publicationState, moderationStatus, rankingScore, lastScoredAt], map: "devotions_feed_rank_idx")
   @@index([publicationState, moderationStatus, publishedAt], map: "devotions_pub_vis_idx")
   @@index([authorId])
   @@index([moderatedBy])
   @@map("devotionals")
+}
+
+model DevotionalTag {
+  id          Int                      @id @default(autoincrement())
+  name        String                   @unique @db.VarChar(64)
+  createdAt   DateTime                 @default(now()) @map("created_at")
+  updatedAt   DateTime                 @updatedAt @map("updated_at")
+  assignments DevotionalTagAssignment[]
+  affinities  UserDevotionalTagAffinity[]
+
+  @@map("devotional_tags")
+}
+
+model DevotionalTagAssignment {
+  devotionalId String       @map("devotional_id") @db.Char(36)
+  tagId        Int          @map("tag_id")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  devotional   Devotional   @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  tag          DevotionalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([devotionalId, tagId])
+  @@index([tagId])
+  @@map("devotional_tag_assignments")
+}
+
+model UserDevotionalTagAffinity {
+  userId       String        @map("user_id") @db.Char(36)
+  tagId        Int           @map("tag_id")
+  score        Float         @default(0)
+  lastSignalAt DateTime      @default(now()) @map("last_signal_at")
+  lastDecayAt  DateTime      @default(now()) @map("last_decay_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tag          DevotionalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([userId, tagId])
+  @@index([tagId, score])
+  @@index([userId, score])
+  @@map("user_devotional_tag_affinity")
+}
+
+model DevotionalDailyFeatureCandidate {
+  id          String      @id @default(uuid()) @db.Char(36)
+  localDate   String      @map("local_date")
+  devotionalId String     @map("devotional_id") @db.Char(36)
+  baseScore   Float       @default(0) @map("base_score")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  devotional  Devotional  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  userLocks   UserDailyFeaturedDevotional[]
+
+  @@unique([localDate, devotionalId])
+  @@index([localDate, baseScore])
+  @@map("devotional_daily_feature_candidates")
+}
+
+model UserDailyFeaturedDevotional {
+  userId        String                                @map("user_id") @db.Char(36)
+  localDate     String                                @map("local_date")
+  devotionalId  String                                @map("devotional_id") @db.Char(36)
+  candidateId   String                                @map("candidate_id") @db.Char(36)
+  selectionMode DevotionalDailyFeaturedSelectionMode  @map("selection_mode")
+  createdAt     DateTime                              @default(now()) @map("created_at")
+  user          User                                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional    Devotional                            @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  candidate     DevotionalDailyFeatureCandidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@id([userId, localDate])
+  @@index([devotionalId])
+  @@index([candidateId])
+  @@map("user_daily_featured_devotionals")
+}
+
+model DevotionalAffinitySignalEvent {
+  id           String                      @id @default(uuid()) @db.Char(36)
+  userId       String                      @map("user_id") @db.Char(36)
+  devotionalId String                      @map("devotional_id") @db.Char(36)
+  signalType   DevotionalAffinitySignalType @map("signal_type")
+  createdAt    DateTime                    @default(now()) @map("created_at")
+  user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  devotional   Devotional                  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, devotionalId, signalType])
+  @@index([devotionalId, signalType])
+  @@map("devotional_affinity_signal_events")
 }
 
 model DevotionalVerseReference {

@@ -19,6 +19,7 @@ export const notificationPreferencesSchema = z.object({
   devotional_notifications_enabled: z.boolean(),
   followed_creator_notifications_enabled: z.boolean(),
   featured_devotional_notifications_enabled: z.boolean(),
+  streak_risk_notifications_enabled: z.boolean(),
   author_moderation_notifications_enabled: z.boolean(),
   editor_review_notifications_enabled: z.boolean(),
 })

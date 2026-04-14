@@ -107,6 +107,18 @@ const USER_STREAK_MAINTENANCE_CRON = readEnvAny(
   ['USER_STREAK_MAINTENANCE_CRON'],
   '0 * * * *',
 );
+const DEVOTIONAL_DAILY_FEATURE_CANDIDATES_CRON = readEnvAny(
+  ['DEVOTIONAL_DAILY_FEATURE_CANDIDATES_CRON'],
+  '0 * * * *',
+);
+const DEVOTIONAL_TAG_AFFINITY_DECAY_CRON = readEnvAny(
+  ['DEVOTIONAL_TAG_AFFINITY_DECAY_CRON'],
+  '10 0 * * *',
+);
+const DEVOTIONAL_STREAK_RISK_CRON = readEnvAny(
+  ['DEVOTIONAL_STREAK_RISK_CRON'],
+  '*/15 * * * *',
+);
 const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
 const PUBLIC_API_BASE_URL = readEnvAny(['PUBLIC_API_BASE_URL'], PUBLIC_BASE_URL);
 
@@ -133,6 +145,13 @@ const OPENAI_DEVOTIONAL_HOOK_MODEL = readEnvOptional([
 const OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS'], '5000'),
   'OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS',
+);
+const OPENAI_DEVOTIONAL_TAG_MODEL = readEnvOptional([
+  'OPENAI_DEVOTIONAL_TAG_MODEL',
+]);
+const OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS = toNumber(
+  readEnvAny(['OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS'], '5000'),
+  'OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS',
 );
 const FCM_PROJECT_ID = readEnvOptional(['FCM_PROJECT_ID']);
 const FCM_CLIENT_EMAIL = readEnvOptional(['FCM_CLIENT_EMAIL']);
@@ -168,6 +187,10 @@ export const config = {
     bibleVersionsCron: BIBLE_VERSIONS_CRON,
     dailyAggregatesCron: DAILY_AGGREGATES_CRON,
     userStreakMaintenanceCron: USER_STREAK_MAINTENANCE_CRON,
+    devotionalDailyFeatureCandidatesCron:
+      DEVOTIONAL_DAILY_FEATURE_CANDIDATES_CRON,
+    devotionalTagAffinityDecayCron: DEVOTIONAL_TAG_AFFINITY_DECAY_CRON,
+    devotionalStreakRiskCron: DEVOTIONAL_STREAK_RISK_CRON,
   },
   mail: {
     host: MAIL_HOST,
@@ -186,6 +209,8 @@ export const config = {
     moderationTimeoutMs: OPENAI_MODERATION_TIMEOUT_MS,
     devotionalHookModel: OPENAI_DEVOTIONAL_HOOK_MODEL,
     devotionalHookTimeoutMs: OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS,
+    devotionalTagModel: OPENAI_DEVOTIONAL_TAG_MODEL,
+    devotionalTagTimeoutMs: OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS,
   },
   notifications: {
     fcmProjectId: FCM_PROJECT_ID,
