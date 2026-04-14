@@ -38,6 +38,7 @@ import {
   extractPlainText,
   qualityGateMessageForStatus,
 } from './devotionalFeedContent'
+import { applyReadCompleteEngagement } from './devotionalEngagement.service'
 import { devotionalHookGenerator } from './devotionalHookGenerator.service'
 import { formatPrimaryReferenceLabel } from './devotionalReference'
 import { moderateText, toModerationAuditMetadata } from './devotional.moderation'
@@ -989,47 +990,6 @@ const getCurrentReadCompleteCount = async (devotionalId: string) => {
   return updated?.readCompleteCount ?? 0
 }
 
-const syncReadCompleteCount = async (devotionalId: string) => {
-  const readCompleteCount = await prisma.devotionalReadComplete.count({
-    where: { devotionalId },
-  })
-
-  const updated = await prisma.devotional.update({
-    where: { id: devotionalId },
-    data: { readCompleteCount },
-    select: { readCompleteCount: true },
-  })
-
-  return updated.readCompleteCount
-}
-
-const insertDevotionalReadComplete = async (params: {
-  devotionalId: string
-  userId: string
-  deliveryId?: string | null
-}) => {
-  const created = await withRetryableWriteConflict(() =>
-    prisma.$executeRaw`
-      INSERT IGNORE INTO devotional_read_completions (
-        id,
-        devotional_id,
-        user_id,
-        delivery_id,
-        created_at
-      )
-      VALUES (
-        ${crypto.randomUUID()},
-        ${params.devotionalId},
-        ${params.userId},
-        ${params.deliveryId ?? null},
-        NOW()
-      )
-    `
-  )
-
-  return Number(created) > 0
-}
-
 const previewFeedDeliveryToken = (token?: string | null) => {
   if (!token) {
     return null
@@ -1093,29 +1053,6 @@ const resolveInteractionFeedDeliveryId = async (
 
   return attribution.deliveryId
 }
-
-const applyReadCompleteSideEffects = async (params: {
-  devotionalId: string
-  userId: string
-  creatorId: string
-}) =>
-  withRetryableWriteConflict(() =>
-    prisma.$transaction(async (tx) => {
-      const updated = await tx.devotional.update({
-        where: { id: params.devotionalId },
-        data: { readCompleteCount: { increment: 1 } },
-        select: { readCompleteCount: true },
-      })
-
-      await upsertCreatorAffinity(tx, {
-        userId: params.userId,
-        creatorId: params.creatorId,
-        scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
-      })
-
-      return updated.readCompleteCount
-    })
-  )
 
 const listFollowingSelections = (params: {
   candidates: DevotionalWithRelations[]
@@ -2568,39 +2505,21 @@ export const markReadComplete = async (params: {
     devotionalId: params.devotionalId,
     deliveryToken: params.deliveryToken,
   })
-
-  const created = await insertDevotionalReadComplete({
+  const engagement = await applyReadCompleteEngagement({
     devotionalId: params.devotionalId,
     userId: params.userId,
     deliveryId,
+    incrementCreatorAffinity: (tx) =>
+      upsertCreatorAffinity(tx, {
+        userId: params.userId,
+        creatorId: devotional.authorId,
+        scoreDelta: devotionalFeedPolicy.affinitySignals.readComplete,
+      }),
   })
 
-  if (!created) {
-    const readCompleteCount = await getCurrentReadCompleteCount(params.devotionalId)
-
-    return {
-      readComplete: true,
-      readCompleteCount,
-    }
-  }
-
-  let readCompleteCount: number
-
-  try {
-    readCompleteCount = await applyReadCompleteSideEffects({
-      devotionalId: params.devotionalId,
-      userId: params.userId,
-      creatorId: devotional.authorId,
-    })
-  } catch (error) {
-    if (!isRetryableWriteConflictError(error)) {
-      throw error
-    }
-
-    readCompleteCount = await withRetryableWriteConflict(() =>
-      syncReadCompleteCount(params.devotionalId)
-    )
-  }
+  const readCompleteCount = engagement.created
+    ? engagement.readCompleteCount
+    : await getCurrentReadCompleteCount(params.devotionalId)
 
   if (params.shareToken) {
     await recordFirstAttributedReadComplete({

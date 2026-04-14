@@ -39,6 +39,7 @@ import {
   updateComment,
   updateDevotional,
 } from './devotional.service'
+import { getDevotionalFeedHeader } from './devotionalEngagement.service'
 import { moderateImageUpload, toModerationAuditMetadata } from './devotional.moderation'
 import {
   commentSchema,
@@ -176,6 +177,12 @@ export const listFeedHandler = async (req: Request, res: Response) => {
     mode: query.mode,
   })
 
+  res.json({ data: result })
+}
+
+export const getFeedHeaderHandler = async (req: Request, res: Response) => {
+  ensureAuth(req)
+  const result = await getDevotionalFeedHeader({ userId: req.user!.sub })
   res.json({ data: result })
 }
 

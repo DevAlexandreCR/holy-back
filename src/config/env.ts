@@ -103,6 +103,10 @@ const RESET_TOKEN_EXPIRES_MINUTES = toNumber(
 );
 const BIBLE_VERSIONS_CRON = readEnvAny(['BIBLE_VERSIONS_CRON'], '15 0 * * *');
 const DAILY_AGGREGATES_CRON = readEnvAny(['DAILY_AGGREGATES_CRON'], '25 0 * * *');
+const USER_STREAK_MAINTENANCE_CRON = readEnvAny(
+  ['USER_STREAK_MAINTENANCE_CRON'],
+  '0 * * * *',
+);
 const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
 const PUBLIC_API_BASE_URL = readEnvAny(['PUBLIC_API_BASE_URL'], PUBLIC_BASE_URL);
 
@@ -163,6 +167,7 @@ export const config = {
   jobs: {
     bibleVersionsCron: BIBLE_VERSIONS_CRON,
     dailyAggregatesCron: DAILY_AGGREGATES_CRON,
+    userStreakMaintenanceCron: USER_STREAK_MAINTENANCE_CRON,
   },
   mail: {
     host: MAIL_HOST,

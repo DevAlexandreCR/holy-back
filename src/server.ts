@@ -11,6 +11,10 @@ import {
   registerDevotionalRankingJob,
   runDevotionalRankingOnce,
 } from './jobs/devotionalRankingJob';
+import {
+  registerUserStreakMaintenanceJob,
+  runUserStreakMaintenanceOnce,
+} from './jobs/userStreakMaintenanceJob';
 
 const { port } = config.app;
 let server: Server | undefined;
@@ -21,6 +25,9 @@ let devotionalRankingJob:
 let dailyAggregatesJob:
   | ReturnType<typeof registerDailyAggregatesJob>
   | undefined;
+let userStreakMaintenanceJob:
+  | ReturnType<typeof registerUserStreakMaintenanceJob>
+  | undefined;
 
 const start = async (): Promise<void> => {
   try {
@@ -28,6 +35,7 @@ const start = async (): Promise<void> => {
     await syncBibleVersionsOnce();
     await runDevotionalRankingOnce();
     await runDailyAggregatesOnce();
+    await runUserStreakMaintenanceOnce();
     server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on port ${port}`);
@@ -35,6 +43,7 @@ const start = async (): Promise<void> => {
     bibleVersionsJob = registerBibleVersionsJob();
     devotionalRankingJob = registerDevotionalRankingJob();
     dailyAggregatesJob = registerDailyAggregatesJob();
+    userStreakMaintenanceJob = registerUserStreakMaintenanceJob();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to start server', error);
@@ -54,6 +63,9 @@ const shutdown = async (signal: string): Promise<void> => {
     }
     if (dailyAggregatesJob) {
       dailyAggregatesJob.stop();
+    }
+    if (userStreakMaintenanceJob) {
+      userStreakMaintenanceJob.stop();
     }
     if (server) {
       await new Promise<void>((resolve) => server?.close(() => resolve()));

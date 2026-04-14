@@ -10,6 +10,7 @@ import {
   deleteCommentHandler,
   deleteDevotionalHandler,
   getDevotionalHandler,
+  getFeedHeaderHandler,
   listCommentsHandler,
   listDevotionalsHandler,
   listFeedHandler,
@@ -42,6 +43,7 @@ const upload = multer({
 })
 
 router.get('/feed', requireAuth, listFeedHandler)
+router.get('/feed/header', requireAuth, getFeedHeaderHandler)
 router.post('/feed/events', requireAuth, recordFeedEventsHandler)
 router.post('/upload-image', requireAuth, upload.single('image'), uploadImageHandler)
 

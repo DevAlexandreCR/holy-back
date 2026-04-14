@@ -128,6 +128,13 @@ enum DevotionalQualityGateStatus {
   NEEDS_CLEARER_OPENING
 }
 
+enum UserStreakFreezeEventType {
+  GRANTED
+  GRANT_SKIPPED_AT_CAP
+  CONSUMED
+  RESET
+}
+
 model User {
   id                              String                             @id @default(uuid()) @db.Char(36)
   name                            String
@@ -190,6 +197,8 @@ model User {
   shareAttributionEvents          DevotionalShareAttributionEvent[]  @relation("ShareAttributionUser")
   creatorDailyMetrics             CreatorDailyMetric[]
   userActivityDailyMetrics        UserActivityDailyMetric[]
+  streak                          UserStreak?
+  streakFreezeEvents              UserStreakFreezeEvent[]
 
   @@map("users")
 }
@@ -228,6 +237,41 @@ model UserSettings {
 
   @@unique([userId])
   @@map("user_settings")
+}
+
+model UserStreak {
+  userId               String   @id @map("user_id") @db.Char(36)
+  currentStreak        Int      @default(0) @map("current_streak")
+  longestStreak        Int      @default(0) @map("longest_streak")
+  lastCompletedDate    String?  @map("last_completed_date")
+  streakFreezeCount    Int      @default(0) @map("streak_freeze_count")
+  freezeProgressCount  Int      @default(0) @map("freeze_progress_count")
+  lastGapEvaluatedDate String?  @map("last_gap_evaluated_date")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([currentStreak])
+  @@index([lastCompletedDate])
+  @@map("user_streaks")
+}
+
+model UserStreakFreezeEvent {
+  id           String                   @id @default(uuid()) @db.Char(36)
+  userId       String                   @map("user_id") @db.Char(36)
+  eventType    UserStreakFreezeEventType @map("event_type")
+  amount       Int
+  balanceAfter Int                      @map("balance_after")
+  reason       String                   @db.VarChar(191)
+  metadata     Json?
+  createdAt    DateTime                 @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([eventType, createdAt])
+  @@map("user_streak_freeze_events")
 }
 
 model LibraryVerse {
