@@ -1,10 +1,10 @@
 import crypto from 'crypto'
 import { Prisma, UserStreak, UserStreakFreezeEventType } from '@prisma/client'
 import { prisma } from '../../config/db'
+import { config } from '../../config/env'
 import { resolveDailyFeaturedForUser } from './devotionalPersonalization.service'
 
 const DEFAULT_STREAK_TIMEZONE = 'America/Bogota'
-const STREAK_FREEZE_PROGRESS_TARGET = 7
 const RETRYABLE_WRITE_CONFLICT_ERROR_CODES = new Set(['P2034'])
 const RETRYABLE_WRITE_CONFLICT_MAX_ATTEMPTS = 5
 
@@ -377,10 +377,12 @@ const applyFirstDailyCompletion = async (
 
   let nextFreezeCount = params.streak.streakFreezeCount
   let nextFreezeProgressCount = params.streak.freezeProgressCount + 1
+  const freezeGrantIntervalDays = config.engagement.freeze.grantIntervalDays
+  const freezeBalanceCap = config.engagement.freeze.balanceCap
 
-  if (nextFreezeProgressCount >= STREAK_FREEZE_PROGRESS_TARGET) {
-    if (nextCurrentStreak >= 3 && nextFreezeCount === 0) {
-      nextFreezeCount = 1
+  if (nextFreezeProgressCount >= freezeGrantIntervalDays) {
+    if (nextCurrentStreak >= 3 && nextFreezeCount < freezeBalanceCap) {
+      nextFreezeCount = Math.min(freezeBalanceCap, nextFreezeCount + 1)
       nextFreezeProgressCount = 0
 
       await createFreezeEvent(tx, {
@@ -388,13 +390,15 @@ const applyFirstDailyCompletion = async (
         eventType: UserStreakFreezeEventType.GRANTED,
         amount: 1,
         balanceAfter: nextFreezeCount,
-        reason: 'SEVEN_DAY_PROGRESS_REWARD',
+        reason: 'STREAK_PROGRESS_REWARD',
         metadata: {
           granted_on_date: params.localToday,
           current_streak: nextCurrentStreak,
+          freeze_cap: freezeBalanceCap,
+          grant_interval_days: freezeGrantIntervalDays,
         },
       })
-    } else if (nextCurrentStreak >= 3 && nextFreezeCount === 1) {
+    } else if (nextCurrentStreak >= 3 && nextFreezeCount >= freezeBalanceCap) {
       nextFreezeProgressCount = 0
 
       await createFreezeEvent(tx, {
@@ -406,6 +410,8 @@ const applyFirstDailyCompletion = async (
         metadata: {
           skipped_on_date: params.localToday,
           current_streak: nextCurrentStreak,
+          freeze_cap: freezeBalanceCap,
+          grant_interval_days: freezeGrantIntervalDays,
         },
       })
     }

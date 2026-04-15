@@ -54,6 +54,21 @@ const toOptionalBoolean = (value: string | undefined, keyLabel: string): boolean
   throw new Error(`Environment variable ${keyLabel} must be "true" or "false"`);
 };
 
+const toBoundedNumber = (
+  value: string,
+  keyLabel: string,
+  options: { min?: number; max?: number } = {},
+): number => {
+  const parsed = toNumber(value, keyLabel);
+  if (options.min !== undefined && parsed < options.min) {
+    throw new Error(`Environment variable ${keyLabel} must be >= ${options.min}`);
+  }
+  if (options.max !== undefined && parsed > options.max) {
+    throw new Error(`Environment variable ${keyLabel} must be <= ${options.max}`);
+  }
+  return parsed;
+};
+
 const ensureRequired = (): void => {
   const missing: string[] = [];
 
@@ -118,6 +133,61 @@ const DEVOTIONAL_TAG_AFFINITY_DECAY_CRON = readEnvAny(
 const DEVOTIONAL_STREAK_RISK_CRON = readEnvAny(
   ['DEVOTIONAL_STREAK_RISK_CRON'],
   '*/15 * * * *',
+);
+const DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER'], '0.25'),
+  'DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER',
+  { min: 0 },
+);
+const DEVOTIONAL_DAILY_FEATURED_AFFINITY_CAP = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_DAILY_FEATURED_AFFINITY_CAP'], '3'),
+  'DEVOTIONAL_DAILY_FEATURED_AFFINITY_CAP',
+  { min: 0 },
+);
+const DEVOTIONAL_FOR_YOU_AFFINITY_MULTIPLIER = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_FOR_YOU_AFFINITY_MULTIPLIER'], '0.1'),
+  'DEVOTIONAL_FOR_YOU_AFFINITY_MULTIPLIER',
+  { min: 0 },
+);
+const DEVOTIONAL_FOR_YOU_AFFINITY_CAP = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_FOR_YOU_AFFINITY_CAP'], '2'),
+  'DEVOTIONAL_FOR_YOU_AFFINITY_CAP',
+  { min: 0 },
+);
+const DEVOTIONAL_AFFINITY_WEIGHT_READ_COMPLETE = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_AFFINITY_WEIGHT_READ_COMPLETE'], '1'),
+  'DEVOTIONAL_AFFINITY_WEIGHT_READ_COMPLETE',
+  { min: 0 },
+);
+const DEVOTIONAL_AFFINITY_WEIGHT_SAVE = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_AFFINITY_WEIGHT_SAVE'], '3'),
+  'DEVOTIONAL_AFFINITY_WEIGHT_SAVE',
+  { min: 0 },
+);
+const DEVOTIONAL_AFFINITY_WEIGHT_SHARE = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_AFFINITY_WEIGHT_SHARE'], '4'),
+  'DEVOTIONAL_AFFINITY_WEIGHT_SHARE',
+  { min: 0 },
+);
+const DEVOTIONAL_STREAK_FREEZE_GRANT_INTERVAL_DAYS = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_STREAK_FREEZE_GRANT_INTERVAL_DAYS'], '7'),
+  'DEVOTIONAL_STREAK_FREEZE_GRANT_INTERVAL_DAYS',
+  { min: 1 },
+);
+const DEVOTIONAL_STREAK_FREEZE_BALANCE_CAP = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_STREAK_FREEZE_BALANCE_CAP'], '1'),
+  'DEVOTIONAL_STREAK_FREEZE_BALANCE_CAP',
+  { min: 1 },
+);
+const DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS'], '12'),
+  'DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS',
+  { min: 1 },
+);
+const DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR = toBoundedNumber(
+  readEnvAny(['DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR'], '18'),
+  'DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR',
+  { min: 0, max: 23 },
 );
 const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
 const PUBLIC_API_BASE_URL = readEnvAny(['PUBLIC_API_BASE_URL'], PUBLIC_BASE_URL);
@@ -217,6 +287,29 @@ export const config = {
     fcmClientEmail: FCM_CLIENT_EMAIL,
     fcmPrivateKey: FCM_PRIVATE_KEY,
     isConfigured: Boolean(FCM_PROJECT_ID && FCM_CLIENT_EMAIL && FCM_PRIVATE_KEY),
+  },
+  engagement: {
+    dailyFeaturedAffinity: {
+      multiplier: DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER,
+      cap: DEVOTIONAL_DAILY_FEATURED_AFFINITY_CAP,
+    },
+    forYouAffinity: {
+      multiplier: DEVOTIONAL_FOR_YOU_AFFINITY_MULTIPLIER,
+      cap: DEVOTIONAL_FOR_YOU_AFFINITY_CAP,
+    },
+    affinityWeights: {
+      readComplete: DEVOTIONAL_AFFINITY_WEIGHT_READ_COMPLETE,
+      save: DEVOTIONAL_AFFINITY_WEIGHT_SAVE,
+      share: DEVOTIONAL_AFFINITY_WEIGHT_SHARE,
+    },
+    freeze: {
+      grantIntervalDays: DEVOTIONAL_STREAK_FREEZE_GRANT_INTERVAL_DAYS,
+      balanceCap: DEVOTIONAL_STREAK_FREEZE_BALANCE_CAP,
+    },
+    notifications: {
+      featuredCooldownHours: DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS,
+      streakRiskSendAfterLocalHour: DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR,
+    },
   },
 } as const;
 

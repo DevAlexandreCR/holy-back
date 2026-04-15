@@ -137,6 +137,48 @@ const buildCooldownWhere = (
   },
 })
 
+const incrementNotificationEvaluationMetrics = async (params: {
+  date: string
+  type: DevotionalNotificationType
+  evaluatedCount: number
+  eligibleCount: number
+  skippedCount: number
+}) => {
+  if (
+    params.evaluatedCount === 0 &&
+    params.eligibleCount === 0 &&
+    params.skippedCount === 0
+  ) {
+    return
+  }
+
+  await prisma.$executeRaw`
+    INSERT INTO devotional_notification_evaluation_daily_metrics (
+      date,
+      notification_type,
+      evaluated_count,
+      eligible_count,
+      skipped_count,
+      created_at,
+      updated_at
+    )
+    VALUES (
+      ${params.date},
+      ${params.type},
+      ${params.evaluatedCount},
+      ${params.eligibleCount},
+      ${params.skippedCount},
+      NOW(),
+      NOW()
+    )
+    ON DUPLICATE KEY UPDATE
+      evaluated_count = evaluated_count + VALUES(evaluated_count),
+      eligible_count = eligible_count + VALUES(eligible_count),
+      skipped_count = skipped_count + VALUES(skipped_count),
+      updated_at = NOW()
+  `
+}
+
 const getCooldownEligibility = async (params: {
   userId: string
   type: DevotionalNotificationType
@@ -153,7 +195,7 @@ const getCooldownEligibility = async (params: {
   if (params.type === DevotionalNotificationType.FEATURED_DEVOTIONAL) {
     const since = new Date(
       params.now.getTime() -
-        devotionalNotificationPolicy.cooldowns.featuredHours * 60 * 60 * 1000
+        config.engagement.notifications.featuredCooldownHours * 60 * 60 * 1000
     )
     const existing = await prisma.devotionalNotificationSend.findFirst({
       where: {
@@ -693,6 +735,14 @@ export const sendDevotionalNotifications = async (params: {
     failureCodes: Object.fromEntries(failureCounts),
   })
 
+  await incrementNotificationEvaluationMetrics({
+    date: now.toISOString().slice(0, 10),
+    type: params.type,
+    evaluatedCount: deviceTokens.length,
+    eligibleCount: sent,
+    skippedCount: skippedByPreference + skippedByCooldown,
+  })
+
   return {
     sent,
     provider_accepted: providerAccepted,
@@ -709,6 +759,14 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
   let failed = 0
   let tokenDeactivated = 0
   let cursorUserId: string | undefined
+  const evaluationMetricsByDate = new Map<
+    string,
+    {
+      evaluatedCount: number
+      eligibleCount: number
+      skippedCount: number
+    }
+  >()
 
   while (true) {
     const streaks = await prisma.userStreak.findMany({
@@ -743,12 +801,26 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
       }
 
       const context = await resolveUserLocalDayContext(prisma, streak.userId, now)
-      if (context.localHour < 18) {
+      const dailyMetric =
+        evaluationMetricsByDate.get(context.localToday) ?? {
+          evaluatedCount: 0,
+          eligibleCount: 0,
+          skippedCount: 0,
+        }
+      dailyMetric.evaluatedCount += 1
+      evaluationMetricsByDate.set(context.localToday, dailyMetric)
+
+      if (
+        context.localHour <
+        config.engagement.notifications.streakRiskSendAfterLocalHour
+      ) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
       const deviceTokens = await listEligibleDeviceTokens([streak.userId])
       if (deviceTokens.length === 0) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
@@ -758,6 +830,7 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
         settings.devotionalNotificationsEnabled !== true ||
         settings.streakRiskNotificationsEnabled !== true
       ) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
@@ -771,6 +844,7 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
         },
       })
       if (completedTodayCount > 0) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
@@ -785,6 +859,7 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
         },
       })
       if (acceptedToday > 0) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
@@ -793,6 +868,7 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
         now,
       })
       if (!dailyFeatured) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
@@ -816,10 +892,12 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
           publicationState: devotional.publicationState,
         })
       ) {
+        dailyMetric.skippedCount += 1
         continue
       }
 
       eligibleUsers += 1
+      dailyMetric.eligibleCount += 1
       const messageTemplates = buildNotificationBody(devotional)
       const payload = messageTemplates[DevotionalNotificationType.STREAK_AT_RISK]
       const imageUrl = await resolveImageUrl({
@@ -902,6 +980,16 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
     }
 
     cursorUserId = streaks[streaks.length - 1]?.userId
+  }
+
+  for (const [date, metric] of evaluationMetricsByDate.entries()) {
+    await incrementNotificationEvaluationMetrics({
+      date,
+      type: DevotionalNotificationType.STREAK_AT_RISK,
+      evaluatedCount: metric.evaluatedCount,
+      eligibleCount: metric.eligibleCount,
+      skippedCount: metric.skippedCount,
+    })
   }
 
   console.log('[DevotionalNotifications] Completed streak-risk send', {

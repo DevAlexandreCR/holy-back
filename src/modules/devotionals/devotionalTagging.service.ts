@@ -157,7 +157,11 @@ const resolveOpenAITags = async (params: {
     '/responses',
     {
       model: config.openai.devotionalTagModel,
-      input: buildPrompt(params),
+      input: buildPrompt({
+        title: params.title,
+        plainText: params.plainText,
+        tagNames: params.availableTagNames,
+      }),
       text: {
         format: {
           type: 'json_schema',

@@ -1,4 +1,5 @@
 import { prisma } from '../../config/db'
+import { rebuildDevotionalEngagementAggregates } from '../devotionals/devotionalEngagementReporting.service'
 
 const toDateKey = (value: Date | string) =>
   (value instanceof Date ? value.toISOString() : value).slice(0, 10)
@@ -978,6 +979,11 @@ export const rebuildDailyAggregates = async (params?: {
     }
   })
 
+  const engagementResult = await rebuildDevotionalEngagementAggregates({
+    startDate,
+    endDate,
+  })
+
   return {
     start_date: startKey,
     end_date: endKey,
@@ -988,5 +994,7 @@ export const rebuildDailyAggregates = async (params?: {
     user_activity_rows: userActivityRows.length,
     share_attribution_rows: shareAttributionRows.length,
     notification_rows: notificationRows.length,
+    daily_featured_engagement_rows: engagementResult.daily_featured_rows,
+    tag_engagement_rows: engagementResult.tag_rows,
   }
 }

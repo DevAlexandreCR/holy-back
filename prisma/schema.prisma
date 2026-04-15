@@ -270,23 +270,27 @@ model UserStreak {
 
   @@index([currentStreak])
   @@index([lastCompletedDate])
+  @@index([currentStreak, userId])
+  @@index([lastCompletedDate, userId])
+  @@index([lastGapEvaluatedDate, userId])
   @@map("user_streaks")
 }
 
 model UserStreakFreezeEvent {
-  id           String                   @id @default(uuid()) @db.Char(36)
-  userId       String                   @map("user_id") @db.Char(36)
+  id           String                    @id @default(uuid()) @db.Char(36)
+  userId       String                    @map("user_id") @db.Char(36)
   eventType    UserStreakFreezeEventType @map("event_type")
   amount       Int
-  balanceAfter Int                      @map("balance_after")
-  reason       String                   @db.VarChar(191)
+  balanceAfter Int                       @map("balance_after")
+  reason       String                    @db.VarChar(191)
   metadata     Json?
-  createdAt    DateTime                 @default(now()) @map("created_at")
+  createdAt    DateTime                  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
   @@index([eventType, createdAt])
+  @@index([userId, eventType, createdAt])
   @@map("user_streak_freeze_events")
 }
 
@@ -467,19 +471,21 @@ model DevotionalTag {
   updatedAt   DateTime                 @updatedAt @map("updated_at")
   assignments DevotionalTagAssignment[]
   affinities  UserDevotionalTagAffinity[]
+  dailyMetrics DevotionalTagEngagementDailyMetric[]
 
   @@map("devotional_tags")
 }
 
 model DevotionalTagAssignment {
-  devotionalId String       @map("devotional_id") @db.Char(36)
-  tagId        Int          @map("tag_id")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  devotional   Devotional   @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  devotionalId String        @map("devotional_id") @db.Char(36)
+  tagId        Int           @map("tag_id")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  devotional   Devotional    @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   tag          DevotionalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([devotionalId, tagId])
   @@index([tagId])
+  @@index([tagId, devotionalId])
   @@map("devotional_tag_assignments")
 }
 
@@ -501,17 +507,19 @@ model UserDevotionalTagAffinity {
 }
 
 model DevotionalDailyFeatureCandidate {
-  id          String      @id @default(uuid()) @db.Char(36)
-  localDate   String      @map("local_date")
-  devotionalId String     @map("devotional_id") @db.Char(36)
-  baseScore   Float       @default(0) @map("base_score")
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  devotional  Devotional  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+  id           String      @id @default(uuid()) @db.Char(36)
+  localDate    String      @map("local_date")
+  devotionalId String      @map("devotional_id") @db.Char(36)
+  baseScore    Float       @default(0) @map("base_score")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  devotional   Devotional  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   userLocks   UserDailyFeaturedDevotional[]
 
   @@unique([localDate, devotionalId])
   @@index([localDate, baseScore])
+  @@index([localDate, updatedAt])
+  @@index([devotionalId, localDate])
   @@map("devotional_daily_feature_candidates")
 }
 
@@ -529,6 +537,8 @@ model UserDailyFeaturedDevotional {
   @@id([userId, localDate])
   @@index([devotionalId])
   @@index([candidateId])
+  @@index([localDate, selectionMode])
+  @@index([localDate, devotionalId])
   @@map("user_daily_featured_devotionals")
 }
 
@@ -731,6 +741,7 @@ model DevotionalFeedEvent {
 
   @@index([devotionalId, type, occurredAt])
   @@index([userId, occurredAt])
+  @@index([deliveryId, type, occurredAt])
   @@map("devotional_feed_events")
 }
 
@@ -762,6 +773,7 @@ model DevotionalSave {
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
   @@index([deliveryId])
+  @@index([deliveryId, createdAt])
   @@map("devotional_saves")
 }
 
@@ -779,6 +791,7 @@ model DevotionalShareEvent {
   @@index([devotionalId, createdAt])
   @@index([userId, createdAt])
   @@index([deliveryId])
+  @@index([deliveryId, createdAt])
   @@map("devotional_share_events")
 }
 
@@ -796,6 +809,7 @@ model DevotionalReadComplete {
   @@unique([devotionalId, userId])
   @@index([userId, createdAt])
   @@index([deliveryId])
+  @@index([deliveryId, createdAt])
   @@map("devotional_read_completions")
 }
 
@@ -915,6 +929,8 @@ model DevotionalNotificationSend {
 
   @@index([type, sentAt])
   @@index([userId, type, sentAt])
+  @@index([userId, type, providerAcceptedAt])
+  @@index([userId, type, openedAt])
   @@index([deviceTokenId, sentAt])
   @@map("devotional_notification_sends")
 }
@@ -1115,6 +1131,54 @@ model NotificationDailyMetric {
   @@unique([date, notificationType])
   @@index([notificationType, date])
   @@map("notification_daily_metrics")
+}
+
+model DevotionalNotificationEvaluationDailyMetric {
+  id             Int                        @id @default(autoincrement())
+  date           String
+  notificationType DevotionalNotificationType @map("notification_type")
+  evaluatedCount Int                        @default(0) @map("evaluated_count")
+  eligibleCount  Int                        @default(0) @map("eligible_count")
+  skippedCount   Int                        @default(0) @map("skipped_count")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  @@unique([date, notificationType])
+  @@index([notificationType, date])
+  @@map("devotional_notification_evaluation_daily_metrics")
+}
+
+model DailyFeaturedEngagementDailyMetric {
+  id                              Int                               @id @default(autoincrement())
+  date                            String
+  selectionMode                   DevotionalDailyFeaturedSelectionMode @map("selection_mode")
+  locksCreated                    Int                               @default(0) @map("locks_created")
+  selectedDevotionalReadCompletes Int                               @default(0) @map("selected_devotional_read_completes")
+  createdAt                       DateTime                          @default(now()) @map("created_at")
+  updatedAt                       DateTime                          @updatedAt @map("updated_at")
+
+  @@unique([date, selectionMode])
+  @@index([selectionMode, date])
+  @@map("daily_featured_engagement_daily_metrics")
+}
+
+model DevotionalTagEngagementDailyMetric {
+  id            Int      @id @default(autoincrement())
+  date          String
+  tagId         Int      @map("tag_id")
+  deliveries    Int      @default(0)
+  opens         Int      @default(0)
+  readCompletes Int      @default(0) @map("read_completes")
+  saves         Int      @default(0)
+  shares        Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  tag DevotionalTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@unique([date, tagId])
+  @@index([tagId, date])
+  @@map("devotional_tag_engagement_daily_metrics")
 }
 
 model WebOutboundClick {

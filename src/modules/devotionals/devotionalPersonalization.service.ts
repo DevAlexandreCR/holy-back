@@ -6,6 +6,7 @@ import {
   Prisma,
 } from '@prisma/client'
 import { prisma } from '../../config/db'
+import { config } from '../../config/env'
 import { buildPreviewTextFromPlainText, extractPlainText } from './devotionalFeedContent'
 import { DEVOTIONAL_FEED_ELIGIBLE_STATES, DEVOTIONAL_WORDS_PER_MINUTE } from './devotional.policy'
 
@@ -210,14 +211,14 @@ const computePendingDecay = (params: {
 
 const getSignalWeight = (signalType: DevotionalAffinitySignalType) => {
   if (signalType === DevotionalAffinitySignalType.READ_COMPLETE) {
-    return 1
+    return config.engagement.affinityWeights.readComplete
   }
 
   if (signalType === DevotionalAffinitySignalType.SAVE) {
-    return 3
+    return config.engagement.affinityWeights.save
   }
 
-  return 4
+  return config.engagement.affinityWeights.share
 }
 
 const getCurrentBogotaDate = (now: Date) => getLocalDate(now, DEFAULT_TIMEZONE)
@@ -464,13 +465,22 @@ export const resolveDailyFeaturedForUser = async (params: {
     devotionalIds: candidates.map((item) => item.devotionalId),
     now,
   })
+  const affinityMultiplier = config.engagement.dailyFeaturedAffinity.multiplier
+  const affinityCap = config.engagement.dailyFeaturedAffinity.cap
 
   const selected = [...candidates].sort((left, right) => {
     const leftPersonalizedScore =
-      left.baseScore + Math.min(3, (affinitySums.get(left.devotionalId) ?? 0) * 0.25)
+      left.baseScore +
+      Math.min(
+        affinityCap,
+        (affinitySums.get(left.devotionalId) ?? 0) * affinityMultiplier
+      )
     const rightPersonalizedScore =
       right.baseScore +
-      Math.min(3, (affinitySums.get(right.devotionalId) ?? 0) * 0.25)
+      Math.min(
+        affinityCap,
+        (affinitySums.get(right.devotionalId) ?? 0) * affinityMultiplier
+      )
 
     if (rightPersonalizedScore !== leftPersonalizedScore) {
       return rightPersonalizedScore - leftPersonalizedScore
@@ -646,7 +656,10 @@ export const getFeedAffinityBoostByDevotionalId = async (params: {
   return new Map(
     [...affinitySums.entries()].map(([devotionalId, sum]) => [
       devotionalId,
-      Math.min(2, sum * 0.1),
+      Math.min(
+        config.engagement.forYouAffinity.cap,
+        sum * config.engagement.forYouAffinity.multiplier
+      ),
     ])
   )
 }
