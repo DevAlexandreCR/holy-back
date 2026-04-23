@@ -84,11 +84,14 @@ const getZonedDateParts = (date: Date, timezone: string) => {
   const byType = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((part) => part.type === type)?.value ?? '00'
 
+  // Some locales/Node.js versions return hour 24 for midnight instead of 0.
+  // Normalize to 0 so toUtcForLocalMidnight converges on the correct date.
+  const rawHour = Number(byType('hour'))
   return {
     year: Number(byType('year')),
     month: Number(byType('month')),
     day: Number(byType('day')),
-    hour: Number(byType('hour')),
+    hour: rawHour === 24 ? 0 : rawHour,
     minute: Number(byType('minute')),
     second: Number(byType('second')),
   }
@@ -557,9 +560,9 @@ export const runUserStreakMaintenance = async () => {
       take: 100,
       ...(cursorUserId
         ? {
-            cursor: { userId: cursorUserId },
-            skip: 1,
-          }
+          cursor: { userId: cursorUserId },
+          skip: 1,
+        }
         : {}),
       select: { userId: true },
     })
