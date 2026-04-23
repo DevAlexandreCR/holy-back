@@ -27,6 +27,8 @@ import {
   updateMyCreatorProfile,
 } from './userProfile.service'
 
+type CreatorRequest = Request<{ id: string }>
+
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {
   try {
     return schema.parse(payload)
@@ -41,7 +43,10 @@ const ensureAuth = (req: Request) => {
   }
 }
 
-export const getCreatorProfileHandler = async (req: Request, res: Response) => {
+export const getCreatorProfileHandler = async (
+  req: CreatorRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const profile = await getCreatorProfile({
     viewerId: req.user!.sub,
@@ -52,7 +57,7 @@ export const getCreatorProfileHandler = async (req: Request, res: Response) => {
 }
 
 export const listCreatorDevotionalsHandler = async (
-  req: Request,
+  req: CreatorRequest,
   res: Response
 ) => {
   ensureAuth(req)
@@ -191,7 +196,10 @@ export const uploadCreatorAvatarHandler = async (
   }
 }
 
-export const followCreatorHandler = async (req: Request, res: Response) => {
+export const followCreatorHandler = async (
+  req: CreatorRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const profile = await followCreator({
     followerId: req.user!.sub,
@@ -201,7 +209,10 @@ export const followCreatorHandler = async (req: Request, res: Response) => {
   res.json({ data: profile })
 }
 
-export const unfollowCreatorHandler = async (req: Request, res: Response) => {
+export const unfollowCreatorHandler = async (
+  req: CreatorRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const profile = await unfollowCreator({
     followerId: req.user!.sub,

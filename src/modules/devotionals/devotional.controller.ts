@@ -51,6 +51,9 @@ import {
   updateDevotionalSchema,
 } from './devotional.validation'
 
+type DevotionalRequest = Request<{ id: string }>
+type DevotionalCommentRequest = Request<{ id: string; commentId: string }>
+
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {
   try {
     return schema.parse(payload)
@@ -216,7 +219,10 @@ export const recordFeedEventsHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
-export const getDevotionalHandler = async (req: Request, res: Response) => {
+export const getDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   const devotional = await getDevotionalById({
     devotionalId: req.params.id,
     viewerId: req.user?.sub,
@@ -230,7 +236,10 @@ export const getDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: devotional })
 }
 
-export const updateDevotionalHandler = async (req: Request, res: Response) => {
+export const updateDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const devotionalId = req.params.id
   const body = parseOrThrow(updateDevotionalSchema, req.body)
@@ -260,7 +269,10 @@ export const updateDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: updated })
 }
 
-export const deleteDevotionalHandler = async (req: Request, res: Response) => {
+export const deleteDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   ensureAdmin(req.user?.role)
   await getDevotionalSnapshot(req.params.id)
@@ -268,7 +280,10 @@ export const deleteDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: { success: true } })
 }
 
-export const publishDevotionalHandler = async (req: Request, res: Response) => {
+export const publishDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const snapshot = await getDevotionalSnapshot(req.params.id)
   ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
@@ -282,7 +297,10 @@ export const publishDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
-export const archiveDevotionalHandler = async (req: Request, res: Response) => {
+export const archiveDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const snapshot = await getDevotionalSnapshot(req.params.id)
   ensureOwnerOrPrivileged(snapshot.authorId, req.user?.role, req.user?.sub)
@@ -296,7 +314,10 @@ export const archiveDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
-export const toggleLikeHandler = async (req: Request, res: Response) => {
+export const toggleLikeHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const snapshot = await getDevotionalSnapshot(req.params.id)
   if (!snapshot.isPubliclyVisible) {
@@ -311,7 +332,10 @@ export const toggleLikeHandler = async (req: Request, res: Response) => {
   res.json({ data: { liked: result.liked, likes_count: result.likesCount } })
 }
 
-export const saveDevotionalHandler = async (req: Request, res: Response) => {
+export const saveDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(devotionalShareSchema, req.body ?? {})
@@ -324,7 +348,10 @@ export const saveDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: { saved: result.saved, save_count: result.saveCount } })
 }
 
-export const unsaveDevotionalHandler = async (req: Request, res: Response) => {
+export const unsaveDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const result = await unsaveDevotional({
@@ -335,7 +362,10 @@ export const unsaveDevotionalHandler = async (req: Request, res: Response) => {
   res.json({ data: { saved: result.saved, save_count: result.saveCount } })
 }
 
-export const shareDevotionalHandler = async (req: Request, res: Response) => {
+export const shareDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(devotionalShareSchema, req.body ?? {})
@@ -350,7 +380,10 @@ export const shareDevotionalHandler = async (req: Request, res: Response) => {
   })
 }
 
-export const readCompleteHandler = async (req: Request, res: Response) => {
+export const readCompleteHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(devotionalReadCompleteSchema, req.body ?? {})
@@ -370,7 +403,10 @@ export const readCompleteHandler = async (req: Request, res: Response) => {
   })
 }
 
-export const reportDevotionalHandler = async (req: Request, res: Response) => {
+export const reportDevotionalHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(devotionalReportSchema, req.body)
@@ -392,7 +428,7 @@ export const reportDevotionalHandler = async (req: Request, res: Response) => {
 }
 
 export const approveDevotionalReviewHandler = async (
-  req: Request,
+  req: DevotionalRequest,
   res: Response
 ) => {
   ensureAuth(req)
@@ -409,7 +445,7 @@ export const approveDevotionalReviewHandler = async (
 }
 
 export const restrictDevotionalReviewHandler = async (
-  req: Request,
+  req: DevotionalRequest,
   res: Response
 ) => {
   ensureAuth(req)
@@ -427,7 +463,10 @@ export const restrictDevotionalReviewHandler = async (
   res.json({ data: result })
 }
 
-export const listCommentsHandler = async (req: Request, res: Response) => {
+export const listCommentsHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   await ensurePublicInteraction(req.params.id)
   const query = parseOrThrow(paginationSchema, req.query)
   const pageRaw = query.page ? Number(query.page) : 1
@@ -443,7 +482,10 @@ export const listCommentsHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
-export const addCommentHandler = async (req: Request, res: Response) => {
+export const addCommentHandler = async (
+  req: DevotionalRequest,
+  res: Response
+) => {
   ensureAuth(req)
   await ensurePublicInteraction(req.params.id)
   const body = parseOrThrow(commentSchema, req.body)
@@ -456,7 +498,10 @@ export const addCommentHandler = async (req: Request, res: Response) => {
   res.json({ data: comment })
 }
 
-export const updateCommentHandler = async (req: Request, res: Response) => {
+export const updateCommentHandler = async (
+  req: DevotionalCommentRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const comment = await getCommentAuthorId(req.params.commentId)
   ensureOwnerOrPrivileged(comment.userId, req.user?.role, req.user?.sub)
@@ -470,7 +515,10 @@ export const updateCommentHandler = async (req: Request, res: Response) => {
   res.json({ data: updated })
 }
 
-export const deleteCommentHandler = async (req: Request, res: Response) => {
+export const deleteCommentHandler = async (
+  req: DevotionalCommentRequest,
+  res: Response
+) => {
   ensureAuth(req)
   const comment = await getCommentAuthorId(req.params.commentId)
   ensureOwnerOrPrivileged(comment.userId, req.user?.role, req.user?.sub)

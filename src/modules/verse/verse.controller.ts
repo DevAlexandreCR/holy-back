@@ -10,6 +10,8 @@ import {
 import { getChapterForDailyVerse, getChapterForSavedVerse } from './chapter.service'
 import { getSavedVerses, removeSavedVerse, saveVerseForUser } from './savedVerse.service'
 
+type LibraryVerseRequest = Request<{ libraryVerseId: string }>
+
 /**
  * GET /verse/today
  * Returns today's personalized verse for the authenticated user
@@ -83,7 +85,7 @@ export const getTodayVerseChapter = async (
  * Returns the full chapter for a saved verse in the version it was saved with
  */
 export const getSavedVerseChapter = async (
-  req: Request,
+  req: LibraryVerseRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -154,13 +156,13 @@ export const getWidgetVerse = async (
  * Mark a verse as liked by the user
  */
 export const likeVerseHandler = async (
-  req: Request,
+  req: LibraryVerseRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const userId = req.user!.sub
-    const libraryVerseId = parseInt(req.params.libraryVerseId)
+    const libraryVerseId = parseInt(req.params.libraryVerseId, 10)
 
     if (isNaN(libraryVerseId)) {
       return res.status(400).json({
@@ -187,13 +189,13 @@ export const likeVerseHandler = async (
  * Mark a verse as shared by the user
  */
 export const shareVerseHandler = async (
-  req: Request,
+  req: LibraryVerseRequest,
   res: Response,
   next: NextFunction
 ) => {
   try {
     const userId = req.user!.sub
-    const libraryVerseId = parseInt(req.params.libraryVerseId)
+    const libraryVerseId = parseInt(req.params.libraryVerseId, 10)
 
     if (isNaN(libraryVerseId)) {
       return res.status(400).json({
@@ -268,7 +270,7 @@ export const resetHistory = async (
  * Save a verse for the authenticated user
  */
 export const saveVerseHandler = async (
-  req: Request,
+  req: LibraryVerseRequest,
   res: Response,
   next: NextFunction
 ) => {
@@ -299,7 +301,7 @@ export const saveVerseHandler = async (
  * Remove a saved verse for the authenticated user
  */
 export const removeSavedVerseHandler = async (
-  req: Request,
+  req: LibraryVerseRequest,
   res: Response,
   next: NextFunction
 ) => {

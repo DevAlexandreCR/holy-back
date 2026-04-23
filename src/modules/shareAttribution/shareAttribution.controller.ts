@@ -7,6 +7,8 @@ import {
   recordShareAttributionAppOpen,
 } from './shareAttribution.service'
 
+type ShareTokenRequest = Request<{ token: string }>
+
 const appOpenSchema = z.object({
   token: z.string().min(1),
   device_id: z.string().min(1).optional().nullable(),
@@ -106,7 +108,10 @@ const buildRedirectHtml = (params: {
   `
 }
 
-export const shareRedirectHandler = async (req: Request, res: Response) => {
+export const shareRedirectHandler = async (
+  req: ShareTokenRequest,
+  res: Response
+) => {
   const context = await getShareRedirectContext(req.params.token)
   const trackedRedirectParams = {
     entryContext: 'share',

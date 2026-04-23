@@ -7,6 +7,8 @@ import {
   listDevotionalInsights,
 } from './insights.service'
 
+type DevotionalInsightRequest = Request<{ id: string }>
+
 const listSchema = z.object({
   cursor: z.string().optional(),
   limit: z.string().optional(),
@@ -51,7 +53,7 @@ export const listDevotionalInsightsHandler = async (
 }
 
 export const getDevotionalInsightDetailHandler = async (
-  req: Request,
+  req: DevotionalInsightRequest,
   res: Response
 ) => {
   ensureAuth(req)

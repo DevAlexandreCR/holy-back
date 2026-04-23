@@ -11,6 +11,8 @@ import {
   userModerationSelect,
 } from '../user/userModeration.service'
 
+type UserRoleRequest = Request<{ userId: string }>
+
 const updateRoleSchema = z.object({
   role: z.nativeEnum(UserRole),
 })
@@ -48,7 +50,7 @@ export const getMyRole = async (req: Request, res: Response) => {
   })
 }
 
-export const updateUserRole = async (req: Request, res: Response) => {
+export const updateUserRole = async (req: UserRoleRequest, res: Response) => {
   if (!req.user || !req.user.role) {
     throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
   }
@@ -159,7 +161,10 @@ export const listUsersWithRoles = async (req: Request, res: Response) => {
   })
 }
 
-export const blockUserHandler = async (req: Request, res: Response) => {
+export const blockUserHandler = async (
+  req: UserRoleRequest,
+  res: Response
+) => {
   if (!req.user || !req.user.role) {
     throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
   }
@@ -186,7 +191,10 @@ export const blockUserHandler = async (req: Request, res: Response) => {
   })
 }
 
-export const unblockUserHandler = async (req: Request, res: Response) => {
+export const unblockUserHandler = async (
+  req: UserRoleRequest,
+  res: Response
+) => {
   if (!req.user || !req.user.role) {
     throw new AppError('Unauthorized', 'AUTH_REQUIRED', 401)
   }
