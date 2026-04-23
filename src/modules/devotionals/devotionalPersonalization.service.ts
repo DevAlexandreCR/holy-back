@@ -11,7 +11,7 @@ import { buildPreviewTextFromPlainText, extractPlainText } from './devotionalFee
 import { DEVOTIONAL_FEED_ELIGIBLE_STATES, DEVOTIONAL_WORDS_PER_MINUTE } from './devotional.policy'
 
 const DEFAULT_TIMEZONE = 'America/Bogota'
-const DAILY_FEATURE_CANDIDATE_TARGET = 10
+const DAILY_FEATURE_CANDIDATE_TARGET = 250
 const TAG_AFFINITY_DECAY_WINDOW_MS = 3 * 24 * 60 * 60 * 1000
 const TAG_AFFINITY_DECAY_FACTOR = 0.9
 const TAG_AFFINITY_MIN_SCORE = 0.25
@@ -25,16 +25,37 @@ type DailyFeaturedCandidateRow = {
   baseScore: number
 }
 
+type DailyFeaturedDevotionalRecord = {
+  id: string
+  title: string
+  content: Prisma.JsonValue
+  optimizedPreviewText: string
+  imageUrl: string | null
+  rankingScore: number
+  publicationState: DevotionalPublicationState
+  moderationStatus: DevotionalModerationStatus
+  lastScoredAt?: Date | null
+}
+
+type DailyFeaturedRenderableDevotional = Pick<
+  DailyFeaturedDevotionalRecord,
+  | 'id'
+  | 'title'
+  | 'content'
+  | 'optimizedPreviewText'
+  | 'imageUrl'
+  | 'publicationState'
+  | 'moderationStatus'
+>
+
 type CandidateWithDevotional = DailyFeaturedCandidateRow & {
-  devotional: {
-    id: string
-    title: string
-    content: Prisma.JsonValue
-    optimizedPreviewText: string
-    imageUrl: string | null
-    publicationState: DevotionalPublicationState
-    moderationStatus: DevotionalModerationStatus
-  }
+  devotional: DailyFeaturedDevotionalRecord
+}
+
+type DailyFeaturedSelectionCandidate = {
+  id: string
+  devotionalId: string
+  baseScore: number
 }
 
 export type UserLocalDayContext = {
@@ -173,7 +194,7 @@ const isPubliclyEligible = (devotional: {
   ) && devotional.moderationStatus === DevotionalModerationStatus.CLEAR
 
 const formatDailyFeatured = (
-  devotional: CandidateWithDevotional['devotional']
+  devotional: DailyFeaturedRenderableDevotional
 ): ResolvedDailyFeatured['devotional'] => ({
   id: devotional.id,
   title: devotional.title,
@@ -226,37 +247,35 @@ const getSignalWeight = (signalType: DevotionalAffinitySignalType) => {
 
 const getCurrentBogotaDate = (now: Date) => getLocalDate(now, DEFAULT_TIMEZONE)
 
-const materializeDailyFeatureCandidatesForDate = async (
+const fetchRankedDailyFeatureDevotionals = async (
   db: PersonalizationDbClient,
-  localDate: string
-) => {
-  const totalEligible = await db.devotional.count({
-    where: {
-      publicationState: {
-        in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES],
-      },
-      moderationStatus: DevotionalModerationStatus.CLEAR,
-    },
-  })
-
-  if (totalEligible === 0) {
-    return [] as CandidateWithDevotional[]
+  params: {
+    excludeReadCompleteUserId?: string
+    take?: number
   }
-
-  const take = Math.min(totalEligible, DAILY_FEATURE_CANDIDATE_TARGET)
-  const devotionals = await db.devotional.findMany({
+) => {
+  return db.devotional.findMany({
     where: {
       publicationState: {
         in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES],
       },
       moderationStatus: DevotionalModerationStatus.CLEAR,
+      ...(params.excludeReadCompleteUserId
+        ? {
+            readCompletions: {
+              none: {
+                userId: params.excludeReadCompleteUserId,
+              },
+            },
+          }
+        : {}),
     },
     orderBy: [
       { rankingScore: 'desc' },
       { lastScoredAt: 'desc' },
       { id: 'desc' },
     ],
-    take,
+    take: params.take ?? DAILY_FEATURE_CANDIDATE_TARGET,
     select: {
       id: true,
       title: true,
@@ -264,24 +283,39 @@ const materializeDailyFeatureCandidatesForDate = async (
       optimizedPreviewText: true,
       imageUrl: true,
       rankingScore: true,
+      lastScoredAt: true,
       publicationState: true,
       moderationStatus: true,
     },
   })
+}
 
-  const devotionalById = new Map(devotionals.map((item) => [item.id, item]))
+const materializeDailyFeatureCandidates = async (
+  db: PersonalizationDbClient,
+  params: {
+    localDate: string
+    devotionals: DailyFeaturedDevotionalRecord[]
+  }
+) => {
+  if (params.devotionals.length === 0) {
+    return [] as CandidateWithDevotional[]
+  }
+
+  const devotionalById = new Map(
+    params.devotionals.map((item) => [item.id, item] as const)
+  )
 
   const candidateRows = await Promise.all(
-    devotionals.map((devotional) =>
+    params.devotionals.map((devotional) =>
       db.devotionalDailyFeatureCandidate.upsert({
         where: {
           localDate_devotionalId: {
-            localDate,
+            localDate: params.localDate,
             devotionalId: devotional.id,
           },
         },
         create: {
-          localDate,
+          localDate: params.localDate,
           devotionalId: devotional.id,
           baseScore: devotional.rankingScore,
         },
@@ -299,6 +333,17 @@ const materializeDailyFeatureCandidatesForDate = async (
     baseScore: row.baseScore,
     devotional: devotionalById.get(row.devotionalId)!,
   }))
+}
+
+const materializeDailyFeatureCandidatesForDate = async (
+  db: PersonalizationDbClient,
+  localDate: string
+) => {
+  const devotionals = await fetchRankedDailyFeatureDevotionals(db, {})
+  return materializeDailyFeatureCandidates(db, {
+    localDate,
+    devotionals,
+  })
 }
 
 const buildAffinitySumByDevotionalId = async (
@@ -371,6 +416,71 @@ const buildAffinitySumByDevotionalId = async (
   }
 
   return result
+}
+
+const getPersonalizedCandidateScore = (
+  candidate: DailyFeaturedSelectionCandidate,
+  params: {
+    affinitySums: Map<string, number>
+    affinityMultiplier: number
+    affinityCap: number
+  }
+) =>
+  candidate.baseScore +
+  Math.min(
+    params.affinityCap,
+    (params.affinitySums.get(candidate.devotionalId) ?? 0) *
+      params.affinityMultiplier
+  )
+
+const rankDailyFeaturedCandidates = <T extends DailyFeaturedSelectionCandidate>(
+  candidates: T[],
+  params: {
+    affinitySums: Map<string, number>
+    affinityMultiplier: number
+    affinityCap: number
+  }
+) =>
+  [...candidates].sort((left, right) => {
+    const leftPersonalizedScore = getPersonalizedCandidateScore(left, params)
+    const rightPersonalizedScore = getPersonalizedCandidateScore(right, params)
+
+    if (rightPersonalizedScore !== leftPersonalizedScore) {
+      return rightPersonalizedScore - leftPersonalizedScore
+    }
+
+    if (right.baseScore !== left.baseScore) {
+      return right.baseScore - left.baseScore
+    }
+
+    return right.devotionalId.localeCompare(left.devotionalId)
+  })
+
+export const selectDailyFeaturedCandidateFromPools = <
+  T extends DailyFeaturedSelectionCandidate,
+>(params: {
+  unreadCandidates: T[]
+  fallbackCandidates: T[]
+  affinitySums: Map<string, number>
+  affinityMultiplier: number
+  affinityCap: number
+}) => {
+  const preferredPool =
+    params.unreadCandidates.length > 0
+      ? params.unreadCandidates
+      : params.fallbackCandidates
+  const ranked = rankDailyFeaturedCandidates(preferredPool, {
+    affinitySums: params.affinitySums,
+    affinityMultiplier: params.affinityMultiplier,
+    affinityCap: params.affinityCap,
+  })
+
+  return {
+    selected: ranked[0] ?? null,
+    usedRepeatedFallback:
+      params.unreadCandidates.length === 0 &&
+      params.fallbackCandidates.length > 0,
+  }
 }
 
 const resolveLockedDailyFeatured = async (
@@ -454,47 +564,45 @@ export const resolveDailyFeaturedForUser = async (params: {
     return existing
   }
 
-  const candidates = await materializeDailyFeatureCandidatesForDate(
-    db,
-    context.localToday
-  )
+  const unreadDevotionals = await fetchRankedDailyFeatureDevotionals(db, {
+    excludeReadCompleteUserId: params.userId,
+  })
+  const unreadCandidates = await materializeDailyFeatureCandidates(db, {
+    localDate: context.localToday,
+    devotionals: unreadDevotionals,
+  })
 
-  if (candidates.length === 0) {
+  const fallbackCandidates =
+    unreadCandidates.length === 0
+      ? await materializeDailyFeatureCandidatesForDate(db, context.localToday)
+      : []
+
+  const candidatePool =
+    unreadCandidates.length > 0 ? unreadCandidates : fallbackCandidates
+
+  if (candidatePool.length === 0) {
     return null
   }
 
   const affinitySums = await buildAffinitySumByDevotionalId(db, {
     userId: params.userId,
-    devotionalIds: candidates.map((item) => item.devotionalId),
+    devotionalIds: candidatePool.map((item) => item.devotionalId),
     now,
   })
   const affinityMultiplier = config.engagement.dailyFeaturedAffinity.multiplier
   const affinityCap = config.engagement.dailyFeaturedAffinity.cap
 
-  const selected = [...candidates].sort((left, right) => {
-    const leftPersonalizedScore =
-      left.baseScore +
-      Math.min(
-        affinityCap,
-        (affinitySums.get(left.devotionalId) ?? 0) * affinityMultiplier
-      )
-    const rightPersonalizedScore =
-      right.baseScore +
-      Math.min(
-        affinityCap,
-        (affinitySums.get(right.devotionalId) ?? 0) * affinityMultiplier
-      )
+  const { selected } = selectDailyFeaturedCandidateFromPools({
+    unreadCandidates,
+    fallbackCandidates,
+    affinitySums,
+    affinityMultiplier,
+    affinityCap,
+  })
 
-    if (rightPersonalizedScore !== leftPersonalizedScore) {
-      return rightPersonalizedScore - leftPersonalizedScore
-    }
-
-    if (right.baseScore !== left.baseScore) {
-      return right.baseScore - left.baseScore
-    }
-
-    return right.devotionalId.localeCompare(left.devotionalId)
-  })[0]
+  if (!selected) {
+    return null
+  }
 
   const lock = await db.userDailyFeaturedDevotional.upsert({
     where: {
