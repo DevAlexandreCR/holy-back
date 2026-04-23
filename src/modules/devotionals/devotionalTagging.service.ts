@@ -7,6 +7,11 @@ import {
 import { config } from '../../config/env'
 import { prisma } from '../../config/db'
 import { extractPlainText } from './devotionalFeedContent'
+import {
+  findMatchingDevotionalTagName,
+  normalizeDevotionalTagValue,
+  type DevotionalTagKey,
+} from './devotionalTagDictionary'
 
 const MAX_ASSIGNED_TAGS = 3
 
@@ -15,26 +20,33 @@ const tagClient = axios.create({
   timeout: config.openai.devotionalTagTimeoutMs,
 })
 
-const normalize = (value: string) =>
-  value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-
 const splitNormalizedWords = (value: string) =>
-  normalize(value)
+  normalizeDevotionalTagValue(value)
     .split(/[^a-z0-9]+/u)
     .map((part) => part.trim())
     .filter(Boolean)
 
-const FALLBACK_KEYWORDS: Record<string, string[]> = {
+const FALLBACK_KEYWORDS: Record<DevotionalTagKey, string[]> = {
   esperanza: ['esperanza', 'esperar', 'animo', 'promesa', 'consuelo'],
   ansiedad: ['ansiedad', 'afan', 'angustia', 'preocupacion', 'cansancio'],
   proposito: ['proposito', 'llamado', 'sentido', 'direccion', 'vocacion'],
-  disciplina: ['disciplina', 'constancia', 'habito', 'obediencia', 'perseverancia'],
+  disciplina: ['disciplina', 'constancia', 'habito', 'rutina', 'perseverancia'],
   fe: ['fe', 'confiar', 'confianza', 'creer', 'fidelidad'],
-  trabajo: ['trabajo', 'labor', 'empleo', 'oficio', 'oficina'],
-  relaciones: ['relacion', 'relaciones', 'familia', 'amistad', 'matrimonio', 'perdon'],
+  trabajo: ['trabajo', 'labor', 'empleo', 'oficio', 'jornada'],
+  relaciones: ['relacion', 'relaciones', 'amistad', 'amistades', 'convivencia'],
+  oracion: ['oracion', 'orar', 'orando', 'clamar', 'intercesion'],
+  descanso: ['descanso', 'reposo', 'quietud', 'fatiga', 'pausa'],
+  perdon: ['perdon', 'perdonar', 'rencor', 'ofensa', 'reconciliacion'],
+  gratitud: ['gratitud', 'agradecimiento', 'gracias', 'agradecer', 'contentamiento'],
+  sabiduria: ['sabiduria', 'prudencia', 'discernimiento', 'entendimiento', 'consejo'],
+  identidad: ['identidad', 'valor', 'pertenencia', 'aceptado', 'aceptada'],
+  sanidad: ['sanidad', 'sanar', 'restauracion', 'enfermedad', 'herida'],
+  soledad: ['soledad', 'solo', 'sola', 'abandono', 'aislamiento'],
+  duelo: ['duelo', 'perdida', 'luto', 'ausencia', 'llorar'],
+  familia: ['familia', 'hogar', 'padres', 'madre', 'hijos'],
+  matrimonio: ['matrimonio', 'esposo', 'esposa', 'pareja', 'conyuge'],
+  provision: ['provision', 'proveer', 'sustento', 'escasez', 'necesidad'],
+  obediencia: ['obediencia', 'obedecer', 'mandato', 'mandamiento', 'sumision'],
 }
 
 type OpenAIResponseOutputContent = {
@@ -96,10 +108,11 @@ const buildFallbackTags = (params: {
   const wordSet = new Set(words)
   const scored = params.availableTagNames
     .map((tagName) => {
-      const normalizedTag = normalize(tagName)
+      const normalizedTag = normalizeDevotionalTagValue(tagName) as DevotionalTagKey
       const keywords = FALLBACK_KEYWORDS[normalizedTag] ?? [normalizedTag]
       const score = keywords.reduce(
-        (total, keyword) => total + (wordSet.has(normalize(keyword)) ? 1 : 0),
+        (total, keyword) =>
+          total + (wordSet.has(normalizeDevotionalTagValue(keyword)) ? 1 : 0),
         wordSet.has(normalizedTag) ? 2 : 0
       )
 
@@ -303,10 +316,12 @@ export const assignDevotionalTags = async (params: {
     availableTagNames: availableTags.map((item) => item.name),
   })
   const primaryTopicKey = extractPrimaryTopicKey(devotional.generationMetadata)
+  const primaryTopicTagName = findMatchingDevotionalTagName(
+    availableTags.map((item) => item.name),
+    primaryTopicKey
+  )
   const mergedTagNames = [
-    ...(primaryTopicKey && availableTags.some((item) => item.name === primaryTopicKey)
-      ? [primaryTopicKey]
-      : []),
+    ...(primaryTopicTagName ? [primaryTopicTagName] : []),
     ...selectedTagNames,
   ]
     .filter((value, index, values) => values.indexOf(value) === index)
