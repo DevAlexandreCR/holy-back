@@ -234,6 +234,15 @@ const selectTagNames = async (params: {
   return buildFallbackTags(params)
 }
 
+const extractPrimaryTopicKey = (value: Prisma.JsonValue | null) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null
+  }
+
+  const topicKey = (value as Record<string, unknown>).topic_key
+  return typeof topicKey === 'string' && topicKey.trim() ? topicKey.trim() : null
+}
+
 export const assignDevotionalTags = async (params: {
   devotionalId: string
   force?: boolean
@@ -248,6 +257,7 @@ export const assignDevotionalTags = async (params: {
       content: true,
       publicationState: true,
       moderationStatus: true,
+      generationMetadata: true,
     },
   })
 
@@ -292,8 +302,17 @@ export const assignDevotionalTags = async (params: {
     plainText: extractPlainText(devotional.content),
     availableTagNames: availableTags.map((item) => item.name),
   })
+  const primaryTopicKey = extractPrimaryTopicKey(devotional.generationMetadata)
+  const mergedTagNames = [
+    ...(primaryTopicKey && availableTags.some((item) => item.name === primaryTopicKey)
+      ? [primaryTopicKey]
+      : []),
+    ...selectedTagNames,
+  ]
+    .filter((value, index, values) => values.indexOf(value) === index)
+    .slice(0, MAX_ASSIGNED_TAGS)
   const selectedTags = availableTags.filter((item) =>
-    selectedTagNames.includes(item.name)
+    mergedTagNames.includes(item.name)
   )
 
   await db.devotionalTagAssignment.deleteMany({

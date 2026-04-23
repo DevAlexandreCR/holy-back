@@ -15,8 +15,10 @@
     "sync:bible-versions": "ts-node-dev --transpile-only src/scripts/syncBibleVersions.ts",
     "backfill:devotional-hooks": "ts-node-dev --transpile-only src/scripts/backfillDevotionalHooks.ts",
     "backfill:devotional-tags": "ts-node-dev --transpile-only src/scripts/backfillDevotionalTags.ts",
+    "test:holyverso-publish": "ts-node-dev --transpile-only src/scripts/testHolyversoPublish.ts",
     "seed:library": "ts-node-dev --transpile-only src/scripts/seedLibraryVerses.ts",
-    "seed:admin": "ts-node-dev --transpile-only src/scripts/seed-admin.ts"
+    "seed:admin": "ts-node-dev --transpile-only src/scripts/seed-admin.ts",
+    "seed:holyverso": "ts-node-dev --transpile-only src/scripts/seed-holyverso-user.ts"
   },
   "keywords": [],
   "author": "",

@@ -14,6 +14,27 @@ enum UserRole {
   ADMIN
 }
 
+enum DevotionalGenerationSource {
+  USER_AUTHORED
+  HOLYVERSO_AUTOMATED
+}
+
+enum HolyversoGenerationBatchStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  PARTIAL
+  FAILED
+}
+
+enum HolyversoGenerationSlotStatus {
+  PLANNED
+  PROCESSING
+  RETRY_PENDING
+  PUBLISHED
+  FAILED
+}
+
 enum UserModerationActionType {
   BLOCK
   UNBLOCK
@@ -172,6 +193,8 @@ model User {
   resetTokenExpiresAt             DateTime?                          @map("reset_token_expires_at")
   deletedAt                       DateTime?                          @map("deleted_at")
   deletedReason                   String?                            @map("deleted_reason")
+  isSystemManaged                 Boolean                            @default(false) @map("is_system_managed")
+  suppressCreatorNotifications    Boolean                            @default(false) @map("suppress_creator_notifications")
   blockedByUser                   User?                              @relation("UserBlockActor", fields: [blockedBy], references: [id])
   blockedUsers                    User[]                             @relation("UserBlockActor")
   unblockedByUser                 User?                              @relation("UserUnblockActor", fields: [unblockedBy], references: [id])
@@ -214,6 +237,7 @@ model User {
   userActivityDailyMetrics        UserActivityDailyMetric[]
   streak                          UserStreak?
   streakFreezeEvents              UserStreakFreezeEvent[]
+  holyversoGenerationBatches      HolyversoGenerationBatch[]
 
   @@map("users")
 }
@@ -409,6 +433,8 @@ model Devotional {
   publicationState         DevotionalPublicationState      @default(DRAFT) @map("publication_state")
   moderationStatus         DevotionalModerationStatus      @default(CLEAR) @map("moderation_status")
   moderationReason         String?                         @map("moderation_reason")
+  generationSource         DevotionalGenerationSource      @default(USER_AUTHORED) @map("generation_source")
+  generationMetadata       Json?                           @map("generation_metadata")
   moderatedBy              String?                         @map("moderated_by") @db.Char(36)
   moderatedByUser          User?                           @relation("DevotionalModerator", fields: [moderatedBy], references: [id])
   moderatedAt              DateTime?                       @map("moderated_at")
@@ -456,12 +482,61 @@ model Devotional {
   dailyFeatureCandidates  DevotionalDailyFeatureCandidate[]
   dailyFeaturedLocks      UserDailyFeaturedDevotional[]
   affinitySignalEvents    DevotionalAffinitySignalEvent[]
+  holyversoGenerationSlots HolyversoGenerationSlot[]
 
   @@index([publicationState, moderationStatus, rankingScore, lastScoredAt], map: "devotions_feed_rank_idx")
   @@index([publicationState, moderationStatus, publishedAt], map: "devotions_pub_vis_idx")
   @@index([authorId])
   @@index([moderatedBy])
+  @@index([generationSource, publishedAt], map: "devotionals_generation_source_published_at_idx")
   @@map("devotionals")
+}
+
+model HolyversoGenerationBatch {
+  id             String                         @id @default(uuid()) @db.Char(36)
+  localDate      String                         @map("local_date")
+  authorId       String                         @map("author_id") @db.Char(36)
+  targetCount    Int                            @default(5) @map("target_count")
+  publishedCount Int                            @default(0) @map("published_count")
+  status         HolyversoGenerationBatchStatus @default(PLANNED)
+  startedAt      DateTime?                      @map("started_at")
+  completedAt    DateTime?                      @map("completed_at")
+  metadata       Json?
+  createdAt      DateTime                       @default(now()) @map("created_at")
+  updatedAt      DateTime                       @updatedAt @map("updated_at")
+
+  author User                       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  slots  HolyversoGenerationSlot[]
+
+  @@unique([localDate, authorId])
+  @@index([authorId, localDate])
+  @@index([status, localDate])
+  @@map("holyverso_generation_batches")
+}
+
+model HolyversoGenerationSlot {
+  id                 String                        @id @default(uuid()) @db.Char(36)
+  batchId            String                        @map("batch_id") @db.Char(36)
+  slotIndex          Int                           @map("slot_index")
+  scheduledFor       DateTime                      @map("scheduled_for")
+  topicKey           String                        @map("topic_key") @db.VarChar(64)
+  styleKey           String                        @map("style_key") @db.VarChar(64)
+  status             HolyversoGenerationSlotStatus @default(PLANNED)
+  retryCount         Int                           @default(0) @map("retry_count")
+  devotionalId       String?                       @map("devotional_id") @db.Char(36)
+  failureCode        String?                       @map("failure_code") @db.VarChar(191)
+  metadata           Json?
+  createdAt          DateTime                      @default(now()) @map("created_at")
+  updatedAt          DateTime                      @updatedAt @map("updated_at")
+
+  batch           HolyversoGenerationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  devotional      Devotional?              @relation(fields: [devotionalId], references: [id], onDelete: SetNull)
+
+  @@unique([batchId, slotIndex])
+  @@index([status, scheduledFor])
+  @@index([topicKey, scheduledFor])
+  @@index([devotionalId])
+  @@map("holyverso_generation_slots")
 }
 
 model DevotionalTag {
@@ -551,7 +626,7 @@ model DevotionalAffinitySignalEvent {
   user         User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
   devotional   Devotional                  @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, devotionalId, signalType])
+  @@unique([userId, devotionalId, signalType], map: "dev_aff_sig_evt_user_dev_sig_key")
   @@index([devotionalId, signalType])
   @@map("devotional_affinity_signal_events")
 }
@@ -929,8 +1004,8 @@ model DevotionalNotificationSend {
 
   @@index([type, sentAt])
   @@index([userId, type, sentAt])
-  @@index([userId, type, providerAcceptedAt])
-  @@index([userId, type, openedAt])
+  @@index([userId, type, providerAcceptedAt], map: "dev_notif_sends_user_type_acc_idx")
+  @@index([userId, type, openedAt], map: "dev_notif_sends_user_type_open_idx")
   @@index([deviceTokenId, sentAt])
   @@map("devotional_notification_sends")
 }
@@ -1143,8 +1218,8 @@ model DevotionalNotificationEvaluationDailyMetric {
   createdAt      DateTime                   @default(now()) @map("created_at")
   updatedAt      DateTime                   @updatedAt @map("updated_at")
 
-  @@unique([date, notificationType])
-  @@index([notificationType, date])
+  @@unique([date, notificationType], map: "dev_notif_eval_daily_date_type_key")
+  @@index([notificationType, date], map: "dev_notif_eval_daily_type_date_idx")
   @@map("devotional_notification_evaluation_daily_metrics")
 }
 

@@ -1,6 +1,20 @@
-ALTER TABLE `user_settings`
-  ADD COLUMN `streak_risk_notifications_enabled` BOOLEAN NOT NULL DEFAULT true
-  AFTER `featured_devotional_notifications_enabled`;
+SET @add_streak_risk_notifications_enabled = (
+  SELECT IF(
+    EXISTS(
+      SELECT 1
+      FROM `information_schema`.`COLUMNS`
+      WHERE `TABLE_SCHEMA` = DATABASE()
+        AND `TABLE_NAME` = 'user_settings'
+        AND `COLUMN_NAME` = 'streak_risk_notifications_enabled'
+    ),
+    'SELECT 1',
+    'ALTER TABLE `user_settings` ADD COLUMN `streak_risk_notifications_enabled` BOOLEAN NOT NULL DEFAULT true AFTER `featured_devotional_notifications_enabled`'
+  )
+);
+
+PREPARE add_streak_risk_notifications_enabled_stmt FROM @add_streak_risk_notifications_enabled;
+EXECUTE add_streak_risk_notifications_enabled_stmt;
+DEALLOCATE PREPARE add_streak_risk_notifications_enabled_stmt;
 
 ALTER TABLE `devotional_notification_sends`
   MODIFY `type` ENUM(
@@ -12,7 +26,7 @@ ALTER TABLE `devotional_notification_sends`
     'AUTHOR_DEVOTIONAL_RESTRICTED'
   ) NOT NULL;
 
-CREATE TABLE `devotional_tags` (
+CREATE TABLE IF NOT EXISTS `devotional_tags` (
   `id` INTEGER NOT NULL AUTO_INCREMENT,
   `name` VARCHAR(64) NOT NULL,
   `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -22,7 +36,7 @@ CREATE TABLE `devotional_tags` (
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `devotional_tag_assignments` (
+CREATE TABLE IF NOT EXISTS `devotional_tag_assignments` (
   `devotional_id` CHAR(36) NOT NULL,
   `tag_id` INTEGER NOT NULL,
   `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
@@ -31,7 +45,7 @@ CREATE TABLE `devotional_tag_assignments` (
   PRIMARY KEY (`devotional_id`, `tag_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `user_devotional_tag_affinity` (
+CREATE TABLE IF NOT EXISTS `user_devotional_tag_affinity` (
   `user_id` CHAR(36) NOT NULL,
   `tag_id` INTEGER NOT NULL,
   `score` DOUBLE NOT NULL DEFAULT 0,
@@ -45,7 +59,7 @@ CREATE TABLE `user_devotional_tag_affinity` (
   PRIMARY KEY (`user_id`, `tag_id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `devotional_daily_feature_candidates` (
+CREATE TABLE IF NOT EXISTS `devotional_daily_feature_candidates` (
   `id` CHAR(36) NOT NULL,
   `local_date` VARCHAR(191) NOT NULL,
   `devotional_id` CHAR(36) NOT NULL,
@@ -58,7 +72,7 @@ CREATE TABLE `devotional_daily_feature_candidates` (
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `user_daily_featured_devotionals` (
+CREATE TABLE IF NOT EXISTS `user_daily_featured_devotionals` (
   `user_id` CHAR(36) NOT NULL,
   `local_date` VARCHAR(191) NOT NULL,
   `devotional_id` CHAR(36) NOT NULL,
@@ -71,14 +85,14 @@ CREATE TABLE `user_daily_featured_devotionals` (
   PRIMARY KEY (`user_id`, `local_date`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE `devotional_affinity_signal_events` (
+CREATE TABLE IF NOT EXISTS `devotional_affinity_signal_events` (
   `id` CHAR(36) NOT NULL,
   `user_id` CHAR(36) NOT NULL,
   `devotional_id` CHAR(36) NOT NULL,
   `signal_type` ENUM('READ_COMPLETE', 'SAVE', 'SHARE') NOT NULL,
   `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-  UNIQUE INDEX `devotional_affinity_signal_events_user_id_devotional_id_signal_type_key`(`user_id`, `devotional_id`, `signal_type`),
+  UNIQUE INDEX `dev_aff_sig_evt_user_dev_sig_key`(`user_id`, `devotional_id`, `signal_type`),
   INDEX `devotional_affinity_signal_events_devotional_id_signal_type_idx`(`devotional_id`, `signal_type`),
   PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -113,7 +127,7 @@ ALTER TABLE `devotional_affinity_signal_events`
   ADD CONSTRAINT `devotional_affinity_signal_events_devotional_id_fkey`
   FOREIGN KEY (`devotional_id`) REFERENCES `devotionals`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
-INSERT INTO `devotional_tags` (`name`, `created_at`, `updated_at`)
+INSERT IGNORE INTO `devotional_tags` (`name`, `created_at`, `updated_at`)
 VALUES
   ('esperanza', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)),
   ('ansiedad', CURRENT_TIMESTAMP(3), CURRENT_TIMESTAMP(3)),

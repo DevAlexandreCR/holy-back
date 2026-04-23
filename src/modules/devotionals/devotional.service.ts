@@ -4,6 +4,7 @@ import path from 'path'
 import {
   DevotionalAffinitySignalType,
   DevotionalFeedEventType,
+  DevotionalGenerationSource,
   DevotionalImageAssetStatus,
   DevotionalImageModerationStatus,
   DevotionalQualityGateStatus,
@@ -1342,6 +1343,8 @@ export const createDevotional = async (params: {
   }[]
   imageAssetId?: string | null
   coverImageFocusY?: number | null
+  generationSource?: DevotionalGenerationSource
+  generationMetadata?: Prisma.InputJsonValue
 }) => {
   ensureContentSize(params.content)
   ensurePrimaryReference(params.verseReferences)
@@ -1364,6 +1367,9 @@ export const createDevotional = async (params: {
           authorId: params.authorId,
           imageAssetId: params.imageAssetId ?? null,
           coverImageFocusY: params.coverImageFocusY ?? null,
+          generationSource:
+            params.generationSource ?? DevotionalGenerationSource.USER_AUTHORED,
+          generationMetadata: params.generationMetadata ?? undefined,
           publicationState: DevotionalPublicationState.DRAFT,
           moderationStatus: DevotionalModerationStatus.CLEAR,
           verseReferences: {

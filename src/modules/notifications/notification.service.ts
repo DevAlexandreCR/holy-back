@@ -73,6 +73,10 @@ const buildNotificationBody = (devotional: { title: string; author: { name: stri
   },
 })
 
+const isSuppressedCreatorNotificationType = (type: DevotionalNotificationType) =>
+  type === DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL ||
+  type === DevotionalNotificationType.FEATURED_DEVOTIONAL
+
 const toAbsoluteUrl = (baseUrl: string, relativePath: string) =>
   `${baseUrl.replace(/\/+$/, '')}${relativePath}`
 
@@ -559,6 +563,7 @@ export const sendDevotionalNotifications = async (params: {
         select: {
           id: true,
           name: true,
+          suppressCreatorNotifications: true,
         },
       },
     },
@@ -574,7 +579,26 @@ export const sendDevotionalNotifications = async (params: {
     type: params.type,
     publicationState: devotional.publicationState,
     moderationStatus: devotional.moderationStatus,
+    suppressCreatorNotifications: devotional.author.suppressCreatorNotifications,
   })
+
+  if (
+    devotional.author.suppressCreatorNotifications &&
+    isSuppressedCreatorNotificationType(params.type)
+  ) {
+    console.log('[DevotionalNotifications] Skipping send because author notifications are suppressed', {
+      devotionalId: devotional.id,
+      authorId: devotional.authorId,
+      type: params.type,
+    })
+
+    return {
+      sent: 0,
+      provider_accepted: 0,
+      failed: 0,
+      token_deactivated: 0,
+    }
+  }
 
   if (
     !isNotificationEligibleForDevotional({

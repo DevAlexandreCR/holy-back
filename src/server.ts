@@ -27,6 +27,14 @@ import {
   registerUserStreakMaintenanceJob,
   runUserStreakMaintenanceOnce,
 } from './jobs/userStreakMaintenanceJob';
+import {
+  registerHolyversoDailyPlannerJob,
+  runHolyversoDailyPlannerOnce,
+} from './jobs/holyversoDailyPlannerJob';
+import {
+  registerHolyversoSlotPublisherJob,
+  runHolyversoSlotPublisherOnce,
+} from './jobs/holyversoSlotPublisherJob';
 
 const { port } = config.app;
 let server: Server | undefined;
@@ -49,6 +57,12 @@ let devotionalStreakRiskJob:
 let userStreakMaintenanceJob:
   | ReturnType<typeof registerUserStreakMaintenanceJob>
   | undefined;
+let holyversoDailyPlannerJob:
+  | ReturnType<typeof registerHolyversoDailyPlannerJob>
+  | undefined;
+let holyversoSlotPublisherJob:
+  | ReturnType<typeof registerHolyversoSlotPublisherJob>
+  | undefined;
 
 const start = async (): Promise<void> => {
   try {
@@ -60,6 +74,8 @@ const start = async (): Promise<void> => {
     await runDevotionalTagAffinityDecayOnce();
     await runUserStreakMaintenanceOnce();
     await runDevotionalStreakRiskOnce();
+    await runHolyversoDailyPlannerOnce();
+    await runHolyversoSlotPublisherOnce();
     server = app.listen(port, () => {
       // eslint-disable-next-line no-console
       console.log(`Backend running on port ${port}`);
@@ -72,6 +88,8 @@ const start = async (): Promise<void> => {
     devotionalTagAffinityDecayJob = registerDevotionalTagAffinityDecayJob();
     userStreakMaintenanceJob = registerUserStreakMaintenanceJob();
     devotionalStreakRiskJob = registerDevotionalStreakRiskJob();
+    holyversoDailyPlannerJob = registerHolyversoDailyPlannerJob();
+    holyversoSlotPublisherJob = registerHolyversoSlotPublisherJob();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to start server', error);
@@ -103,6 +121,12 @@ const shutdown = async (signal: string): Promise<void> => {
     }
     if (devotionalStreakRiskJob) {
       devotionalStreakRiskJob.stop();
+    }
+    if (holyversoDailyPlannerJob) {
+      holyversoDailyPlannerJob.stop();
+    }
+    if (holyversoSlotPublisherJob) {
+      holyversoSlotPublisherJob.stop();
     }
     if (server) {
       await new Promise<void>((resolve) => server?.close(() => resolve()));

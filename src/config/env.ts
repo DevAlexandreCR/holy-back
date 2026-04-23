@@ -134,6 +134,14 @@ const DEVOTIONAL_STREAK_RISK_CRON = readEnvAny(
   ['DEVOTIONAL_STREAK_RISK_CRON'],
   '*/15 * * * *',
 );
+const HOLYVERSO_DAILY_PLANNER_CRON = readEnvAny(
+  ['HOLYVERSO_DAILY_PLANNER_CRON'],
+  '*/30 * * * *',
+);
+const HOLYVERSO_SLOT_PUBLISHER_CRON = readEnvAny(
+  ['HOLYVERSO_SLOT_PUBLISHER_CRON'],
+  '*/10 * * * *',
+);
 const DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER = toBoundedNumber(
   readEnvAny(['DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER'], '0.25'),
   'DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER',
@@ -223,6 +231,31 @@ const OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS'], '5000'),
   'OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS',
 );
+const OPENAI_HOLYVERSO_TEXT_MODEL = readEnvOptional([
+  'OPENAI_HOLYVERSO_TEXT_MODEL',
+]);
+const OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS = toNumber(
+  readEnvAny(['OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS'], '15000'),
+  'OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS',
+);
+const OPENAI_HOLYVERSO_IMAGE_MODEL = readEnvOptional([
+  'OPENAI_HOLYVERSO_IMAGE_MODEL',
+]);
+const OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS = toNumber(
+  readEnvAny(['OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS'], '45000'),
+  'OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS',
+);
+const HOLYVERSO_USER_NAME = readEnvAny(['HOLYVERSO_USER_NAME'], 'HolyVerso');
+const HOLYVERSO_USER_EMAIL = readEnvAny(
+  ['HOLYVERSO_USER_EMAIL'],
+  'holyverso@holyverso.com',
+);
+const HOLYVERSO_USER_HANDLE = readEnvAny(['HOLYVERSO_USER_HANDLE'], 'holyverso');
+const HOLYVERSO_USER_PASSWORD = readEnvOptional(['HOLYVERSO_USER_PASSWORD']);
+const HOLYVERSO_USER_BIO = readEnvAny(
+  ['HOLYVERSO_USER_BIO'],
+  'Devocionales diarios para acompañarte con la Palabra de Dios.',
+);
 const FCM_PROJECT_ID = readEnvOptional(['FCM_PROJECT_ID']);
 const FCM_CLIENT_EMAIL = readEnvOptional(['FCM_CLIENT_EMAIL']);
 const rawFcmPrivateKey =
@@ -261,6 +294,8 @@ export const config = {
       DEVOTIONAL_DAILY_FEATURE_CANDIDATES_CRON,
     devotionalTagAffinityDecayCron: DEVOTIONAL_TAG_AFFINITY_DECAY_CRON,
     devotionalStreakRiskCron: DEVOTIONAL_STREAK_RISK_CRON,
+    holyversoDailyPlannerCron: HOLYVERSO_DAILY_PLANNER_CRON,
+    holyversoSlotPublisherCron: HOLYVERSO_SLOT_PUBLISHER_CRON,
   },
   mail: {
     host: MAIL_HOST,
@@ -281,6 +316,10 @@ export const config = {
     devotionalHookTimeoutMs: OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS,
     devotionalTagModel: OPENAI_DEVOTIONAL_TAG_MODEL,
     devotionalTagTimeoutMs: OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS,
+    holyversoTextModel: OPENAI_HOLYVERSO_TEXT_MODEL,
+    holyversoTextTimeoutMs: OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS,
+    holyversoImageModel: OPENAI_HOLYVERSO_IMAGE_MODEL,
+    holyversoImageTimeoutMs: OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS,
   },
   notifications: {
     fcmProjectId: FCM_PROJECT_ID,
@@ -310,6 +349,20 @@ export const config = {
       featuredCooldownHours: DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS,
       streakRiskSendAfterLocalHour: DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR,
     },
+  },
+  holyverso: {
+    user: {
+      name: HOLYVERSO_USER_NAME,
+      email: HOLYVERSO_USER_EMAIL,
+      handle: HOLYVERSO_USER_HANDLE,
+      password: HOLYVERSO_USER_PASSWORD,
+      bio: HOLYVERSO_USER_BIO,
+    },
+    isConfigured: Boolean(
+      OPENAI_API_KEY &&
+        OPENAI_HOLYVERSO_TEXT_MODEL &&
+        OPENAI_HOLYVERSO_IMAGE_MODEL
+    ),
   },
 } as const;
 
