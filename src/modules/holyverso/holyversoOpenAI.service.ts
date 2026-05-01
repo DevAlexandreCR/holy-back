@@ -38,6 +38,10 @@ const HOLYVERSO_TARGET_WORD_COUNT_MIN = Math.round(
 const HOLYVERSO_TARGET_WORD_COUNT_MAX = Math.round(
   DEVOTIONAL_WORDS_PER_MINUTE * 2.2
 )
+export const HOLYVERSO_BLOCK_MIN_COUNT = 8
+export const HOLYVERSO_BLOCK_MAX_COUNT = 14
+export const HOLYVERSO_BLOCK_MIN_LENGTH = 15
+export const HOLYVERSO_BLOCK_MAX_LENGTH = 260
 
 const textClient = axios.create({
   baseURL: 'https://api.openai.com/v1',
@@ -56,9 +60,18 @@ const primaryReferenceSchema = z.object({
   verse_end: z.number().int().positive().nullable().optional(),
 })
 
-const generatedDevotionalSchema = z.object({
+export const holyversoGeneratedDevotionalSchema = z.object({
   title: z.string().trim().min(1).max(120),
-  content: z.array(z.string().trim().min(30).max(900)).min(3).max(5),
+  content: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(HOLYVERSO_BLOCK_MIN_LENGTH)
+        .max(HOLYVERSO_BLOCK_MAX_LENGTH)
+    )
+    .min(HOLYVERSO_BLOCK_MIN_COUNT)
+    .max(HOLYVERSO_BLOCK_MAX_COUNT),
   primary_reference: primaryReferenceSchema,
   topic_key: z.string().trim().min(1).max(64),
   image_brief: z.string().trim().min(40).max(600),
@@ -95,7 +108,52 @@ const getStyleDescription = (styleKey: HolyversoStyleKey) =>
   HOLYVERSO_STYLE_LIBRARY.find((style) => style.key === styleKey)?.description ??
   styleKey
 
-const buildTextPrompt = (params: {
+const holyversoGeneratedDevotionalJsonSchema = {
+  type: 'object',
+  additionalProperties: false,
+  properties: {
+    title: {
+      type: 'string',
+      minLength: 1,
+      maxLength: 120,
+    },
+    content: {
+      type: 'array',
+      minItems: HOLYVERSO_BLOCK_MIN_COUNT,
+      maxItems: HOLYVERSO_BLOCK_MAX_COUNT,
+      items: {
+        type: 'string',
+        minLength: HOLYVERSO_BLOCK_MIN_LENGTH,
+        maxLength: HOLYVERSO_BLOCK_MAX_LENGTH,
+      },
+    },
+    primary_reference: {
+      type: 'object',
+      additionalProperties: false,
+      properties: {
+        book: { type: 'string', minLength: 1, maxLength: 80 },
+        chapter: { type: 'integer', minimum: 1 },
+        verse_start: { type: 'integer', minimum: 1 },
+        verse_end: {
+          anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }],
+        },
+      },
+      required: ['book', 'chapter', 'verse_start', 'verse_end'],
+    },
+    topic_key: {
+      type: 'string',
+      enum: HOLYVERSO_TOPIC_POOL.map((topic) => topic.key),
+    },
+    image_brief: {
+      type: 'string',
+      minLength: 40,
+      maxLength: 600,
+    },
+  },
+  required: ['title', 'content', 'primary_reference', 'topic_key', 'image_brief'],
+} as const
+
+export const buildHolyversoTextPrompt = (params: {
   topicKey: HolyversoTopicKey
   excludedTopicKeys: HolyversoTopicKey[]
   attemptSeed: string
@@ -108,19 +166,30 @@ const buildTextPrompt = (params: {
     'Hard requirements:',
     '- Language: Spanish for Colombia.',
     '- Tone: natural, warm, pastoral, close, never robotic.',
+    '- Address the reader directly in second person whenever it feels natural.',
     '- The opening must be highly engaging, emotionally sharp, and impossible to confuse with generic Christian copy.',
-    '- Open with a hook in the first paragraph that creates immediate curiosity, recognition, tension, or relief without clickbait or manipulation.',
+    '- Open with a first block that names a real emotional state, tension, relief, weariness, or hidden fear without clickbait or manipulation.',
     `- Total devotional body length must stay between ${HOLYVERSO_MIN_WORD_COUNT} and ${HOLYVERSO_MAX_WORD_COUNT} words.`,
     `- Ideal target length is ${HOLYVERSO_TARGET_WORD_COUNT_MIN} to ${HOLYVERSO_TARGET_WORD_COUNT_MAX} words so the text feels complete but not exhausting.`,
-    '- Structure the devotional in 3 to 5 short paragraphs.',
-    '- Keep paragraphs breathable: usually 1 to 3 sentences per paragraph, with natural pauses and varied rhythm.',
-    '- Avoid dense walls of text. No paragraph should feel heavy, repetitive, or over-explained.',
+    `- Structure the devotional body in ${HOLYVERSO_BLOCK_MIN_COUNT} to ${HOLYVERSO_BLOCK_MAX_COUNT} short blocks inside the content array.`,
+    '- Each block should usually be 1 sentence, sometimes 2, and only rarely 3 if a biblical pivot or closing line truly needs it.',
+    '- Keep a short-block cadence: punchy, breathable, mobile-friendly, and emotionally progressive.',
+    '- Do not merge ideas into dense paragraphs. Each block should carry one clear beat.',
     '- Because this is a short devotional, be concise and selective. Do not overdevelop every idea.',
     '- One clear biblical anchor with a single main verse reference.',
     '- Practical application for daily life.',
+    '- Follow this editorial progression, adapted naturally to the topic: recognition -> concrete tension -> hidden inner question -> biblical pivot -> reframing -> theme-fit call to action -> memorable closing line.',
+    '- Build escalating specificity through relatable examples, inner conflict, or lived tension instead of abstract teaching.',
+    '- Include one explicit inner question, exposed doubt, or silent fear before the biblical answer arrives.',
+    '- Use the verse as the turning point that answers the tension. Do not use the verse as decoration.',
+    '- Include one compact thesis line that feels memorable and easy to retain.',
+    '- End according to the topic: use confrontation plus a micro-action for today when the theme supports it; use comfort, surrender, reflection, or a prayerful landing when the topic is more tender.',
+    '- A brief natural pivot line is acceptable, but do not use sermon-outline headings or formulaic section labels.',
     '- No hashtags, no emojis, no lists, no sermon outline labels.',
     '- Avoid repeating the exact topic labels in an artificial way.',
-    '- End with a concise landing that leaves the reader with clarity, peace, conviction, or a concrete next step.',
+    '- Avoid generic churchy filler, sermon-outline exposition, repetitive verse paraphrasing, fake certainty, and promises not grounded in the verse.',
+    '- Do not let the call to action sound like motivational content or social-media advice. It must remain pastoral, biblical, and believable.',
+    '- End with a concise landing that leaves the reader with clarity, peace, conviction, surrender, or a concrete next step that fits the theme.',
     '',
     `Main topic key: ${params.topicKey}`,
     `Main topic guidance: ${getTopicDescription(params.topicKey)}`,
@@ -176,62 +245,13 @@ export const generateHolyversoDevotional = async (params: {
     '/responses',
     {
       model: config.openai.holyversoTextModel,
-      input: buildTextPrompt(params),
+      input: buildHolyversoTextPrompt(params),
       text: {
         format: {
           type: 'json_schema',
           name: 'holyverso_devotional',
           strict: true,
-          schema: {
-            type: 'object',
-            additionalProperties: false,
-            properties: {
-              title: {
-                type: 'string',
-                minLength: 1,
-                maxLength: 120,
-              },
-              content: {
-                type: 'array',
-                minItems: 3,
-                maxItems: 5,
-                items: {
-                  type: 'string',
-                  minLength: 30,
-                  maxLength: 900,
-                },
-              },
-              primary_reference: {
-                type: 'object',
-                additionalProperties: false,
-                properties: {
-                  book: { type: 'string', minLength: 1, maxLength: 80 },
-                  chapter: { type: 'integer', minimum: 1 },
-                  verse_start: { type: 'integer', minimum: 1 },
-                  verse_end: {
-                    anyOf: [{ type: 'integer', minimum: 1 }, { type: 'null' }],
-                  },
-                },
-                required: ['book', 'chapter', 'verse_start', 'verse_end'],
-              },
-              topic_key: {
-                type: 'string',
-                enum: HOLYVERSO_TOPIC_POOL.map((topic) => topic.key),
-              },
-              image_brief: {
-                type: 'string',
-                minLength: 40,
-                maxLength: 600,
-              },
-            },
-            required: [
-              'title',
-              'content',
-              'primary_reference',
-              'topic_key',
-              'image_brief',
-            ],
-          },
+          schema: holyversoGeneratedDevotionalJsonSchema,
         },
       },
     },
@@ -248,7 +268,7 @@ export const generateHolyversoDevotional = async (params: {
     throw new Error('HolyVerso text generation returned an empty response.')
   }
 
-  const parsed = generatedDevotionalSchema.parse(JSON.parse(output))
+  const parsed = holyversoGeneratedDevotionalSchema.parse(JSON.parse(output))
   if (parsed.topic_key !== params.topicKey) {
     throw new Error('HolyVerso text generation returned a mismatched topic key.')
   }
