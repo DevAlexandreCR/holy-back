@@ -9,6 +9,7 @@ import {
 import { prisma } from '../../config/db'
 import { AppError } from '../../common/errors'
 import { devotionalFeedPolicy } from '../devotionals/devotional.policy'
+import { notifyNewFollowerCreated } from '../notifications/notificationInbox.service'
 
 const normalizeStorageUrl = (value?: string | null) => {
   if (!value) {
@@ -349,7 +350,9 @@ export const followCreator = async (params: {
 
   await ensureCreatorExists(params.creatorId)
 
-  return prisma.$transaction(async (tx) => {
+  let createdFollow = false
+
+  const profile = await prisma.$transaction(async (tx) => {
     const existing = await tx.userFollow.findUnique({
       where: {
         followerId_followedId: {
@@ -360,6 +363,7 @@ export const followCreator = async (params: {
     })
 
     if (!existing) {
+      createdFollow = true
       await tx.userFollow.create({
         data: {
           followerId: params.followerId,
@@ -435,6 +439,15 @@ export const followCreator = async (params: {
       publishedDevotionalsCount,
     })
   })
+
+  if (createdFollow) {
+    await notifyNewFollowerCreated({
+      recipientUserId: params.creatorId,
+      actorUserId: params.followerId,
+    })
+  }
+
+  return profile
 }
 
 export const unfollowCreator = async (params: {

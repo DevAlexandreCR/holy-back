@@ -9,8 +9,16 @@ import {
   updateNotificationPreferences,
 } from './notification.service'
 import {
+  getNotificationInboxUnreadCount,
+  listNotificationInbox,
+  markAllNotificationInboxItemsRead,
+  markNotificationInboxItemRead,
+} from './notificationInbox.service'
+import {
   deviceTokenDeleteSchema,
   deviceTokenRegisterSchema,
+  notificationInboxListSchema,
+  notificationInboxReadSchema,
   notificationOpenSchema,
   notificationPreferencesSchema,
 } from './notification.validation'
@@ -72,6 +80,57 @@ export const updateNotificationPreferencesHandler = async (
   ensureAuth(req)
   const body = parseOrThrow(notificationPreferencesSchema, req.body)
   const result = await updateNotificationPreferences(req.user!.sub, body)
+  res.json({ data: result })
+}
+
+export const listNotificationInboxHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  const query = parseOrThrow(notificationInboxListSchema, req.query)
+  const limitRaw = query.limit ? Number(query.limit) : 20
+  const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? limitRaw : 20
+  const result = await listNotificationInbox({
+    userId: req.user!.sub,
+    cursor: query.cursor,
+    limit,
+    filter: query.filter,
+  })
+
+  res.json({ data: result })
+}
+
+export const getNotificationInboxUnreadCountHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  const result = await getNotificationInboxUnreadCount(req.user!.sub)
+  res.json({ data: result })
+}
+
+export const markNotificationInboxItemReadHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  const body = parseOrThrow(notificationInboxReadSchema, req.body)
+  const result = await markNotificationInboxItemRead({
+    userId: req.user!.sub,
+    inboxItemId: String(req.params.id),
+    opened: body.opened === true,
+  })
+
+  res.json({ data: result })
+}
+
+export const markNotificationInboxItemsReadHandler = async (
+  req: Request,
+  res: Response
+) => {
+  ensureAuth(req)
+  const result = await markAllNotificationInboxItemsRead(req.user!.sub)
   res.json({ data: result })
 }
 

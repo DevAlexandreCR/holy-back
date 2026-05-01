@@ -72,6 +72,10 @@ export const updateSettings = async (
       | 'streakRiskNotificationsEnabled'
       | 'authorModerationNotificationsEnabled'
       | 'editorReviewNotificationsEnabled'
+      | 'socialActivityNotificationsEnabled'
+      | 'commentNotificationsEnabled'
+      | 'followNotificationsEnabled'
+      | 'reactionNotificationsEnabled'
     >
   >,
 ): Promise<UserSettings> => {

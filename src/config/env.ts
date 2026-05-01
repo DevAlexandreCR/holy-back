@@ -134,6 +134,10 @@ const DEVOTIONAL_STREAK_RISK_CRON = readEnvAny(
   ['DEVOTIONAL_STREAK_RISK_CRON'],
   '*/15 * * * *',
 );
+const NOTIFICATION_INBOX_FLUSH_CRON = readEnvAny(
+  ['NOTIFICATION_INBOX_FLUSH_CRON'],
+  '*/5 * * * *',
+);
 const HOLYVERSO_DAILY_PLANNER_CRON = readEnvAny(
   ['HOLYVERSO_DAILY_PLANNER_CRON'],
   '*/30 * * * *',
@@ -294,6 +298,7 @@ export const config = {
       DEVOTIONAL_DAILY_FEATURE_CANDIDATES_CRON,
     devotionalTagAffinityDecayCron: DEVOTIONAL_TAG_AFFINITY_DECAY_CRON,
     devotionalStreakRiskCron: DEVOTIONAL_STREAK_RISK_CRON,
+    notificationInboxFlushCron: NOTIFICATION_INBOX_FLUSH_CRON,
     holyversoDailyPlannerCron: HOLYVERSO_DAILY_PLANNER_CRON,
     holyversoSlotPublisherCron: HOLYVERSO_SLOT_PUBLISHER_CRON,
   },

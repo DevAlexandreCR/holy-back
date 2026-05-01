@@ -94,6 +94,13 @@ enum DevotionalNotificationType {
   AUTHOR_DEVOTIONAL_RESTRICTED
 }
 
+enum NotificationInboxType {
+  DEVOTIONAL_LIKE
+  DEVOTIONAL_COMMENT
+  DEVOTIONAL_SHARE
+  NEW_FOLLOWER
+}
+
 enum DevotionalDailyFeaturedSelectionMode {
   BASE_SCORE
   BASE_SCORE_PLUS_AFFINITY
@@ -226,6 +233,10 @@ model User {
   deviceTokens                    DeviceToken[]
   appSessionEvents                AppSessionEvent[]
   notificationSends               DevotionalNotificationSend[]
+  notificationInboxItemsReceived  NotificationInboxItem[]         @relation("NotificationInboxRecipient")
+  notificationInboxItemsActed     NotificationInboxItem[]         @relation("NotificationInboxActor")
+  notificationInboxActorEvents    NotificationInboxActorEvent[]
+  notificationInboxPushDeliveries NotificationInboxPushDelivery[]
   devotionalTagAffinities         UserDevotionalTagAffinity[]
   dailyFeaturedDevotionals        UserDailyFeaturedDevotional[]
   devotionalAffinitySignalEvents  DevotionalAffinitySignalEvent[]
@@ -270,6 +281,10 @@ model UserSettings {
   streakRiskNotificationsEnabled         Boolean       @default(true) @map("streak_risk_notifications_enabled")
   authorModerationNotificationsEnabled   Boolean       @default(true) @map("author_moderation_notifications_enabled")
   editorReviewNotificationsEnabled       Boolean       @default(true) @map("editor_review_notifications_enabled")
+  socialActivityNotificationsEnabled     Boolean       @default(true) @map("social_activity_notifications_enabled")
+  commentNotificationsEnabled            Boolean       @default(true) @map("comment_notifications_enabled")
+  followNotificationsEnabled             Boolean       @default(true) @map("follow_notifications_enabled")
+  reactionNotificationsEnabled           Boolean       @default(true) @map("reaction_notifications_enabled")
   createdAt                              DateTime      @default(now()) @map("created_at")
   updatedAt                              DateTime      @updatedAt @map("updated_at")
   user                                   User          @relation(fields: [userId], references: [id])
@@ -475,6 +490,7 @@ model Devotional {
   reports                 DevotionalReport[]
   moderationActions       DevotionalModerationAction[]
   notificationSends       DevotionalNotificationSend[]
+  notificationInboxItems  NotificationInboxItem[]
   stateTransitionEvents   DevotionalStateTransitionEvent[]
   dailyMetrics            DevotionalDailyMetric[]
   shareAttributionSources DevotionalShareAttributionSource[]
@@ -671,6 +687,7 @@ model DevotionalComment {
 
   devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
   user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notificationInboxItems NotificationInboxItem[]
 
   @@index([devotionalId])
   @@index([userId])
@@ -972,6 +989,7 @@ model DeviceToken {
 
   user              User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
   notificationSends DevotionalNotificationSend[]
+  notificationInboxPushDeliveries NotificationInboxPushDelivery[]
 
   @@index([userId, isActive])
   @@index([osPermissionStatus, isActive])
@@ -1008,6 +1026,83 @@ model DevotionalNotificationSend {
   @@index([userId, type, openedAt], map: "dev_notif_sends_user_type_open_idx")
   @@index([deviceTokenId, sentAt])
   @@map("devotional_notification_sends")
+}
+
+model NotificationInboxItem {
+  id             String               @id @default(uuid()) @db.Char(36)
+  recipientUserId String              @map("recipient_user_id") @db.Char(36)
+  type           NotificationInboxType
+  actorUserId    String?              @map("actor_user_id") @db.Char(36)
+  devotionalId   String?              @map("devotional_id") @db.Char(36)
+  commentId      String?              @map("comment_id") @db.Char(36)
+  title          String               @db.VarChar(191)
+  body           String               @db.VarChar(500)
+  imageUrl       String?              @map("image_url")
+  aggregateCount Int                  @default(1) @map("aggregate_count")
+  aggregationKey String?              @map("aggregation_key") @db.VarChar(191)
+  windowStartedAt DateTime?           @map("window_started_at")
+  windowEndsAt   DateTime?            @map("window_ends_at")
+  isRead         Boolean              @default(false) @map("is_read")
+  readAt         DateTime?            @map("read_at")
+  openedAt       DateTime?            @map("opened_at")
+  lastPushedAt   DateTime?            @map("last_pushed_at")
+  metadata       Json?
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  recipientUser  User                 @relation("NotificationInboxRecipient", fields: [recipientUserId], references: [id], onDelete: Cascade)
+  actorUser      User?                @relation("NotificationInboxActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  devotional     Devotional?          @relation(fields: [devotionalId], references: [id], onDelete: SetNull)
+  comment        DevotionalComment?   @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  actorEvents    NotificationInboxActorEvent[]
+  pushDeliveries NotificationInboxPushDelivery[]
+
+  @@index([recipientUserId, isRead, createdAt], map: "notif_inbox_recipient_read_created_idx")
+  @@index([recipientUserId, type, createdAt], map: "notif_inbox_recipient_type_created_idx")
+  @@index([aggregationKey, windowEndsAt], map: "notif_inbox_agg_window_idx")
+  @@index([windowEndsAt, lastPushedAt], map: "notif_inbox_window_push_idx")
+  @@map("notification_inbox_items")
+}
+
+model NotificationInboxActorEvent {
+  id          String                @id @default(uuid()) @db.Char(36)
+  inboxItemId String                @map("inbox_item_id") @db.Char(36)
+  actorUserId String                @map("actor_user_id") @db.Char(36)
+  createdAt   DateTime              @default(now()) @map("created_at")
+
+  inboxItem NotificationInboxItem @relation(fields: [inboxItemId], references: [id], onDelete: Cascade)
+  actorUser User                  @relation(fields: [actorUserId], references: [id], onDelete: Cascade)
+
+  @@unique([inboxItemId, actorUserId], map: "notif_inbox_actor_event_item_actor_key")
+  @@index([actorUserId, createdAt], map: "notif_inbox_actor_event_actor_created_idx")
+  @@map("notification_inbox_actor_events")
+}
+
+model NotificationInboxPushDelivery {
+  id                String                @id @default(uuid()) @db.Char(36)
+  inboxItemId       String                @map("inbox_item_id") @db.Char(36)
+  recipientUserId   String                @map("recipient_user_id") @db.Char(36)
+  deviceTokenId     String                @map("device_token_id") @db.Char(36)
+  title             String                @db.VarChar(191)
+  body              String                @db.VarChar(500)
+  providerMessageId String?               @map("provider_message_id")
+  sentAt            DateTime              @default(now()) @map("sent_at")
+  providerAcceptedAt DateTime?            @map("provider_accepted_at")
+  failedAt          DateTime?             @map("failed_at")
+  failureCode       String?               @map("failure_code")
+  tokenDeactivatedAt DateTime?            @map("token_deactivated_at")
+  payload           Json?
+  createdAt         DateTime              @default(now()) @map("created_at")
+  updatedAt         DateTime              @updatedAt @map("updated_at")
+
+  inboxItem      NotificationInboxItem @relation(fields: [inboxItemId], references: [id], onDelete: Cascade)
+  recipientUser  User                  @relation(fields: [recipientUserId], references: [id], onDelete: Cascade)
+  deviceToken    DeviceToken           @relation(fields: [deviceTokenId], references: [id], onDelete: Cascade)
+
+  @@index([inboxItemId, sentAt], map: "notif_inbox_push_item_sent_idx")
+  @@index([recipientUserId, sentAt], map: "notif_inbox_push_recipient_sent_idx")
+  @@index([deviceTokenId, sentAt], map: "notif_inbox_push_device_sent_idx")
+  @@map("notification_inbox_push_deliveries")
 }
 
 model AppSessionEvent {

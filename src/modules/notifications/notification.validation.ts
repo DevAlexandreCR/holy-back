@@ -22,9 +22,23 @@ export const notificationPreferencesSchema = z.object({
   streak_risk_notifications_enabled: z.boolean(),
   author_moderation_notifications_enabled: z.boolean(),
   editor_review_notifications_enabled: z.boolean(),
+  social_activity_notifications_enabled: z.boolean(),
+  comment_notifications_enabled: z.boolean(),
+  follow_notifications_enabled: z.boolean(),
+  reaction_notifications_enabled: z.boolean(),
 })
 
 export const notificationOpenSchema = z.object({
   type: z.nativeEnum(DevotionalNotificationType),
   devotional_id: z.string().uuid(),
+})
+
+export const notificationInboxListSchema = z.object({
+  cursor: z.string().optional(),
+  limit: z.string().optional(),
+  filter: z.enum(['all', 'unread']).optional(),
+})
+
+export const notificationInboxReadSchema = z.object({
+  opened: z.boolean().optional(),
 })

@@ -20,31 +20,12 @@ import {
 import { ensureSettings, updateSettings } from '../user/userSettings.service'
 import { devotionalNotificationPolicy } from '../devotionals/devotional.policy'
 import { sendPushMessage } from './notification.provider'
+import { formatNotificationPreferences } from './notificationPreferences'
 
 const SENDABLE_PERMISSION_STATUSES = [
   DeviceOsPermissionStatus.AUTHORIZED,
   DeviceOsPermissionStatus.PROVISIONAL,
 ] as const
-
-const formatNotificationPreferences = (settings: {
-  devotionalNotificationsEnabled: boolean
-  followedCreatorNotificationsEnabled: boolean
-  featuredDevotionalNotificationsEnabled: boolean
-  streakRiskNotificationsEnabled: boolean
-  authorModerationNotificationsEnabled: boolean
-  editorReviewNotificationsEnabled: boolean
-}) => ({
-  devotional_notifications_enabled: settings.devotionalNotificationsEnabled,
-  followed_creator_notifications_enabled:
-    settings.followedCreatorNotificationsEnabled,
-  featured_devotional_notifications_enabled:
-    settings.featuredDevotionalNotificationsEnabled,
-  streak_risk_notifications_enabled: settings.streakRiskNotificationsEnabled,
-  author_moderation_notifications_enabled:
-    settings.authorModerationNotificationsEnabled,
-  editor_review_notifications_enabled:
-    settings.editorReviewNotificationsEnabled,
-})
 
 const buildNotificationBody = (devotional: { title: string; author: { name: string } }) => ({
   [DevotionalNotificationType.FOLLOWED_CREATOR_NEW_DEVOTIONAL]: {
@@ -443,6 +424,10 @@ export const updateNotificationPreferences = async (
     streak_risk_notifications_enabled: boolean
     author_moderation_notifications_enabled: boolean
     editor_review_notifications_enabled: boolean
+    social_activity_notifications_enabled: boolean
+    comment_notifications_enabled: boolean
+    follow_notifications_enabled: boolean
+    reaction_notifications_enabled: boolean
   }
 ) => {
   const settings = await updateSettings(userId, {
@@ -455,6 +440,11 @@ export const updateNotificationPreferences = async (
     authorModerationNotificationsEnabled:
       input.author_moderation_notifications_enabled,
     editorReviewNotificationsEnabled: input.editor_review_notifications_enabled,
+    socialActivityNotificationsEnabled:
+      input.social_activity_notifications_enabled,
+    commentNotificationsEnabled: input.comment_notifications_enabled,
+    followNotificationsEnabled: input.follow_notifications_enabled,
+    reactionNotificationsEnabled: input.reaction_notifications_enabled,
   })
 
   return formatNotificationPreferences(settings)

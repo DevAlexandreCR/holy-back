@@ -11,6 +11,7 @@ import {
   formatUserModeration,
   userModerationSelect,
 } from '../user/userModeration.service';
+import { formatNotificationPreferences } from '../notifications/notificationPreferences';
 
 type RegisterInput = {
   name: string;
@@ -236,18 +237,7 @@ export const getUserWithSettings = async (userId: string) => {
       preferred_version_id: settings.preferredVersionId,
       timezone: settings.timezone,
       widget_font_size: settings.widgetFontSize,
-      devotional_notifications_enabled:
-        settings.devotionalNotificationsEnabled,
-      followed_creator_notifications_enabled:
-        settings.followedCreatorNotificationsEnabled,
-      featured_devotional_notifications_enabled:
-        settings.featuredDevotionalNotificationsEnabled,
-      streak_risk_notifications_enabled:
-        settings.streakRiskNotificationsEnabled,
-      author_moderation_notifications_enabled:
-        settings.authorModerationNotificationsEnabled,
-      editor_review_notifications_enabled:
-        settings.editorReviewNotificationsEnabled,
+      ...formatNotificationPreferences(settings),
     },
   };
 };

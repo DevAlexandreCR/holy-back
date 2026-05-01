@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { AppError } from '../../common/errors'
 import { ensureSettings, setPreferredVersion, setTimezone, setWidgetFontSize } from './userSettings.service'
 import { deleteUserAccount } from './userDeletion.service'
+import { formatNotificationPreferences } from '../notifications/notificationPreferences'
 
 const versionSchema = z.object({
   version_id: z.number().int().positive(),
@@ -26,20 +27,15 @@ const formatSettings = (settings: {
   streakRiskNotificationsEnabled: boolean
   authorModerationNotificationsEnabled: boolean
   editorReviewNotificationsEnabled: boolean
+  socialActivityNotificationsEnabled: boolean
+  commentNotificationsEnabled: boolean
+  followNotificationsEnabled: boolean
+  reactionNotificationsEnabled: boolean
 }) => ({
   preferred_version_id: settings.preferredVersionId,
   timezone: settings.timezone,
   widget_font_size: settings.widgetFontSize,
-  devotional_notifications_enabled: settings.devotionalNotificationsEnabled,
-  followed_creator_notifications_enabled:
-    settings.followedCreatorNotificationsEnabled,
-  featured_devotional_notifications_enabled:
-    settings.featuredDevotionalNotificationsEnabled,
-  streak_risk_notifications_enabled: settings.streakRiskNotificationsEnabled,
-  author_moderation_notifications_enabled:
-    settings.authorModerationNotificationsEnabled,
-  editor_review_notifications_enabled:
-    settings.editorReviewNotificationsEnabled,
+  ...formatNotificationPreferences(settings),
 })
 
 const parseOrThrow = <T>(schema: z.Schema<T>, payload: unknown): T => {

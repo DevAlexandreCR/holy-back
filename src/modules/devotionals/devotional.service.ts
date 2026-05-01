@@ -61,6 +61,11 @@ import {
 } from '../shareAttribution/shareAttribution.service'
 import { sendDevotionalNotifications } from '../notifications/notification.service'
 import {
+  notifyDevotionalCommentCreated,
+  notifyDevotionalLikeCreated,
+  notifyDevotionalShareCreated,
+} from '../notifications/notificationInbox.service'
+import {
   AuthorBlockRecommendation,
   resolveAuthorBlockRecommendation,
   resolveAuthorBlockRecommendations,
@@ -2335,7 +2340,7 @@ export const toggleDevotionalLike = async (params: {
   devotionalId: string
   userId: string
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const existing = await tx.devotionalLike.findUnique({
       where: {
         devotionalId_userId: {
@@ -2370,6 +2375,15 @@ export const toggleDevotionalLike = async (params: {
 
     return { liked: true, likesCount: updated.likeCount }
   })
+
+  if (result.liked) {
+    await notifyDevotionalLikeCreated({
+      devotionalId: params.devotionalId,
+      actorUserId: params.userId,
+    })
+  }
+
+  return result
 }
 
 export const saveDevotional = async (params: {
@@ -2479,7 +2493,7 @@ export const shareDevotional = async (params: {
   userId: string
   deliveryToken?: string | null
 }) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const devotional = await tx.devotional.findUnique({
       where: { id: params.devotionalId },
       select: { id: true },
@@ -2524,6 +2538,13 @@ export const shareDevotional = async (params: {
 
     return { shareCount: updated.shareCount, shareUrl: shareSource.shareUrl }
   })
+
+  await notifyDevotionalShareCreated({
+    devotionalId: params.devotionalId,
+    actorUserId: params.userId,
+  })
+
+  return result
 }
 
 export const markReadComplete = async (params: {
@@ -2872,7 +2893,7 @@ export const addComment = async (params: {
     return created
   })
 
-  return {
+  const result = {
     id: comment.id,
     devotional_id: comment.devotionalId,
     content: comment.content,
@@ -2880,6 +2901,14 @@ export const addComment = async (params: {
     updated_at: comment.updatedAt.toISOString(),
     author: formatAuthor(comment.user),
   }
+
+  await notifyDevotionalCommentCreated({
+    devotionalId: params.devotionalId,
+    commentId: comment.id,
+    actorUserId: params.userId,
+  })
+
+  return result
 }
 
 export const updateComment = async (params: {

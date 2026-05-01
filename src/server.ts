@@ -20,6 +20,10 @@ import {
   runDevotionalStreakRiskOnce,
 } from './jobs/devotionalStreakRiskJob';
 import {
+  registerNotificationInboxFlushJob,
+  runNotificationInboxFlushOnce,
+} from './jobs/notificationInboxFlushJob';
+import {
   registerDevotionalTagAffinityDecayJob,
   runDevotionalTagAffinityDecayOnce,
 } from './jobs/devotionalTagAffinityDecayJob';
@@ -54,6 +58,9 @@ let devotionalTagAffinityDecayJob:
 let devotionalStreakRiskJob:
   | ReturnType<typeof registerDevotionalStreakRiskJob>
   | undefined;
+let notificationInboxFlushJob:
+  | ReturnType<typeof registerNotificationInboxFlushJob>
+  | undefined;
 let userStreakMaintenanceJob:
   | ReturnType<typeof registerUserStreakMaintenanceJob>
   | undefined;
@@ -74,6 +81,7 @@ const start = async (): Promise<void> => {
     await runDevotionalTagAffinityDecayOnce();
     await runUserStreakMaintenanceOnce();
     await runDevotionalStreakRiskOnce();
+    await runNotificationInboxFlushOnce();
     await runHolyversoDailyPlannerOnce();
     await runHolyversoSlotPublisherOnce();
     server = app.listen(port, () => {
@@ -88,6 +96,7 @@ const start = async (): Promise<void> => {
     devotionalTagAffinityDecayJob = registerDevotionalTagAffinityDecayJob();
     userStreakMaintenanceJob = registerUserStreakMaintenanceJob();
     devotionalStreakRiskJob = registerDevotionalStreakRiskJob();
+    notificationInboxFlushJob = registerNotificationInboxFlushJob();
     holyversoDailyPlannerJob = registerHolyversoDailyPlannerJob();
     holyversoSlotPublisherJob = registerHolyversoSlotPublisherJob();
   } catch (error) {
@@ -121,6 +130,9 @@ const shutdown = async (signal: string): Promise<void> => {
     }
     if (devotionalStreakRiskJob) {
       devotionalStreakRiskJob.stop();
+    }
+    if (notificationInboxFlushJob) {
+      notificationInboxFlushJob.stop();
     }
     if (holyversoDailyPlannerJob) {
       holyversoDailyPlannerJob.stop();
