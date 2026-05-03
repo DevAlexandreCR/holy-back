@@ -40,6 +40,13 @@ import {
   extractPlainText,
   qualityGateMessageForStatus,
 } from './devotionalFeedContent'
+import {
+  listFollowingSelections,
+  listForYouSelections,
+  mergeUniqueFeedCandidates,
+  type DevotionalRecommendationReason,
+  type FeedSelection as BaseFeedSelection,
+} from './devotionalFeedStrategy'
 import { applyReadCompleteEngagement } from './devotionalEngagement.service'
 import { devotionalHookGenerator } from './devotionalHookGenerator.service'
 import { formatPrimaryReferenceLabel } from './devotionalReference'
@@ -80,16 +87,8 @@ export const DEVOTIONAL_MANAGEMENT_STATUSES = [
 
 export type DevotionalManagementStatus =
   (typeof DEVOTIONAL_MANAGEMENT_STATUSES)[number]
-
-export const DEVOTIONAL_RECOMMENDATION_REASONS = [
-  'FOLLOWED_AUTHOR',
-  'RECENTLY_ENGAGED_AUTHOR',
-  'TRENDING',
-  'DISCOVERY',
-] as const
-
-export type DevotionalRecommendationReason =
-  (typeof DEVOTIONAL_RECOMMENDATION_REASONS)[number]
+export { DEVOTIONAL_RECOMMENDATION_REASONS } from './devotionalFeedStrategy'
+export type { DevotionalRecommendationReason } from './devotionalFeedStrategy'
 
 type DevotionalWithRelations = Prisma.DevotionalGetPayload<{
   include: {
@@ -133,10 +132,7 @@ type SavedDevotionalCursor = {
   id: string
 }
 
-type FeedSelection = {
-  devotional: DevotionalWithRelations
-  recommendationReason: DevotionalRecommendationReason
-}
+type FeedSelection = BaseFeedSelection<DevotionalWithRelations>
 
 const isImageAssetUniqueConstraintError = (error: unknown) => {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) {
@@ -803,73 +799,6 @@ const getFeedCandidateWindowByMode = (
     ? devotionalFeedPolicy.following.candidateWindowMultiplier
     : devotionalFeedPolicy.forYou.candidateWindowMultiplier)
 
-const selectFeedCandidates = (params: {
-  candidates: DevotionalWithRelations[]
-  recentDeliveryIds: Set<string>
-  limit: number
-}) => {
-  const authorCounts = new Map<string, number>()
-  const selected: DevotionalWithRelations[] = []
-  const selectedIds = new Set<string>()
-
-  const trySelect = (candidate: DevotionalWithRelations, respectAuthorCap: boolean) => {
-    if (selected.length >= params.limit || selectedIds.has(candidate.id)) {
-      return
-    }
-
-    const authorCount = authorCounts.get(candidate.authorId) ?? 0
-    if (
-      respectAuthorCap &&
-      authorCount >= devotionalFeedPolicy.authorRepetitionMax
-    ) {
-      return
-    }
-
-    selected.push(candidate)
-    selectedIds.add(candidate.id)
-    authorCounts.set(candidate.authorId, authorCount + 1)
-  }
-
-  for (const candidate of params.candidates) {
-    if (params.recentDeliveryIds.has(candidate.id)) {
-      continue
-    }
-    trySelect(candidate, true)
-  }
-
-  for (const candidate of params.candidates) {
-    if (!params.recentDeliveryIds.has(candidate.id)) {
-      continue
-    }
-    trySelect(candidate, true)
-  }
-
-  for (const candidate of params.candidates) {
-    trySelect(candidate, false)
-  }
-
-  return {
-    items: selected,
-    selectedIds,
-  }
-}
-
-const isActiveFeatured = (devotional: {
-  publicationState: DevotionalPublicationState
-  featuredUntil: Date | null
-}) =>
-  devotional.publicationState === DevotionalPublicationState.FEATURED &&
-  (devotional.featuredUntil == null ||
-    devotional.featuredUntil.getTime() > Date.now())
-
-const compareDatesDesc = (left?: Date | null, right?: Date | null) =>
-  (right?.getTime() ?? 0) - (left?.getTime() ?? 0)
-
-const compareNumbersDesc = (left: number, right: number) => right - left
-
-const compareStringsDesc = (left: string, right: string) =>
-  right.localeCompare(left)
-
 const buildEligibleFeedWhere = (): Prisma.DevotionalWhereInput => ({
   publicationState: { in: [...DEVOTIONAL_FEED_ELIGIBLE_STATES] },
   moderationStatus: DevotionalModerationStatus.CLEAR,
@@ -877,84 +806,6 @@ const buildEligibleFeedWhere = (): Prisma.DevotionalWhereInput => ({
     isBlocked: false,
   },
 })
-
-const getDiscoveryReason = (
-  devotional: Pick<DevotionalWithRelations, 'publicationState' | 'rankingScore'>
-): DevotionalRecommendationReason => {
-  if (
-    devotional.publicationState === DevotionalPublicationState.TRENDING ||
-    devotional.publicationState === DevotionalPublicationState.FEATURED ||
-    devotional.rankingScore >= devotionalFeedPolicy.forYou.trendingThreshold
-  ) {
-    return 'TRENDING'
-  }
-
-  return 'DISCOVERY'
-}
-
-const buildBucketTargets = (limit: number) => {
-  const personalized = Math.round(limit * devotionalFeedPolicy.forYou.mix.personalized)
-  const lowReach = Math.round(
-    limit * devotionalFeedPolicy.forYou.mix.lowReachExploration
-  )
-  const global = Math.max(limit - personalized - lowReach, 0)
-
-  return {
-    global,
-    lowReach,
-    personalized,
-  }
-}
-
-const appendSelectionsFromBucket = (params: {
-  bucket: FeedSelection[]
-  target: number
-  selected: FeedSelection[]
-  selectedIds: Set<string>
-  authorCounts: Map<string, number>
-  recentDeliveryIds: Set<string>
-}) => {
-  let added = 0
-  const phases = [
-    { recentOnly: false, respectAuthorCap: true },
-    { recentOnly: true, respectAuthorCap: true },
-    { recentOnly: undefined as boolean | undefined, respectAuthorCap: false },
-  ]
-
-  for (const phase of phases) {
-    for (const item of params.bucket) {
-      if (added >= params.target) {
-        return
-      }
-
-      const devotional = item.devotional
-      if (params.selectedIds.has(devotional.id)) {
-        continue
-      }
-
-      const isRecent = params.recentDeliveryIds.has(devotional.id)
-      if (phase.recentOnly === false && isRecent) {
-        continue
-      }
-      if (phase.recentOnly === true && !isRecent) {
-        continue
-      }
-
-      const authorCount = params.authorCounts.get(devotional.authorId) ?? 0
-      if (
-        phase.respectAuthorCap &&
-        authorCount >= devotionalFeedPolicy.authorRepetitionMax
-      ) {
-        continue
-      }
-
-      params.selected.push(item)
-      params.selectedIds.add(devotional.id)
-      params.authorCounts.set(devotional.authorId, authorCount + 1)
-      added += 1
-    }
-  }
-}
 
 const upsertCreatorAffinity = async (
   tx: Prisma.TransactionClient,
@@ -1064,204 +915,6 @@ const resolveInteractionFeedDeliveryId = async (
   })
 
   return attribution.deliveryId
-}
-
-const listFollowingSelections = (params: {
-  candidates: DevotionalWithRelations[]
-  recentDeliveryIds: Set<string>
-  limit: number
-}) => {
-  const ordered = [...params.candidates].sort((left, right) => {
-    const featuredComparison =
-      Number(isActiveFeatured(right)) - Number(isActiveFeatured(left))
-    if (featuredComparison !== 0) {
-      return featuredComparison
-    }
-
-    const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
-    if (publishedComparison !== 0) {
-      return publishedComparison
-    }
-
-    const rankingComparison = compareNumbersDesc(
-      left.rankingScore,
-      right.rankingScore
-    )
-    if (rankingComparison !== 0) {
-      return rankingComparison
-    }
-
-    return compareStringsDesc(left.id, right.id)
-  })
-
-  const selected = selectFeedCandidates({
-    candidates: ordered,
-    recentDeliveryIds: params.recentDeliveryIds,
-    limit: params.limit,
-  }).items
-
-  return selected.map<FeedSelection>((devotional) => ({
-    devotional,
-    recommendationReason: 'FOLLOWED_AUTHOR',
-  }))
-}
-
-const listForYouSelections = (params: {
-  candidates: DevotionalWithRelations[]
-  recentDeliveryIds: Set<string>
-  limit: number
-  followedAuthorIds: Set<string>
-  affinityByCreatorId: Map<string, number>
-  affinityBoostByDevotionalId: Map<string, number>
-  lowReachAuthorIds: Set<string>
-}) => {
-  const personalizedBucket = params.candidates
-    .filter((devotional) => {
-      const affinityScore = params.affinityByCreatorId.get(devotional.authorId) ?? 0
-      return (
-        params.followedAuthorIds.has(devotional.authorId) || affinityScore > 0
-      )
-    })
-    .sort((left, right) => {
-      const leftScore =
-        left.rankingScore +
-        (params.followedAuthorIds.has(left.authorId)
-          ? devotionalFeedPolicy.forYou.followBoost
-          : 0) +
-        (params.affinityByCreatorId.get(left.authorId) ?? 0) *
-          devotionalFeedPolicy.forYou.affinityScoreMultiplier +
-        (params.affinityBoostByDevotionalId.get(left.id) ?? 0) +
-        (isActiveFeatured(left) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
-      const rightScore =
-        right.rankingScore +
-        (params.followedAuthorIds.has(right.authorId)
-          ? devotionalFeedPolicy.forYou.followBoost
-          : 0) +
-        (params.affinityByCreatorId.get(right.authorId) ?? 0) *
-          devotionalFeedPolicy.forYou.affinityScoreMultiplier +
-        (params.affinityBoostByDevotionalId.get(right.id) ?? 0) +
-        (isActiveFeatured(right) ? devotionalFeedPolicy.forYou.featuredBoost : 0)
-
-      const scoreComparison = compareNumbersDesc(leftScore, rightScore)
-      if (scoreComparison !== 0) {
-        return scoreComparison
-      }
-
-      const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
-      if (publishedComparison !== 0) {
-        return publishedComparison
-      }
-
-      return compareStringsDesc(left.id, right.id)
-    })
-    .map<FeedSelection>((devotional) => ({
-      devotional,
-      recommendationReason: params.followedAuthorIds.has(devotional.authorId)
-        ? 'FOLLOWED_AUTHOR'
-        : 'RECENTLY_ENGAGED_AUTHOR',
-    }))
-
-  const lowReachBucket = params.candidates
-    .filter((devotional) => params.lowReachAuthorIds.has(devotional.authorId))
-    .sort((left, right) => {
-      const publishedComparison = compareDatesDesc(left.publishedAt, right.publishedAt)
-      if (publishedComparison !== 0) {
-        return publishedComparison
-      }
-
-      const rankingComparison = compareNumbersDesc(
-        left.rankingScore,
-        right.rankingScore
-      )
-      if (rankingComparison !== 0) {
-        return rankingComparison
-      }
-
-      return compareStringsDesc(left.id, right.id)
-    })
-    .map<FeedSelection>((devotional) => ({
-      devotional,
-      recommendationReason: 'DISCOVERY',
-    }))
-
-  const globalBucket = [...params.candidates]
-    .sort((left, right) => {
-      const rankingComparison = compareNumbersDesc(
-        left.rankingScore,
-        right.rankingScore
-      )
-      if (rankingComparison !== 0) {
-        return rankingComparison
-      }
-
-      const scoredComparison = compareDatesDesc(left.lastScoredAt, right.lastScoredAt)
-      if (scoredComparison !== 0) {
-        return scoredComparison
-      }
-
-      return compareStringsDesc(left.id, right.id)
-    })
-    .map<FeedSelection>((devotional) => ({
-      devotional,
-      recommendationReason: getDiscoveryReason(devotional),
-    }))
-
-  const targets = buildBucketTargets(params.limit)
-  const selected: FeedSelection[] = []
-  const selectedIds = new Set<string>()
-  const authorCounts = new Map<string, number>()
-
-  appendSelectionsFromBucket({
-    bucket: globalBucket,
-    target: targets.global,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-  appendSelectionsFromBucket({
-    bucket: lowReachBucket,
-    target: targets.lowReach,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-  appendSelectionsFromBucket({
-    bucket: personalizedBucket,
-    target: targets.personalized,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-
-  appendSelectionsFromBucket({
-    bucket: personalizedBucket,
-    target: params.limit - selected.length,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-  appendSelectionsFromBucket({
-    bucket: globalBucket,
-    target: params.limit - selected.length,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-  appendSelectionsFromBucket({
-    bucket: lowReachBucket,
-    target: params.limit - selected.length,
-    selected,
-    selectedIds,
-    authorCounts,
-    recentDeliveryIds: params.recentDeliveryIds,
-  })
-
-  return selected
 }
 
 const maybeTrackView = async (devotionalId: string, userId?: string | null) => {
@@ -1479,65 +1132,131 @@ export const listFeedDevotionals = async (params: {
     select: { devotionalId: true },
   })
 
-  const seenDevotionalIds = new Set(recentDeliveries.map((item) => item.devotionalId))
-  const followedAuthorRows = await prisma.userFollow.findMany({
-    where: { followerId: params.userId },
-    select: { followedId: true },
-  })
-  const followedAuthorIds = new Set(
-    followedAuthorRows.map((item) => item.followedId)
+  const recentDeliveredDevotionalIds = new Set(
+    recentDeliveries.map((item) => item.devotionalId)
   )
-
-  const where: Prisma.DevotionalWhereInput =
+  const [followedAuthorRows, affinityRows] = await Promise.all([
+    prisma.userFollow.findMany({
+      where: { followerId: params.userId },
+      select: { followedId: true },
+    }),
     mode === 'following'
-      ? {
-          ...buildEligibleFeedWhere(),
-          authorId: { in: [...followedAuthorIds] },
-        }
-      : buildEligibleFeedWhere()
+      ? Promise.resolve([])
+      : prisma.userCreatorAffinity.findMany({
+          where: {
+            userId: params.userId,
+            score: { gt: 0 },
+          },
+          select: {
+            creatorId: true,
+            score: true,
+          },
+        }),
+  ])
+  const followedAuthorIds = new Set(followedAuthorRows.map((item) => item.followedId))
+  const affinityByCreatorId = new Map(
+    affinityRows.map((item) => [item.creatorId, item.score])
+  )
+  const baseWhere = buildEligibleFeedWhere()
+  const freshSince = new Date(
+    Date.now() - devotionalFeedPolicy.forYou.freshnessWindowHours * 60 * 60 * 1000
+  )
+  const personalizedAuthorIds = [
+    ...new Set([
+      ...followedAuthorRows.map((item) => item.followedId),
+      ...affinityRows.map((item) => item.creatorId),
+    ]),
+  ]
 
-  const fetchedCandidates = await prisma.devotional.findMany({
-    where,
-    orderBy:
-      mode === 'following'
-        ? [
+  const fetchedCandidates =
+    mode === 'following'
+      ? await prisma.devotional.findMany({
+          where: {
+            ...baseWhere,
+            authorId: { in: [...followedAuthorIds] },
+          },
+          orderBy: [
             { publishedAt: 'desc' },
             { rankingScore: 'desc' },
             { id: 'desc' },
-          ]
-        : [
-            { rankingScore: 'desc' },
-            { lastScoredAt: 'desc' },
-            { id: 'desc' },
           ],
-    take: candidateWindow,
-    include: devotionalInclude(params.userId),
-  })
+          take: candidateWindow,
+          include: devotionalInclude(params.userId),
+        })
+      : mergeUniqueFeedCandidates(
+          ...(await Promise.all([
+            prisma.devotional.findMany({
+              where: baseWhere,
+              orderBy: [
+                { rankingScore: 'desc' },
+                { lastScoredAt: 'desc' },
+                { id: 'desc' },
+              ],
+              take: candidateWindow,
+              include: devotionalInclude(params.userId),
+            }),
+            prisma.devotional.findMany({
+              where: {
+                ...baseWhere,
+                publishedAt: { gte: freshSince },
+              },
+              orderBy: [
+                { publishedAt: 'desc' },
+                { rankingScore: 'desc' },
+                { id: 'desc' },
+              ],
+              take: candidateWindow,
+              include: devotionalInclude(params.userId),
+            }),
+            personalizedAuthorIds.length > 0
+              ? prisma.devotional.findMany({
+                  where: {
+                    ...baseWhere,
+                    authorId: { in: personalizedAuthorIds },
+                  },
+                  orderBy: [
+                    { publishedAt: 'desc' },
+                    { rankingScore: 'desc' },
+                    { id: 'desc' },
+                  ],
+                  take: candidateWindow,
+                  include: devotionalInclude(params.userId),
+                })
+              : Promise.resolve([] as DevotionalWithRelations[]),
+          ]))
+        )
+
+  const readCompletionRows =
+    fetchedCandidates.length > 0
+      ? await prisma.devotionalReadComplete.findMany({
+          where: {
+            userId: params.userId,
+            devotionalId: {
+              in: fetchedCandidates.map((item) => item.id),
+            },
+          },
+          select: { devotionalId: true },
+        })
+      : []
+  const readCompletedDevotionalIds = new Set(
+    readCompletionRows.map((item) => item.devotionalId)
+  )
+  const unreadDevotionalIds = new Set(
+    fetchedCandidates
+      .filter((item) => !readCompletedDevotionalIds.has(item.id))
+      .map((item) => item.id)
+  )
 
   let orderedSelections: FeedSelection[] = []
 
   if (mode === 'following') {
     orderedSelections = listFollowingSelections({
       candidates: fetchedCandidates,
-      recentDeliveryIds: seenDevotionalIds,
+      recentDeliveryIds: recentDeliveredDevotionalIds,
+      unreadDevotionalIds,
       limit: selectionWindow,
     })
   } else {
-    const affinityRows = await prisma.userCreatorAffinity.findMany({
-      where: {
-        userId: params.userId,
-        creatorId: {
-          in: [...new Set(fetchedCandidates.map((item) => item.authorId))],
-        },
-      },
-      select: {
-        creatorId: true,
-        score: true,
-      },
-    })
-    const affinityByCreatorId = new Map(
-      affinityRows.map((item) => [item.creatorId, item.score])
-    )
     const affinityBoostByDevotionalId = await getFeedAffinityBoostByDevotionalId({
       userId: params.userId,
       devotionalIds: fetchedCandidates.map((item) => item.id),
@@ -1556,7 +1275,8 @@ export const listFeedDevotionals = async (params: {
 
     orderedSelections = listForYouSelections({
       candidates: fetchedCandidates,
-      recentDeliveryIds: seenDevotionalIds,
+      recentDeliveryIds: recentDeliveredDevotionalIds,
+      unreadDevotionalIds,
       limit: selectionWindow,
       followedAuthorIds,
       affinityByCreatorId,

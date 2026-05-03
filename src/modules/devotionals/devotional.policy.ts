@@ -32,9 +32,11 @@ export const devotionalFeedPolicy = {
   authorRepetitionWindow: 20,
   forYou: {
     candidateWindowMultiplier: 12,
+    freshnessWindowHours: 96,
     mix: {
-      globalDiscovery: 0.5,
-      lowReachExploration: 0.25,
+      fresh: 0.35,
+      globalDiscovery: 0.25,
+      lowReachExploration: 0.15,
       personalized: 0.25,
     },
     lowReachAuthorImpressions24hMax: 50,
