@@ -34,6 +34,10 @@ import {
   updateComment,
   updateDevotional,
 } from './devotional.service'
+import {
+  getDevotionalAudioConfig,
+  requestDevotionalAudio,
+} from './devotionalAudio.service'
 import { getDevotionalFeedHeader } from './devotionalEngagement.service'
 import { createDevotionalImageAssetFromBuffer } from './devotionalImageAsset.service'
 import {
@@ -178,6 +182,14 @@ export const listFeedHandler = async (req: Request, res: Response) => {
   res.json({ data: result })
 }
 
+export const getDevotionalAudioConfigHandler = async (
+  req: Request,
+  res: Response,
+) => {
+  ensureAuth(req)
+  res.json({ data: getDevotionalAudioConfig() })
+}
+
 export const getFeedHeaderHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   const result = await getDevotionalFeedHeader({ userId: req.user!.sub })
@@ -234,6 +246,34 @@ export const getDevotionalHandler = async (
   })
 
   res.json({ data: devotional })
+}
+
+export const requestDevotionalAudioHandler = async (
+  req: DevotionalRequest,
+  res: Response,
+) => {
+  ensureAuth(req)
+  const result = await requestDevotionalAudio({
+    devotionalId: req.params.id,
+    userId: req.user!.sub,
+  })
+
+  if (result.status === 'GENERATING') {
+    res.status(202).json({
+      data: {
+        status: 'GENERATING',
+        retry_after_ms: result.retryAfterMs,
+      },
+    })
+    return
+  }
+
+  res.json({
+    data: {
+      status: 'READY',
+      segments: result.segments,
+    },
+  })
 }
 
 export const updateDevotionalHandler = async (

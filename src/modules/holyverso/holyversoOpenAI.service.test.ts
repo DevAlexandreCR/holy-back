@@ -18,7 +18,7 @@ test('buildHolyversoTextPrompt requires the short-block editorial cadence', () =
   assert.match(
     prompt,
     new RegExp(
-      `recognition -> concrete tension -> hidden inner question -> biblical pivot -> reframing -> theme-fit call to action -> memorable closing line`,
+      `recognition -> concrete tension -> hidden inner question -> biblical pivot -> reframing -> practical action -> memorable landing`,
       'u'
     )
   )
@@ -30,8 +30,11 @@ test('buildHolyversoTextPrompt requires the short-block editorial cadence', () =
     )
   )
   assert.match(prompt, /Address the reader directly in second person/u)
+  assert.match(prompt, /Write for spoken listening as well as mobile reading/u)
+  assert.match(prompt, /Prefer short, natural spoken sentences/u)
   assert.match(prompt, /generic churchy filler/u)
   assert.match(prompt, /confrontation plus a micro-action for today/u)
+  assert.match(prompt, /brief final prayer inside the existing content blocks/u)
 })
 
 test('holyversoGeneratedDevotionalSchema accepts the new short-block range', () => {

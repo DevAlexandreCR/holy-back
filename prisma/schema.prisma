@@ -68,6 +68,12 @@ enum DevotionalImageAssetStatus {
   EXPIRED
 }
 
+enum DevotionalAudioStatus {
+  GENERATING
+  READY
+  FAILED
+}
+
 enum DevotionalFeedEventType {
   IMPRESSION
   OPEN
@@ -499,6 +505,7 @@ model Devotional {
   dailyFeaturedLocks      UserDailyFeaturedDevotional[]
   affinitySignalEvents    DevotionalAffinitySignalEvent[]
   holyversoGenerationSlots HolyversoGenerationSlot[]
+  audioAssets             DevotionalAudioAsset[]
 
   @@index([publicationState, moderationStatus, rankingScore, lastScoredAt], map: "devotions_feed_rank_idx")
   @@index([publicationState, moderationStatus, publishedAt], map: "devotions_pub_vis_idx")
@@ -506,6 +513,28 @@ model Devotional {
   @@index([moderatedBy])
   @@index([generationSource, publishedAt], map: "devotionals_generation_source_published_at_idx")
   @@map("devotionals")
+}
+
+model DevotionalAudioAsset {
+  id             String               @id @default(uuid()) @db.Char(36)
+  devotionalId   String               @map("devotional_id") @db.Char(36)
+  voice          String               @db.VarChar(64)
+  model          String               @db.VarChar(128)
+  narrationHash  String               @map("narration_hash") @db.Char(64)
+  status         DevotionalAudioStatus @default(GENERATING)
+  segments       Json?
+  failureCode    String?              @map("failure_code") @db.VarChar(191)
+  failureMessage String?              @map("failure_message") @db.VarChar(500)
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+  completedAt    DateTime?            @map("completed_at")
+
+  devotional Devotional @relation(fields: [devotionalId], references: [id], onDelete: Cascade)
+
+  @@unique([devotionalId, voice, model, narrationHash], map: "devotional_audio_cache_key")
+  @@index([devotionalId, status])
+  @@index([status, updatedAt])
+  @@map("devotional_audio_assets")
 }
 
 model HolyversoGenerationBatch {

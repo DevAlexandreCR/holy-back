@@ -235,6 +235,33 @@ const OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS'], '5000'),
   'OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS',
 );
+const DEVOTIONAL_AUDIO_ENABLED = toOptionalBoolean(
+  readEnvOptional(['DEVOTIONAL_AUDIO_ENABLED']),
+  'DEVOTIONAL_AUDIO_ENABLED',
+) ?? false;
+const OPENAI_DEVOTIONAL_AUDIO_MODEL = readEnvAny(
+  ['OPENAI_DEVOTIONAL_AUDIO_MODEL'],
+  'gpt-4o-mini-tts',
+);
+const OPENAI_DEVOTIONAL_AUDIO_VOICE = readEnvAny(
+  ['OPENAI_DEVOTIONAL_AUDIO_VOICE'],
+  'cedar',
+);
+const OPENAI_DEVOTIONAL_AUDIO_TIMEOUT_MS = toBoundedNumber(
+  readEnvAny(['OPENAI_DEVOTIONAL_AUDIO_TIMEOUT_MS'], '60000'),
+  'OPENAI_DEVOTIONAL_AUDIO_TIMEOUT_MS',
+  { min: 1000 },
+);
+const OPENAI_DEVOTIONAL_AUDIO_MAX_CHARS = toBoundedNumber(
+  readEnvAny(['OPENAI_DEVOTIONAL_AUDIO_MAX_CHARS'], '12000'),
+  'OPENAI_DEVOTIONAL_AUDIO_MAX_CHARS',
+  { min: 1 },
+);
+const OPENAI_DEVOTIONAL_AUDIO_CHUNK_MAX_CHARS = toBoundedNumber(
+  readEnvAny(['OPENAI_DEVOTIONAL_AUDIO_CHUNK_MAX_CHARS'], '4096'),
+  'OPENAI_DEVOTIONAL_AUDIO_CHUNK_MAX_CHARS',
+  { min: 1, max: 4096 },
+);
 const OPENAI_HOLYVERSO_TEXT_MODEL = readEnvOptional([
   'OPENAI_HOLYVERSO_TEXT_MODEL',
 ]);
@@ -260,6 +287,12 @@ const HOLYVERSO_USER_BIO = readEnvAny(
   ['HOLYVERSO_USER_BIO'],
   'Devocionales diarios para acompañarte con la Palabra de Dios.',
 );
+
+if (DEVOTIONAL_AUDIO_ENABLED && !OPENAI_API_KEY) {
+  throw new Error(
+    'OPENAI_API_KEY is required when DEVOTIONAL_AUDIO_ENABLED=true',
+  );
+}
 const FCM_PROJECT_ID = readEnvOptional(['FCM_PROJECT_ID']);
 const FCM_CLIENT_EMAIL = readEnvOptional(['FCM_CLIENT_EMAIL']);
 const rawFcmPrivateKey =
@@ -321,6 +354,12 @@ export const config = {
     devotionalHookTimeoutMs: OPENAI_DEVOTIONAL_HOOK_TIMEOUT_MS,
     devotionalTagModel: OPENAI_DEVOTIONAL_TAG_MODEL,
     devotionalTagTimeoutMs: OPENAI_DEVOTIONAL_TAG_TIMEOUT_MS,
+    devotionalAudioEnabled: DEVOTIONAL_AUDIO_ENABLED,
+    devotionalAudioModel: OPENAI_DEVOTIONAL_AUDIO_MODEL,
+    devotionalAudioVoice: OPENAI_DEVOTIONAL_AUDIO_VOICE,
+    devotionalAudioTimeoutMs: OPENAI_DEVOTIONAL_AUDIO_TIMEOUT_MS,
+    devotionalAudioMaxChars: OPENAI_DEVOTIONAL_AUDIO_MAX_CHARS,
+    devotionalAudioChunkMaxChars: OPENAI_DEVOTIONAL_AUDIO_CHUNK_MAX_CHARS,
     holyversoTextModel: OPENAI_HOLYVERSO_TEXT_MODEL,
     holyversoTextTimeoutMs: OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS,
     holyversoImageModel: OPENAI_HOLYVERSO_IMAGE_MODEL,

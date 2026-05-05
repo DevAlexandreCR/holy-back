@@ -10,6 +10,7 @@ import {
   deleteCommentHandler,
   deleteDevotionalHandler,
   getDevotionalHandler,
+  getDevotionalAudioConfigHandler,
   getFeedHeaderHandler,
   listCommentsHandler,
   listDevotionalsHandler,
@@ -19,6 +20,7 @@ import {
   readCompleteHandler,
   recordFeedEventsHandler,
   reportDevotionalHandler,
+  requestDevotionalAudioHandler,
   saveDevotionalHandler,
   shareDevotionalHandler,
   toggleLikeHandler,
@@ -45,6 +47,7 @@ const upload = multer({
 router.get('/feed', requireAuth, listFeedHandler)
 router.get('/feed/header', requireAuth, getFeedHeaderHandler)
 router.post('/feed/events', requireAuth, recordFeedEventsHandler)
+router.get('/audio/config', requireAuth, getDevotionalAudioConfigHandler)
 router.post('/upload-image', requireAuth, upload.single('image'), uploadImageHandler)
 
 router.get('/', requireAuth, listDevotionalsHandler)
@@ -61,6 +64,7 @@ router.delete('/:id/save', requireAuth, unsaveDevotionalHandler)
 router.post('/:id/share', requireAuth, shareDevotionalHandler)
 router.post('/:id/read-complete', requireAuth, readCompleteHandler)
 router.post('/:id/report', requireAuth, reportDevotionalHandler)
+router.post('/:id/audio', requireAuth, requestDevotionalAudioHandler)
 router.get('/:id/comments', optionalAuth, listCommentsHandler)
 router.post('/:id/comments', requireAuth, requireUserCapability('COMMENT_CREATE'), addCommentHandler)
 router.put('/:id/comments/:commentId', requireAuth, requireUserCapability('COMMENT_EDIT'), updateCommentHandler)
