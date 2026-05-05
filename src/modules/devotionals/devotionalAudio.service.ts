@@ -451,6 +451,55 @@ const generateNarrationSegments = async (params: {
   return segments
 }
 
+const finalizeClaimedDevotionalAudioGeneration = async (params: {
+  assetId: string
+  devotionalId: string
+  narrationHash: string
+  chunks: string[]
+}) => {
+  try {
+    const segments = await generateNarrationSegments({
+      devotionalId: params.devotionalId,
+      narrationHash: params.narrationHash,
+      chunks: params.chunks,
+    })
+
+    await prisma.devotionalAudioAsset.update({
+      where: { id: params.assetId },
+      data: {
+        status: DevotionalAudioStatus.READY,
+        segments: segments as Prisma.InputJsonValue,
+        failureCode: null,
+        failureMessage: null,
+        completedAt: new Date(),
+      },
+    })
+  } catch (error) {
+    await persistAudioFailure({
+      assetId: params.assetId,
+      devotionalId: params.devotionalId,
+      narrationHash: params.narrationHash,
+      error,
+    })
+
+    console.error('[DevotionalAudio] Background generation failed', {
+      devotionalId: params.devotionalId,
+      assetId: params.assetId,
+      narrationHash: params.narrationHash,
+      error,
+    })
+  }
+}
+
+const scheduleClaimedDevotionalAudioGeneration = (params: {
+  assetId: string
+  devotionalId: string
+  narrationHash: string
+  chunks: string[]
+}) => {
+  void finalizeClaimedDevotionalAudioGeneration(params)
+}
+
 export const getDevotionalAudioConfig = () => ({
   enabled: config.openai.devotionalAudioEnabled,
   unavailable_message: DEVOTIONAL_AUDIO_UNAVAILABLE_MESSAGE,
@@ -564,44 +613,15 @@ export const requestDevotionalAudio = async (params: {
     }
   }
 
-  try {
-    const segments = await generateNarrationSegments({
-      devotionalId: devotional.id,
-      narrationHash,
-      chunks,
-    })
+  scheduleClaimedDevotionalAudioGeneration({
+    assetId: claimed.assetId,
+    devotionalId: devotional.id,
+    narrationHash,
+    chunks,
+  })
 
-    await prisma.devotionalAudioAsset.update({
-      where: { id: claimed.assetId },
-      data: {
-        status: DevotionalAudioStatus.READY,
-        segments: segments as Prisma.InputJsonValue,
-        failureCode: null,
-        failureMessage: null,
-        completedAt: new Date(),
-      },
-    })
-
-    return {
-      status: 'READY',
-      segments,
-    }
-  } catch (error) {
-    await persistAudioFailure({
-      assetId: claimed.assetId,
-      devotionalId: devotional.id,
-      narrationHash,
-      error,
-    })
-
-    if (error instanceof AppError) {
-      throw error
-    }
-
-    throw new AppError(
-      'Could not generate devotional audio.',
-      'DEVOTIONAL_AUDIO_GENERATION_FAILED',
-      502,
-    )
+  return {
+    status: 'GENERATING',
+    retryAfterMs: DEVOTIONAL_AUDIO_RETRY_AFTER_MS,
   }
 }
