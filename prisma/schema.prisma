@@ -98,6 +98,9 @@ enum DevotionalNotificationType {
   EDITOR_DEVOTIONAL_REVIEW_REQUIRED
   AUTHOR_DEVOTIONAL_APPROVED
   AUTHOR_DEVOTIONAL_RESTRICTED
+  DAILY_REMINDER
+  STREAK_MILESTONE
+  WINBACK
 }
 
 enum NotificationInboxType {
@@ -254,6 +257,8 @@ model User {
   userActivityDailyMetrics        UserActivityDailyMetric[]
   streak                          UserStreak?
   streakFreezeEvents              UserStreakFreezeEvent[]
+  streakMilestones                UserStreakMilestone[]
+  winbackState                    UserWinbackState?
   holyversoGenerationBatches      HolyversoGenerationBatch[]
 
   @@map("users")
@@ -291,6 +296,10 @@ model UserSettings {
   commentNotificationsEnabled            Boolean       @default(true) @map("comment_notifications_enabled")
   followNotificationsEnabled             Boolean       @default(true) @map("follow_notifications_enabled")
   reactionNotificationsEnabled           Boolean       @default(true) @map("reaction_notifications_enabled")
+  dailyReminderHour                      Int?          @map("daily_reminder_hour")
+  dailyReminderNotificationsEnabled      Boolean       @default(true) @map("daily_reminder_notifications_enabled")
+  streakMilestoneNotificationsEnabled    Boolean       @default(true) @map("streak_milestone_notifications_enabled")
+  winbackNotificationsEnabled            Boolean       @default(true) @map("winback_notifications_enabled")
   createdAt                              DateTime      @default(now()) @map("created_at")
   updatedAt                              DateTime      @updatedAt @map("updated_at")
   user                                   User          @relation(fields: [userId], references: [id])
@@ -337,6 +346,35 @@ model UserStreakFreezeEvent {
   @@index([eventType, createdAt])
   @@index([userId, eventType, createdAt])
   @@map("user_streak_freeze_events")
+}
+
+model UserStreakMilestone {
+  id           String    @id @default(uuid()) @db.Char(36)
+  userId       String    @map("user_id") @db.Char(36)
+  milestone    Int
+  achievedDate String    @map("achieved_date")
+  celebratedAt DateTime? @map("celebrated_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, milestone])
+  @@index([userId, celebratedAt])
+  @@map("user_streak_milestones")
+}
+
+model UserWinbackState {
+  userId       String    @id @map("user_id") @db.Char(36)
+  lastStepSent Int       @default(0) @map("last_step_sent")
+  lastSentAt   DateTime? @map("last_sent_at")
+  pausedAt     DateTime? @map("paused_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_winback_states")
 }
 
 model LibraryVerse {

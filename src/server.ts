@@ -20,6 +20,11 @@ import {
   runDevotionalStreakRiskOnce,
 } from './jobs/devotionalStreakRiskJob';
 import {
+  registerDailyReminderJob,
+  runDailyReminderOnce,
+} from './jobs/dailyReminderJob';
+import { registerWinbackJob, runWinbackOnce } from './jobs/winbackJob';
+import {
   registerNotificationInboxFlushJob,
   runNotificationInboxFlushOnce,
 } from './jobs/notificationInboxFlushJob';
@@ -58,6 +63,8 @@ let devotionalTagAffinityDecayJob:
 let devotionalStreakRiskJob:
   | ReturnType<typeof registerDevotionalStreakRiskJob>
   | undefined;
+let dailyReminderJob: ReturnType<typeof registerDailyReminderJob> | undefined;
+let winbackJob: ReturnType<typeof registerWinbackJob> | undefined;
 let notificationInboxFlushJob:
   | ReturnType<typeof registerNotificationInboxFlushJob>
   | undefined;
@@ -81,6 +88,8 @@ const start = async (): Promise<void> => {
     await runDevotionalTagAffinityDecayOnce();
     await runUserStreakMaintenanceOnce();
     await runDevotionalStreakRiskOnce();
+    await runDailyReminderOnce();
+    await runWinbackOnce();
     await runNotificationInboxFlushOnce();
     await runHolyversoDailyPlannerOnce();
     await runHolyversoSlotPublisherOnce();
@@ -96,6 +105,8 @@ const start = async (): Promise<void> => {
     devotionalTagAffinityDecayJob = registerDevotionalTagAffinityDecayJob();
     userStreakMaintenanceJob = registerUserStreakMaintenanceJob();
     devotionalStreakRiskJob = registerDevotionalStreakRiskJob();
+    dailyReminderJob = registerDailyReminderJob();
+    winbackJob = registerWinbackJob();
     notificationInboxFlushJob = registerNotificationInboxFlushJob();
     holyversoDailyPlannerJob = registerHolyversoDailyPlannerJob();
     holyversoSlotPublisherJob = registerHolyversoSlotPublisherJob();
@@ -130,6 +141,12 @@ const shutdown = async (signal: string): Promise<void> => {
     }
     if (devotionalStreakRiskJob) {
       devotionalStreakRiskJob.stop();
+    }
+    if (dailyReminderJob) {
+      dailyReminderJob.stop();
+    }
+    if (winbackJob) {
+      winbackJob.stop();
     }
     if (notificationInboxFlushJob) {
       notificationInboxFlushJob.stop();

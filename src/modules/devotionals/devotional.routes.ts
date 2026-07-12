@@ -6,6 +6,7 @@ import { requireUserCapability } from '../../common/middleware/requireUserCapabi
 import {
   addCommentHandler,
   archiveDevotionalHandler,
+  celebrateMilestoneHandler,
   createDevotionalHandler,
   deleteCommentHandler,
   deleteDevotionalHandler,
@@ -47,6 +48,11 @@ const upload = multer({
 router.get('/feed', requireAuth, listFeedHandler)
 router.get('/feed/header', requireAuth, getFeedHeaderHandler)
 router.post('/feed/events', requireAuth, recordFeedEventsHandler)
+router.post(
+  '/streak/milestones/:milestone/celebrate',
+  requireAuth,
+  celebrateMilestoneHandler
+)
 router.get('/audio/config', requireAuth, getDevotionalAudioConfigHandler)
 router.post('/upload-image', requireAuth, upload.single('image'), uploadImageHandler)
 

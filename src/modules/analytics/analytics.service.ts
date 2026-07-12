@@ -153,6 +153,19 @@ export const recordAppSessionStarted = async (params: {
     },
   })
 
+  // Returning resets the win-back ladder (design D5 / winback-notifications
+  // spec "Returning resets the ladder"): a new session clears any lapsed
+  // progress and lifts the pause, so a future lapse starts again at step 3.
+  // updateMany is a no-op when the user has no UserWinbackState row, so this
+  // never creates state for users who were never win-back'd.
+  await prisma.userWinbackState.updateMany({
+    where: { userId: params.userId },
+    data: {
+      lastStepSent: 0,
+      pausedAt: null,
+    },
+  })
+
   return { recorded: true }
 }
 

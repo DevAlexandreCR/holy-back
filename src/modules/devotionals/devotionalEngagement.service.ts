@@ -2,7 +2,10 @@ import crypto from 'crypto'
 import { Prisma, UserStreak, UserStreakFreezeEventType } from '@prisma/client'
 import { prisma } from '../../config/db'
 import { config } from '../../config/env'
-import { resolveDailyFeaturedForUser } from './devotionalPersonalization.service'
+import {
+  resolveDailyFeaturedForUser,
+  resolveUserLocalDayContext,
+} from './devotionalPersonalization.service'
 
 const DEFAULT_STREAK_TIMEZONE = 'America/Bogota'
 const RETRYABLE_WRITE_CONFLICT_ERROR_CODES = new Set(['P2034'])
@@ -15,6 +18,19 @@ type UserDayContext = {
   localToday: string
   dayWindowStart: Date
   nextDayWindowStart: Date
+}
+
+// value + celebrated flag exposed in the read-complete response and getDevotionalFeedHeader()
+export type MilestoneCelebrationBlock = {
+  value: number
+  celebrated: boolean
+}
+
+// Surfaced by applyReadCompleteEngagement to the caller so a post-commit congratulation
+// push (task 4.3) can be fired strictly on first reach, never on re-reach.
+export type MilestoneReachedSignal = {
+  milestone: number
+  isFirstReach: boolean
 }
 
 const isRetryableWriteConflictError = (error: unknown) =>
@@ -196,6 +212,68 @@ const createFreezeEvent = async (
   })
 }
 
+const applyMilestoneReached = async (
+  tx: Prisma.TransactionClient,
+  params: {
+    userId: string
+    milestone: number
+    localToday: string
+  }
+): Promise<MilestoneReachedSignal> => {
+  const existing = await tx.userStreakMilestone.findUnique({
+    where: {
+      userId_milestone: {
+        userId: params.userId,
+        milestone: params.milestone,
+      },
+    },
+  })
+
+  if (!existing) {
+    await tx.userStreakMilestone.create({
+      data: {
+        userId: params.userId,
+        milestone: params.milestone,
+        achievedDate: params.localToday,
+        celebratedAt: null,
+      },
+    })
+
+    return { milestone: params.milestone, isFirstReach: true }
+  }
+
+  await tx.userStreakMilestone.update({
+    where: {
+      userId_milestone: {
+        userId: params.userId,
+        milestone: params.milestone,
+      },
+    },
+    data: {
+      celebratedAt: null,
+      achievedDate: params.localToday,
+    },
+  })
+
+  return { milestone: params.milestone, isFirstReach: false }
+}
+
+const getUncelebratedMilestone = async (
+  db: StreakDbClient,
+  userId: string
+): Promise<MilestoneCelebrationBlock | null> => {
+  const record = await db.userStreakMilestone.findFirst({
+    where: { userId, celebratedAt: null },
+    orderBy: [{ achievedDate: 'desc' }, { milestone: 'desc' }],
+  })
+
+  if (!record) {
+    return null
+  }
+
+  return { value: record.milestone, celebrated: false }
+}
+
 const resolveUserDayContext = async (
   db: StreakDbClient,
   userId: string
@@ -367,7 +445,7 @@ const applyFirstDailyCompletion = async (
     streak: UserStreak
     localToday: string
   }
-) => {
+): Promise<{ streak: UserStreak; milestoneSignal: MilestoneReachedSignal | null }> => {
   const yesterday = addDays(params.localToday, -1)
   const nextCurrentStreak =
     params.streak.lastCompletedDate === yesterday
@@ -420,7 +498,7 @@ const applyFirstDailyCompletion = async (
     }
   }
 
-  return tx.userStreak.update({
+  const updatedStreak = await tx.userStreak.update({
     where: { userId: params.userId },
     data: {
       currentStreak: nextCurrentStreak,
@@ -431,6 +509,17 @@ const applyFirstDailyCompletion = async (
       lastGapEvaluatedDate: params.localToday,
     },
   })
+
+  const milestoneValues = config.engagement.notifications.streakMilestoneValues as readonly number[]
+  const milestoneSignal = milestoneValues.includes(nextCurrentStreak)
+    ? await applyMilestoneReached(tx, {
+      userId: params.userId,
+      milestone: nextCurrentStreak,
+      localToday: params.localToday,
+    })
+    : null
+
+  return { streak: updatedStreak, milestoneSignal }
 }
 
 export const reconcileUserStreak = async (params: { userId: string }) => {
@@ -468,6 +557,7 @@ export const getDevotionalFeedHeader = async (params: { userId: string }) => {
         : completedToday
           ? 'DAY_COMPLETED'
           : 'OPEN_DAILY_FEATURED'
+      const milestone = await getUncelebratedMilestone(tx, params.userId)
 
       return {
         streak: {
@@ -487,9 +577,38 @@ export const getDevotionalFeedHeader = async (params: { userId: string }) => {
                 : 'Completa tu día',
           devotional_id: dailyFeatured?.devotional.id ?? null,
         },
+        milestone,
       }
     })
   )
+}
+
+export const isStreakCompletedForLocalDay = (params: {
+  lastCompletedDate: string | null | undefined
+  localToday: string
+}): boolean => params.lastCompletedDate === params.localToday
+
+// Lightweight, read-only streak snapshot for the widget-sync verse endpoints
+// (task 6.1). Unlike getDevotionalFeedHeader, this does not reconcile the
+// streak in a transaction — it is a plain read for display purposes only.
+export const getWidgetStreakStatus = async (
+  userId: string
+): Promise<{ streakCount: number; completedToday: boolean }> => {
+  const [streak, context] = await Promise.all([
+    prisma.userStreak.findUnique({
+      where: { userId },
+      select: { currentStreak: true, lastCompletedDate: true },
+    }),
+    resolveUserLocalDayContext(prisma, userId),
+  ])
+
+  return {
+    streakCount: streak?.currentStreak ?? 0,
+    completedToday: isStreakCompletedForLocalDay({
+      lastCompletedDate: streak?.lastCompletedDate,
+      localToday: context.localToday,
+    }),
+  }
 }
 
 export const applyReadCompleteEngagement = async (params: {
@@ -517,7 +636,8 @@ export const applyReadCompleteEngagement = async (params: {
       })
 
       if (!created) {
-        return { created: false }
+        const milestone = await getUncelebratedMilestone(tx, params.userId)
+        return { created: false, milestone, milestoneReached: null }
       }
 
       const updatedReadCompleteCount = await tx.devotional.update({
@@ -528,20 +648,48 @@ export const applyReadCompleteEngagement = async (params: {
 
       await params.incrementCreatorAffinity(tx)
 
+      let milestoneReached: MilestoneReachedSignal | null = null
+
       if (!hadCompletionToday) {
-        await applyFirstDailyCompletion(tx, {
+        const completion = await applyFirstDailyCompletion(tx, {
           userId: params.userId,
           streak: reconciledStreak,
           localToday: context.localToday,
         })
+        milestoneReached = completion.milestoneSignal
       }
+
+      const milestone = await getUncelebratedMilestone(tx, params.userId)
 
       return {
         created: true,
         readCompleteCount: updatedReadCompleteCount.readCompleteCount,
+        milestone,
+        milestoneReached,
       }
     })
   )
+}
+
+// Acknowledges a milestone celebration: marks celebratedAt on the target milestone
+// AND on any older uncelebrated milestones of the same user (a newer milestone
+// supersedes older ones — they are never surfaced again). A single updateMany
+// covers both in one statement. Idempotent: acknowledging an already-celebrated
+// or non-existent milestone updates zero rows and never errors.
+export const celebrateMilestone = async (params: {
+  userId: string
+  milestone: number
+}): Promise<{ milestone: MilestoneCelebrationBlock }> => {
+  await prisma.userStreakMilestone.updateMany({
+    where: {
+      userId: params.userId,
+      milestone: { lte: params.milestone },
+      celebratedAt: null,
+    },
+    data: { celebratedAt: new Date() },
+  })
+
+  return { milestone: { value: params.milestone, celebrated: true } }
 }
 
 export const runUserStreakMaintenance = async () => {

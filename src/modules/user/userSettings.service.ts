@@ -76,6 +76,10 @@ export const updateSettings = async (
       | 'commentNotificationsEnabled'
       | 'followNotificationsEnabled'
       | 'reactionNotificationsEnabled'
+      | 'dailyReminderHour'
+      | 'dailyReminderNotificationsEnabled'
+      | 'streakMilestoneNotificationsEnabled'
+      | 'winbackNotificationsEnabled'
     >
   >,
 ): Promise<UserSettings> => {

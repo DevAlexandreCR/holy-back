@@ -31,6 +31,10 @@ const formatSettings = (settings: {
   commentNotificationsEnabled: boolean
   followNotificationsEnabled: boolean
   reactionNotificationsEnabled: boolean
+  dailyReminderHour: number | null
+  dailyReminderNotificationsEnabled: boolean
+  streakMilestoneNotificationsEnabled: boolean
+  winbackNotificationsEnabled: boolean
 }) => ({
   preferred_version_id: settings.preferredVersionId,
   timezone: settings.timezone,

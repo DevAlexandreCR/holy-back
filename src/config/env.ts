@@ -146,6 +146,14 @@ const HOLYVERSO_SLOT_PUBLISHER_CRON = readEnvAny(
   ['HOLYVERSO_SLOT_PUBLISHER_CRON'],
   '*/10 * * * *',
 );
+const DAILY_REMINDER_CRON = readEnvAny(
+  ['DAILY_REMINDER_CRON'],
+  '*/15 * * * *',
+);
+const WINBACK_CRON = readEnvAny(
+  ['WINBACK_CRON'],
+  '0 * * * *',
+);
 const DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER = toBoundedNumber(
   readEnvAny(['DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER'], '0.25'),
   'DEVOTIONAL_DAILY_FEATURED_AFFINITY_MULTIPLIER',
@@ -201,6 +209,23 @@ const DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR = toBoundedNumber(
   'DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR',
   { min: 0, max: 23 },
 );
+const WINBACK_WINDOW_START_LOCAL_HOUR = toBoundedNumber(
+  readEnvAny(['WINBACK_WINDOW_START_LOCAL_HOUR'], '12'),
+  'WINBACK_WINDOW_START_LOCAL_HOUR',
+  { min: 0, max: 23 },
+);
+const WINBACK_WINDOW_END_LOCAL_HOUR = toBoundedNumber(
+  readEnvAny(['WINBACK_WINDOW_END_LOCAL_HOUR'], '20'),
+  'WINBACK_WINDOW_END_LOCAL_HOUR',
+  { min: 0, max: 23 },
+);
+const WINBACK_MIN_HOURS_BETWEEN_SENDS = toBoundedNumber(
+  readEnvAny(['WINBACK_MIN_HOURS_BETWEEN_SENDS'], '48'),
+  'WINBACK_MIN_HOURS_BETWEEN_SENDS',
+  { min: 1 },
+);
+const WINBACK_STEP_DAYS = [3, 7, 14] as const;
+const STREAK_MILESTONE_VALUES = [3, 7, 30, 100] as const;
 const PUBLIC_BASE_URL = readEnvAny(['PUBLIC_BASE_URL', 'APP_BASE_URL'], 'https://holyverso.com');
 const PUBLIC_API_BASE_URL = readEnvAny(['PUBLIC_API_BASE_URL'], PUBLIC_BASE_URL);
 
@@ -334,6 +359,8 @@ export const config = {
     notificationInboxFlushCron: NOTIFICATION_INBOX_FLUSH_CRON,
     holyversoDailyPlannerCron: HOLYVERSO_DAILY_PLANNER_CRON,
     holyversoSlotPublisherCron: HOLYVERSO_SLOT_PUBLISHER_CRON,
+    dailyReminderCron: DAILY_REMINDER_CRON,
+    winbackCron: WINBACK_CRON,
   },
   mail: {
     host: MAIL_HOST,
@@ -392,6 +419,13 @@ export const config = {
     notifications: {
       featuredCooldownHours: DEVOTIONAL_FEATURED_NOTIFICATION_COOLDOWN_HOURS,
       streakRiskSendAfterLocalHour: DEVOTIONAL_STREAK_RISK_SEND_AFTER_LOCAL_HOUR,
+      winback: {
+        stepDays: WINBACK_STEP_DAYS,
+        windowStartLocalHour: WINBACK_WINDOW_START_LOCAL_HOUR,
+        windowEndLocalHour: WINBACK_WINDOW_END_LOCAL_HOUR,
+        minHoursBetweenSends: WINBACK_MIN_HOURS_BETWEEN_SENDS,
+      },
+      streakMilestoneValues: STREAK_MILESTONE_VALUES,
     },
   },
   holyverso: {

@@ -9,6 +9,7 @@ import {
 } from './verse.service'
 import { getChapterForDailyVerse, getChapterForSavedVerse } from './chapter.service'
 import { getSavedVerses, removeSavedVerse, saveVerseForUser } from './savedVerse.service'
+import { getWidgetStreakStatus } from '../devotionals/devotionalEngagement.service'
 
 type LibraryVerseRequest = Request<{ libraryVerseId: string }>
 
@@ -27,8 +28,16 @@ export const getTodayVerse = async (
       ? await getDailyVerseForUser(userId)
       : await getDailyVerseForGuest()
 
+    const streakStatus = userId ? await getWidgetStreakStatus(userId) : null
+
     res.json({
-      data: verse,
+      data: streakStatus
+        ? {
+            ...verse,
+            streak_count: streakStatus.streakCount,
+            completed_today: streakStatus.completedToday,
+          }
+        : verse,
     })
   } catch (error: any) {
     console.error('Error fetching today verse:', error)
@@ -124,6 +133,7 @@ export const getWidgetVerse = async (
     const userId = req.user!.sub // From auth middleware
 
     const verse = await getDailyVerseForUser(userId)
+    const streakStatus = await getWidgetStreakStatus(userId)
 
     // Simplified response for widgets
     res.json({
@@ -132,6 +142,8 @@ export const getWidgetVerse = async (
         text: verse.text,
         version: verse.versionCode,
         is_saved: verse.is_saved,
+        streak_count: streakStatus.streakCount,
+        completed_today: streakStatus.completedToday,
       },
     })
   } catch (error: any) {

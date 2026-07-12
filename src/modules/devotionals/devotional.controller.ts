@@ -7,6 +7,7 @@ import {
 } from '@prisma/client'
 import { z } from 'zod'
 import { prisma } from '../../config/db'
+import { config } from '../../config/env'
 import { AppError } from '../../common/errors'
 import {
   addComment,
@@ -38,7 +39,10 @@ import {
   getDevotionalAudioConfig,
   requestDevotionalAudio,
 } from './devotionalAudio.service'
-import { getDevotionalFeedHeader } from './devotionalEngagement.service'
+import {
+  celebrateMilestone,
+  getDevotionalFeedHeader,
+} from './devotionalEngagement.service'
 import { createDevotionalImageAssetFromBuffer } from './devotionalImageAsset.service'
 import {
   commentSchema,
@@ -193,6 +197,28 @@ export const getDevotionalAudioConfigHandler = async (
 export const getFeedHeaderHandler = async (req: Request, res: Response) => {
   ensureAuth(req)
   const result = await getDevotionalFeedHeader({ userId: req.user!.sub })
+  res.json({ data: result })
+}
+
+export const celebrateMilestoneHandler = async (
+  req: Request<{ milestone: string }>,
+  res: Response
+) => {
+  ensureAuth(req)
+
+  const milestone = Number(req.params.milestone)
+  const validMilestones =
+    config.engagement.notifications.streakMilestoneValues as readonly number[]
+
+  if (!Number.isInteger(milestone) || !validMilestones.includes(milestone)) {
+    throw new AppError('Invalid milestone value', 'INVALID_MILESTONE', 400)
+  }
+
+  const result = await celebrateMilestone({
+    userId: req.user!.sub,
+    milestone,
+  })
+
   res.json({ data: result })
 }
 
@@ -439,6 +465,7 @@ export const readCompleteHandler = async (
     data: {
       read_complete: result.readComplete,
       read_complete_count: result.readCompleteCount,
+      milestone: result.milestone,
     },
   })
 }

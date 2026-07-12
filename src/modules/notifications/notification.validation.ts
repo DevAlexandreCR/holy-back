@@ -26,6 +26,10 @@ export const notificationPreferencesSchema = z.object({
   comment_notifications_enabled: z.boolean(),
   follow_notifications_enabled: z.boolean(),
   reaction_notifications_enabled: z.boolean(),
+  daily_reminder_hour: z.number().int().min(0).max(23).nullable(),
+  daily_reminder_notifications_enabled: z.boolean(),
+  streak_milestone_notifications_enabled: z.boolean(),
+  winback_notifications_enabled: z.boolean(),
 })
 
 export const notificationOpenSchema = z.object({

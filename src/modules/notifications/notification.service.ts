@@ -18,9 +18,15 @@ import {
   resolveUserLocalDayContext,
 } from '../devotionals/devotionalPersonalization.service'
 import { ensureSettings, updateSettings } from '../user/userSettings.service'
-import { devotionalNotificationPolicy } from '../devotionals/devotional.policy'
+import {
+  devotionalNotificationPolicy,
+  resolveDailyReminderCopy,
+  resolveStreakMilestoneCopy,
+  resolveWinbackCopy,
+} from '../devotionals/devotional.policy'
 import { sendPushMessage } from './notification.provider'
 import { formatNotificationPreferences } from './notificationPreferences'
+import { getDailyVerseForUser } from '../verse/verse.service'
 
 const SENDABLE_PERMISSION_STATUSES = [
   DeviceOsPermissionStatus.AUTHORIZED,
@@ -51,6 +57,22 @@ const buildNotificationBody = (devotional: { title: string; author: { name: stri
   [DevotionalNotificationType.AUTHOR_DEVOTIONAL_RESTRICTED]: {
     title: devotionalNotificationPolicy.titleTemplates.authorRestricted,
     body: `"${devotional.title}" fue retirado por revisión editorial.`,
+  },
+  // Unused fallbacks: DAILY_REMINDER, STREAK_MILESTONE and WINBACK never route
+  // through sendDevotionalNotifications — each has a bespoke sender that builds
+  // its own copy (see sendStreakRiskNotifications / sendDailyReminderNotifications).
+  // These entries only keep this map exhaustive over DevotionalNotificationType.
+  [DevotionalNotificationType.DAILY_REMINDER]: {
+    title: 'Tu momento con Dios te espera',
+    body: devotional.title,
+  },
+  [DevotionalNotificationType.STREAK_MILESTONE]: {
+    title: '¡Nueva racha alcanzada!',
+    body: devotional.title,
+  },
+  [DevotionalNotificationType.WINBACK]: {
+    title: 'Te extrañamos',
+    body: devotional.title,
   },
 })
 
@@ -428,6 +450,10 @@ export const updateNotificationPreferences = async (
     comment_notifications_enabled: boolean
     follow_notifications_enabled: boolean
     reaction_notifications_enabled: boolean
+    daily_reminder_hour: number | null
+    daily_reminder_notifications_enabled: boolean
+    streak_milestone_notifications_enabled: boolean
+    winback_notifications_enabled: boolean
   }
 ) => {
   const settings = await updateSettings(userId, {
@@ -445,6 +471,12 @@ export const updateNotificationPreferences = async (
     commentNotificationsEnabled: input.comment_notifications_enabled,
     followNotificationsEnabled: input.follow_notifications_enabled,
     reactionNotificationsEnabled: input.reaction_notifications_enabled,
+    dailyReminderHour: input.daily_reminder_hour,
+    dailyReminderNotificationsEnabled:
+      input.daily_reminder_notifications_enabled,
+    streakMilestoneNotificationsEnabled:
+      input.streak_milestone_notifications_enabled,
+    winbackNotificationsEnabled: input.winback_notifications_enabled,
   })
 
   return formatNotificationPreferences(settings)
@@ -1007,6 +1039,800 @@ export const sendStreakRiskNotifications = async (now = new Date()) => {
   }
 
   console.log('[DevotionalNotifications] Completed streak-risk send', {
+    processedUsers,
+    eligibleUsers,
+    sent,
+    providerAccepted,
+    failed,
+    tokenDeactivated,
+  })
+
+  return {
+    processed_users: processedUsers,
+    eligible_users: eligibleUsers,
+    sent,
+    provider_accepted: providerAccepted,
+    failed,
+    token_deactivated: tokenDeactivated,
+  }
+}
+
+export const isDailyReminderHourDue = (params: {
+  localHour: number
+  reminderHour: number
+}): boolean => params.localHour === params.reminderHour
+
+export const isDailyReminderPreferenceEnabled = (
+  settings: { dailyReminderNotificationsEnabled: boolean } | null | undefined
+): boolean => settings?.dailyReminderNotificationsEnabled === true
+
+export const isDailyReminderAlreadySentToday = (
+  reminderSentTodayCount: number
+): boolean => reminderSentTodayCount > 0
+
+export const isDailyReminderDaySuppressedByCompletion = (params: {
+  lastCompletedDate: string | null | undefined
+  localToday: string
+}): boolean => params.lastCompletedDate === params.localToday
+
+export const isDailyReminderSuppressedByStreakRisk = (
+  streakRiskSentTodayCount: number
+): boolean => streakRiskSentTodayCount > 0
+
+export const isDailyReminderSuppressedByWinbackPause = (
+  pausedAt: Date | null | undefined
+): boolean => Boolean(pausedAt)
+
+export const hasDailyFeaturedDevotional = <T>(
+  dailyFeatured: T | null | undefined
+): dailyFeatured is T => Boolean(dailyFeatured)
+
+export const sendDailyReminderNotifications = async (now = new Date()) => {
+  let processedUsers = 0
+  let eligibleUsers = 0
+  let sent = 0
+  let providerAccepted = 0
+  let failed = 0
+  let tokenDeactivated = 0
+  let cursorId: number | undefined
+  const evaluationMetricsByDate = new Map<
+    string,
+    {
+      evaluatedCount: number
+      eligibleCount: number
+      skippedCount: number
+    }
+  >()
+
+  while (true) {
+    const settingsBatch = await prisma.userSettings.findMany({
+      where: {
+        dailyReminderNotificationsEnabled: true,
+        dailyReminderHour: {
+          not: null,
+        },
+      },
+      orderBy: {
+        id: 'asc',
+      },
+      take: 100,
+      ...(cursorId
+        ? {
+            cursor: { id: cursorId },
+            skip: 1,
+          }
+        : {}),
+      select: { id: true, userId: true, dailyReminderHour: true },
+    })
+
+    if (settingsBatch.length === 0) {
+      break
+    }
+
+    for (const settingsRow of settingsBatch) {
+      processedUsers += 1
+      cursorId = settingsRow.id
+
+      const reminderHour = settingsRow.dailyReminderHour
+      if (reminderHour == null) {
+        continue
+      }
+
+      const context = await resolveUserLocalDayContext(
+        prisma,
+        settingsRow.userId,
+        now
+      )
+      const dailyMetric =
+        evaluationMetricsByDate.get(context.localToday) ?? {
+          evaluatedCount: 0,
+          eligibleCount: 0,
+          skippedCount: 0,
+        }
+      dailyMetric.evaluatedCount += 1
+      evaluationMetricsByDate.set(context.localToday, dailyMetric)
+
+      if (
+        !isDailyReminderHourDue({
+          localHour: context.localHour,
+          reminderHour,
+        })
+      ) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const deviceTokens = await listEligibleDeviceTokens([
+        settingsRow.userId,
+      ])
+      if (deviceTokens.length === 0) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const settings = deviceTokens[0]?.user.settings
+      if (!isDailyReminderPreferenceEnabled(settings)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const reminderSentToday = await prisma.devotionalNotificationSend.count(
+        {
+          where: {
+            userId: settingsRow.userId,
+            type: DevotionalNotificationType.DAILY_REMINDER,
+            providerAcceptedAt: {
+              gte: context.dayWindowStart,
+              lt: context.nextDayWindowStart,
+            },
+          },
+        }
+      )
+      if (isDailyReminderAlreadySentToday(reminderSentToday)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const streak = await prisma.userStreak.findUnique({
+        where: { userId: settingsRow.userId },
+        select: { currentStreak: true, lastCompletedDate: true },
+      })
+      if (
+        isDailyReminderDaySuppressedByCompletion({
+          lastCompletedDate: streak?.lastCompletedDate,
+          localToday: context.localToday,
+        })
+      ) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const streakRiskSentToday =
+        await prisma.devotionalNotificationSend.count({
+          where: {
+            userId: settingsRow.userId,
+            type: DevotionalNotificationType.STREAK_AT_RISK,
+            providerAcceptedAt: {
+              gte: context.dayWindowStart,
+              lt: context.nextDayWindowStart,
+            },
+          },
+        })
+      if (isDailyReminderSuppressedByStreakRisk(streakRiskSentToday)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const winbackState = await prisma.userWinbackState.findUnique({
+        where: { userId: settingsRow.userId },
+        select: { pausedAt: true },
+      })
+      if (isDailyReminderSuppressedByWinbackPause(winbackState?.pausedAt)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const dailyFeatured = await resolveDailyFeaturedForUser({
+        userId: settingsRow.userId,
+        now,
+      })
+      if (!hasDailyFeaturedDevotional(dailyFeatured)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      eligibleUsers += 1
+      dailyMetric.eligibleCount += 1
+
+      const devotionalId = dailyFeatured.devotional.id
+      const imageUrl = await resolveImageUrl({
+        devotionalId,
+        value: dailyFeatured.devotional.preview_image_url,
+      })
+      const copy = resolveDailyReminderCopy({
+        name: deviceTokens[0].user.name,
+        streak: streak?.currentStreak ?? 0,
+      })
+
+      for (const deviceToken of deviceTokens) {
+        const createdSend = await prisma.devotionalNotificationSend.create({
+          data: {
+            devotionalId,
+            userId: deviceToken.userId,
+            deviceTokenId: deviceToken.id,
+            type: DevotionalNotificationType.DAILY_REMINDER,
+            title: copy.title,
+            body: copy.body,
+            imageUrl,
+            payload: {
+              type: DevotionalNotificationType.DAILY_REMINDER,
+              title: copy.title,
+              body: copy.body,
+              devotional_id: devotionalId,
+              image_url: imageUrl,
+              local_date: context.localToday,
+            },
+          },
+        })
+
+        sent += 1
+
+        const providerResult = await sendPushMessage({
+          token: deviceToken.token,
+          title: copy.title,
+          body: copy.body,
+          imageUrl,
+          data: {
+            type: DevotionalNotificationType.DAILY_REMINDER,
+            title: copy.title,
+            body: copy.body,
+            devotional_id: devotionalId,
+            ...(imageUrl ? { image_url: imageUrl } : {}),
+          },
+        })
+
+        if (providerResult.providerAccepted) {
+          providerAccepted += 1
+          await prisma.devotionalNotificationSend.update({
+            where: { id: createdSend.id },
+            data: {
+              providerAcceptedAt: new Date(),
+              providerMessageId: providerResult.providerMessageId ?? null,
+            },
+          })
+          continue
+        }
+
+        failed += 1
+        const failureCode = providerResult.failureCode ?? 'FCM_REQUEST_FAILED'
+        const updatePayload: Prisma.DevotionalNotificationSendUpdateInput = {
+          failedAt: new Date(),
+          failureCode,
+        }
+
+        if (providerResult.shouldDeactivateToken) {
+          tokenDeactivated += 1
+          updatePayload.tokenDeactivatedAt = new Date()
+          await prisma.deviceToken.update({
+            where: { id: deviceToken.id },
+            data: {
+              isActive: false,
+            },
+          })
+        }
+
+        await prisma.devotionalNotificationSend.update({
+          where: { id: createdSend.id },
+          data: updatePayload,
+        })
+      }
+    }
+  }
+
+  for (const [date, metric] of evaluationMetricsByDate.entries()) {
+    await incrementNotificationEvaluationMetrics({
+      date,
+      type: DevotionalNotificationType.DAILY_REMINDER,
+      evaluatedCount: metric.evaluatedCount,
+      eligibleCount: metric.eligibleCount,
+      skippedCount: metric.skippedCount,
+    })
+  }
+
+  console.log('[DevotionalNotifications] Completed daily reminder send', {
+    processedUsers,
+    eligibleUsers,
+    sent,
+    providerAccepted,
+    failed,
+    tokenDeactivated,
+  })
+
+  return {
+    processed_users: processedUsers,
+    eligible_users: eligibleUsers,
+    sent,
+    provider_accepted: providerAccepted,
+    failed,
+    token_deactivated: tokenDeactivated,
+  }
+}
+
+export const isStreakMilestonePreferenceEnabled = (
+  settings: { streakMilestoneNotificationsEnabled: boolean } | null | undefined
+): boolean => settings?.streakMilestoneNotificationsEnabled === true
+
+// Combines both gates the milestone push must pass: it must be the first time
+// the milestone was ever reached (re-reaches after a streak reset never push,
+// only re-celebrate in-app) AND the user must have milestone notifications enabled.
+export const shouldSendStreakMilestonePush = (params: {
+  isFirstReach: boolean
+  settings: { streakMilestoneNotificationsEnabled: boolean } | null | undefined
+}): boolean =>
+  params.isFirstReach && isStreakMilestonePreferenceEnabled(params.settings)
+
+// Sends the one-time STREAK_MILESTONE congratulation push. Must be called
+// strictly AFTER the streak transaction that detected the milestone has
+// committed (never from inside that transaction callback) — see
+// applyReadCompleteEngagement in devotionalEngagement.service.ts, whose
+// milestoneReached signal drives the `isFirstReach` param here.
+export const sendStreakMilestoneNotification = async (params: {
+  userId: string
+  milestone: number
+  devotionalId: string
+  isFirstReach: boolean
+}) => {
+  if (!params.isFirstReach) {
+    return { sent: 0, provider_accepted: 0, failed: 0, token_deactivated: 0 }
+  }
+
+  const deviceTokens = await listEligibleDeviceTokens([params.userId])
+  if (deviceTokens.length === 0) {
+    return { sent: 0, provider_accepted: 0, failed: 0, token_deactivated: 0 }
+  }
+
+  const settings = deviceTokens[0]?.user.settings
+  if (
+    !shouldSendStreakMilestonePush({
+      isFirstReach: params.isFirstReach,
+      settings,
+    })
+  ) {
+    return { sent: 0, provider_accepted: 0, failed: 0, token_deactivated: 0 }
+  }
+
+  const copy = resolveStreakMilestoneCopy(params.milestone)
+
+  let sent = 0
+  let providerAccepted = 0
+  let failed = 0
+  let tokenDeactivated = 0
+
+  for (const deviceToken of deviceTokens) {
+    const createdSend = await prisma.devotionalNotificationSend.create({
+      data: {
+        devotionalId: params.devotionalId,
+        userId: deviceToken.userId,
+        deviceTokenId: deviceToken.id,
+        type: DevotionalNotificationType.STREAK_MILESTONE,
+        title: copy.title,
+        body: copy.body,
+        imageUrl: null,
+        payload: {
+          type: DevotionalNotificationType.STREAK_MILESTONE,
+          title: copy.title,
+          body: copy.body,
+          devotional_id: params.devotionalId,
+          milestone: params.milestone,
+        },
+      },
+    })
+
+    sent += 1
+
+    const providerResult = await sendPushMessage({
+      token: deviceToken.token,
+      title: copy.title,
+      body: copy.body,
+      imageUrl: null,
+      data: {
+        type: DevotionalNotificationType.STREAK_MILESTONE,
+        title: copy.title,
+        body: copy.body,
+        devotional_id: params.devotionalId,
+      },
+    })
+
+    if (providerResult.providerAccepted) {
+      providerAccepted += 1
+      await prisma.devotionalNotificationSend.update({
+        where: { id: createdSend.id },
+        data: {
+          providerAcceptedAt: new Date(),
+          providerMessageId: providerResult.providerMessageId ?? null,
+        },
+      })
+      continue
+    }
+
+    failed += 1
+    const failureCode = providerResult.failureCode ?? 'FCM_REQUEST_FAILED'
+    const updatePayload: Prisma.DevotionalNotificationSendUpdateInput = {
+      failedAt: new Date(),
+      failureCode,
+    }
+
+    if (providerResult.shouldDeactivateToken) {
+      tokenDeactivated += 1
+      updatePayload.tokenDeactivatedAt = new Date()
+      await prisma.deviceToken.update({
+        where: { id: deviceToken.id },
+        data: {
+          isActive: false,
+        },
+      })
+    }
+
+    await prisma.devotionalNotificationSend.update({
+      where: { id: createdSend.id },
+      data: updatePayload,
+    })
+  }
+
+  console.log('[DevotionalNotifications] Completed milestone push', {
+    userId: params.userId,
+    milestone: params.milestone,
+    sent,
+    providerAccepted,
+    failed,
+    tokenDeactivated,
+  })
+
+  return {
+    sent,
+    provider_accepted: providerAccepted,
+    failed,
+    token_deactivated: tokenDeactivated,
+  }
+}
+
+// --- Win-back ladder predicates (pure) -------------------------------------
+// Extracted so unit tests (task 5.3) can exercise ladder/window/spacing logic
+// without hitting Prisma, following the sendDailyReminderNotifications seam.
+
+export const hasEverHadAppSession = (
+  lastSessionAt: Date | null | undefined
+): boolean => Boolean(lastSessionAt)
+
+export const isWinbackPaused = (
+  pausedAt: Date | null | undefined
+): boolean => Boolean(pausedAt)
+
+export const isWinbackPreferenceEnabled = (
+  settings: { winbackNotificationsEnabled: boolean } | null | undefined
+): boolean => settings?.winbackNotificationsEnabled === true
+
+// Highest step in stepDays (ascending, e.g. [3, 7, 14]) whose threshold has
+// been crossed by daysSinceLastSession, or null if none has been crossed yet.
+export const resolveWinbackStep = (params: {
+  daysSinceLastSession: number
+  stepDays: readonly number[]
+}): number | null => {
+  let matchedStep: number | null = null
+  for (const step of params.stepDays) {
+    if (params.daysSinceLastSession >= step) {
+      matchedStep = step
+    }
+  }
+  return matchedStep
+}
+
+export const isWinbackLocalWindowOpen = (params: {
+  localHour: number
+  windowStartLocalHour: number
+  windowEndLocalHour: number
+}): boolean =>
+  params.localHour >= params.windowStartLocalHour &&
+  params.localHour < params.windowEndLocalHour
+
+export const isWinbackStepMonotonic = (params: {
+  lastStepSent: number
+  step: number
+}): boolean => params.lastStepSent < params.step
+
+export const isWinbackSpacingSatisfied = (params: {
+  lastSentAt: Date | null | undefined
+  now: Date
+  minHoursBetweenSends: number
+}): boolean => {
+  if (!params.lastSentAt) {
+    return true
+  }
+
+  const elapsedHours =
+    (params.now.getTime() - params.lastSentAt.getTime()) / (60 * 60 * 1000)
+
+  return elapsedHours >= params.minHoursBetweenSends
+}
+
+const computeDaysSinceLastSession = (params: {
+  lastSessionAt: Date
+  now: Date
+}): number =>
+  Math.floor(
+    (params.now.getTime() - params.lastSessionAt.getTime()) /
+      (24 * 60 * 60 * 1000)
+  )
+
+export const sendWinbackNotifications = async (now = new Date()) => {
+  const winbackPolicy = config.engagement.notifications.winback
+  let processedUsers = 0
+  let eligibleUsers = 0
+  let sent = 0
+  let providerAccepted = 0
+  let failed = 0
+  let tokenDeactivated = 0
+  let cursorId: number | undefined
+  const evaluationMetricsByDate = new Map<
+    string,
+    {
+      evaluatedCount: number
+      eligibleCount: number
+      skippedCount: number
+    }
+  >()
+
+  while (true) {
+    const settingsBatch = await prisma.userSettings.findMany({
+      where: {
+        winbackNotificationsEnabled: true,
+      },
+      orderBy: {
+        id: 'asc',
+      },
+      take: 100,
+      ...(cursorId
+        ? {
+            cursor: { id: cursorId },
+            skip: 1,
+          }
+        : {}),
+      select: { id: true, userId: true },
+    })
+
+    if (settingsBatch.length === 0) {
+      break
+    }
+
+    for (const settingsRow of settingsBatch) {
+      processedUsers += 1
+      cursorId = settingsRow.id
+
+      const context = await resolveUserLocalDayContext(
+        prisma,
+        settingsRow.userId,
+        now
+      )
+      const dailyMetric =
+        evaluationMetricsByDate.get(context.localToday) ?? {
+          evaluatedCount: 0,
+          eligibleCount: 0,
+          skippedCount: 0,
+        }
+      dailyMetric.evaluatedCount += 1
+      evaluationMetricsByDate.set(context.localToday, dailyMetric)
+
+      const lastSession = await prisma.appSessionEvent.findFirst({
+        where: { userId: settingsRow.userId },
+        orderBy: { occurredAt: 'desc' },
+        select: { occurredAt: true },
+      })
+      if (!hasEverHadAppSession(lastSession?.occurredAt)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const winbackState = await prisma.userWinbackState.findUnique({
+        where: { userId: settingsRow.userId },
+      })
+      if (isWinbackPaused(winbackState?.pausedAt)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const daysSinceLastSession = computeDaysSinceLastSession({
+        lastSessionAt: lastSession!.occurredAt,
+        now,
+      })
+      const step = resolveWinbackStep({
+        daysSinceLastSession,
+        stepDays: winbackPolicy.stepDays,
+      })
+      if (step === null) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      if (
+        !isWinbackStepMonotonic({
+          lastStepSent: winbackState?.lastStepSent ?? 0,
+          step,
+        })
+      ) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      if (
+        !isWinbackSpacingSatisfied({
+          lastSentAt: winbackState?.lastSentAt,
+          now,
+          minHoursBetweenSends: winbackPolicy.minHoursBetweenSends,
+        })
+      ) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      if (
+        !isWinbackLocalWindowOpen({
+          localHour: context.localHour,
+          windowStartLocalHour: winbackPolicy.windowStartLocalHour,
+          windowEndLocalHour: winbackPolicy.windowEndLocalHour,
+        })
+      ) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const deviceTokens = await listEligibleDeviceTokens([
+        settingsRow.userId,
+      ])
+      if (deviceTokens.length === 0) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const settings = deviceTokens[0]?.user.settings
+      if (!isWinbackPreferenceEnabled(settings)) {
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      const dailyFeatured = await resolveDailyFeaturedForUser({
+        userId: settingsRow.userId,
+        now,
+      })
+      if (!hasDailyFeaturedDevotional(dailyFeatured)) {
+        // Null-featured-devotional skip must NOT advance ladder state, so no
+        // UserWinbackState write happens on this path.
+        dailyMetric.skippedCount += 1
+        continue
+      }
+
+      eligibleUsers += 1
+      dailyMetric.eligibleCount += 1
+
+      const devotionalId = dailyFeatured.devotional.id
+      const imageUrl = await resolveImageUrl({
+        devotionalId,
+        value: dailyFeatured.devotional.preview_image_url,
+      })
+
+      let verseText: string | null = null
+      if (step === 3) {
+        const dailyVerse = await getDailyVerseForUser(settingsRow.userId)
+        verseText = `${dailyVerse.text} (${dailyVerse.reference})`
+      }
+
+      const copy = resolveWinbackCopy({
+        step,
+        name: deviceTokens[0].user.name,
+        verseText,
+      })
+
+      for (const deviceToken of deviceTokens) {
+        const createdSend = await prisma.devotionalNotificationSend.create({
+          data: {
+            devotionalId,
+            userId: deviceToken.userId,
+            deviceTokenId: deviceToken.id,
+            type: DevotionalNotificationType.WINBACK,
+            title: copy.title,
+            body: copy.body,
+            imageUrl,
+            payload: {
+              type: DevotionalNotificationType.WINBACK,
+              title: copy.title,
+              body: copy.body,
+              devotional_id: devotionalId,
+              image_url: imageUrl,
+              step,
+              local_date: context.localToday,
+            },
+          },
+        })
+
+        sent += 1
+
+        const providerResult = await sendPushMessage({
+          token: deviceToken.token,
+          title: copy.title,
+          body: copy.body,
+          imageUrl,
+          data: {
+            type: DevotionalNotificationType.WINBACK,
+            title: copy.title,
+            body: copy.body,
+            devotional_id: devotionalId,
+            ...(imageUrl ? { image_url: imageUrl } : {}),
+          },
+        })
+
+        if (providerResult.providerAccepted) {
+          providerAccepted += 1
+          await prisma.devotionalNotificationSend.update({
+            where: { id: createdSend.id },
+            data: {
+              providerAcceptedAt: new Date(),
+              providerMessageId: providerResult.providerMessageId ?? null,
+            },
+          })
+          continue
+        }
+
+        failed += 1
+        const failureCode = providerResult.failureCode ?? 'FCM_REQUEST_FAILED'
+        const updatePayload: Prisma.DevotionalNotificationSendUpdateInput = {
+          failedAt: new Date(),
+          failureCode,
+        }
+
+        if (providerResult.shouldDeactivateToken) {
+          tokenDeactivated += 1
+          updatePayload.tokenDeactivatedAt = new Date()
+          await prisma.deviceToken.update({
+            where: { id: deviceToken.id },
+            data: {
+              isActive: false,
+            },
+          })
+        }
+
+        await prisma.devotionalNotificationSend.update({
+          where: { id: createdSend.id },
+          data: updatePayload,
+        })
+      }
+
+      await prisma.userWinbackState.upsert({
+        where: { userId: settingsRow.userId },
+        create: {
+          userId: settingsRow.userId,
+          lastStepSent: step,
+          lastSentAt: now,
+          pausedAt: step === 14 ? now : null,
+        },
+        update: {
+          lastStepSent: step,
+          lastSentAt: now,
+          pausedAt: step === 14 ? now : null,
+        },
+      })
+    }
+  }
+
+  for (const [date, metric] of evaluationMetricsByDate.entries()) {
+    await incrementNotificationEvaluationMetrics({
+      date,
+      type: DevotionalNotificationType.WINBACK,
+      evaluatedCount: metric.evaluatedCount,
+      eligibleCount: metric.eligibleCount,
+      skippedCount: metric.skippedCount,
+    })
+  }
+
+  console.log('[DevotionalNotifications] Completed win-back send', {
     processedUsers,
     eligibleUsers,
     sent,

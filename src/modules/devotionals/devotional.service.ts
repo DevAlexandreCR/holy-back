@@ -66,7 +66,10 @@ import {
   recordFirstAttributedDevotionalOpen,
   recordFirstAttributedReadComplete,
 } from '../shareAttribution/shareAttribution.service'
-import { sendDevotionalNotifications } from '../notifications/notification.service'
+import {
+  sendDevotionalNotifications,
+  sendStreakMilestoneNotification,
+} from '../notifications/notification.service'
 import {
   notifyDevotionalCommentCreated,
   notifyDevotionalLikeCreated,
@@ -2301,6 +2304,26 @@ export const markReadComplete = async (params: {
       }),
   })
 
+  // Fire-and-forget, strictly after the streak transaction above has
+  // committed: never awaited inline so no DB lock/response time is held on
+  // the FCM round-trip, and any failure is caught and logged here rather
+  // than propagating (mirrors the background-send pattern in auth.service.ts).
+  if (engagement.milestoneReached?.isFirstReach === true) {
+    const milestone = engagement.milestoneReached.milestone
+    void sendStreakMilestoneNotification({
+      userId: params.userId,
+      milestone,
+      devotionalId: params.devotionalId,
+      isFirstReach: true,
+    }).catch((error) => {
+      console.error('[DevotionalNotifications] Failed to send milestone push', {
+        userId: params.userId,
+        milestone,
+        error,
+      })
+    })
+  }
+
   if (engagement.created) {
     await prisma.$transaction(async (tx) => {
       await applyDevotionalAffinitySignal(tx, {
@@ -2327,6 +2350,8 @@ export const markReadComplete = async (params: {
   return {
     readComplete: true,
     readCompleteCount,
+    milestone: engagement.milestone,
+    milestoneReached: engagement.milestoneReached,
   }
 }
 

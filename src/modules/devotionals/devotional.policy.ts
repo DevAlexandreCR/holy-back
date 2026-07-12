@@ -83,7 +83,132 @@ export const devotionalNotificationPolicy = {
     authorApproved: 'Tu devocional fue aprobado',
     authorRestricted: 'Tu devocional fue restringido',
   },
+  dailyReminderCopyTemplates: {
+    streak: [
+      {
+        title: '🔥 Día {streak}, {name}',
+        body: 'Tu racha sigue firme. Este es un buen momento para tu devocional de hoy.',
+      },
+      {
+        title: 'Vas muy bien, {name} 🔥',
+        body: 'Llevas {streak} días seguidos buscando a Dios. Sigamos hoy también.',
+      },
+      {
+        title: '🔥 Racha de {streak} días',
+        body: '{name}, tu momento con Dios te está esperando.',
+      },
+    ],
+    invitation: [
+      {
+        title: 'Tu momento con Dios te espera',
+        body: 'Hola {name}, hoy es un buen día para detenerte un momento y leer tu devocional.',
+      },
+      {
+        title: 'Un espacio para respirar',
+        body: '{name}, tómate unos minutos hoy para tu momento con Dios.',
+      },
+      {
+        title: 'Hoy también hay un mensaje para ti',
+        body: 'Hola {name}, tu devocional de hoy te está esperando.',
+      },
+    ],
+  },
 } as const
+
+const interpolateDailyReminderTemplate = (
+  template: string,
+  values: { name: string; streak: string },
+) => template.replace(/\{name\}/g, values.name).replace(/\{streak\}/g, values.streak)
+
+export const resolveDailyReminderCopy = (params: {
+  name: string
+  streak: number
+}): { title: string; body: string } => {
+  const firstName = params.name.trim().split(/\s+/)[0] || params.name
+  const variant =
+    params.streak >= 2
+      ? devotionalNotificationPolicy.dailyReminderCopyTemplates.streak
+      : devotionalNotificationPolicy.dailyReminderCopyTemplates.invitation
+  const template = variant[Math.floor(Math.random() * variant.length)]
+  const values = { name: firstName, streak: String(params.streak) }
+
+  return {
+    title: interpolateDailyReminderTemplate(template.title, values),
+    body: interpolateDailyReminderTemplate(template.body, values),
+  }
+}
+
+const streakMilestoneCopyTemplates: Record<
+  number,
+  { title: string; body: string }
+> = {
+  3: {
+    title: '¡3 días seguidos! 🔥',
+    body: 'Estás construyendo un lindo hábito. Sigamos así.',
+  },
+  7: {
+    title: '¡7 días seguidos! 🔥',
+    body: 'Una semana completa buscando a Dios cada día. ¡Vas muy bien!',
+  },
+  30: {
+    title: '¡30 días seguidos! 🔥',
+    body: 'Un mes entero de constancia. Este hábito ya es parte de tu vida.',
+  },
+  100: {
+    title: '¡100 días seguidos! 🔥',
+    body: 'Cien días seguidos buscando a Dios. Tu constancia es un testimonio. ¡Felicidades!',
+  },
+}
+
+export const resolveStreakMilestoneCopy = (
+  milestone: number
+): { title: string; body: string } =>
+  streakMilestoneCopyTemplates[milestone] ?? {
+    title: `¡${milestone} días seguidos! 🔥`,
+    body: 'Tu constancia está dando frutos. ¡Sigamos así!',
+  }
+
+// Win-back ladder copy: warm Spanish (Colombia), never guilt. Step 3 carries
+// the verse-of-the-day text in the body (resolved server-side by the caller,
+// see sendWinbackNotifications). Step 14 IS the final message announcing the
+// pause — there is no separate "step 15".
+const winbackCopyTemplates: Record<number, { title: string; body: string }> = {
+  3: {
+    title: 'Te extrañamos, {name} 💛',
+    body: 'Hace unos días no sabemos de ti. Hoy tu versículo es: "{verse}"',
+  },
+  7: {
+    title: 'Hay algo nuevo para ti',
+    body: '{name}, preparamos nuevos devocionales pensando en ti. Vuelve cuando quieras retomar tu momento con Dios.',
+  },
+  14: {
+    title: 'Vamos a dejarte tranquilo por ahora',
+    body: '{name}, no queremos llenarte de notificaciones. Dejaremos de escribirte por un tiempo; aquí estaremos cuando quieras volver.',
+  },
+}
+
+const interpolateWinbackTemplate = (
+  template: string,
+  values: { name: string; verse: string },
+) =>
+  template
+    .replace(/\{name\}/g, values.name)
+    .replace(/\{verse\}/g, values.verse)
+
+export const resolveWinbackCopy = (params: {
+  step: number
+  name: string
+  verseText?: string | null
+}): { title: string; body: string } => {
+  const firstName = params.name.trim().split(/\s+/)[0] || params.name
+  const template = winbackCopyTemplates[params.step] ?? winbackCopyTemplates[3]
+  const values = { name: firstName, verse: params.verseText ?? '' }
+
+  return {
+    title: interpolateWinbackTemplate(template.title, values),
+    body: interpolateWinbackTemplate(template.body, values),
+  }
+}
 
 export const devotionalRankingReviewPolicy = {
   version: 'phase3-v2',
