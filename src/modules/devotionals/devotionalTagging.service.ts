@@ -170,6 +170,7 @@ const resolveOpenAITags = async (params: {
     '/responses',
     {
       model: config.openai.devotionalTagModel,
+      reasoning: { effort: 'none' },
       input: buildPrompt({
         title: params.title,
         plainText: params.plainText,
@@ -190,7 +191,6 @@ const resolveOpenAITags = async (params: {
                   type: 'string',
                   enum: params.availableTagNames,
                 },
-                uniqueItems: true,
                 maxItems: MAX_ASSIGNED_TAGS,
               },
             },

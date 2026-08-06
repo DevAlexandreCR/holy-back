@@ -6,7 +6,7 @@ import { buildDeterministicHookFallback } from './devotionalFeedContent'
 const HOOK_MIN_LENGTH = 80
 const HOOK_TARGET_MIN_LENGTH = 120
 const HOOK_MAX_LENGTH = 140
-const HOOK_MAX_OUTPUT_TOKENS = 120
+const HOOK_MAX_OUTPUT_TOKENS = 400
 
 const CLICKBAIT_PATTERNS = [
   /\bno vas a creer\b/u,
@@ -327,7 +327,7 @@ export class DevotionalHookGeneratorService {
         {
           model,
           store: false,
-          temperature: 0.3,
+          reasoning: { effort: 'none' },
           max_output_tokens: HOOK_MAX_OUTPUT_TOKENS,
           input: buildHookPrompt(input),
           text: {

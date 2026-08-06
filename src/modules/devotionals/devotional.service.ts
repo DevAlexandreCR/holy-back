@@ -1788,7 +1788,7 @@ export const publishDevotional = async (params: {
         devotional.moderationStatus !== DevotionalModerationStatus.UNDER_REVIEW &&
         moderationStatus === DevotionalModerationStatus.UNDER_REVIEW,
     }
-  })
+  }, { maxWait: 5000, timeout: 30000 })
 
   await maybeSendReviewRequiredNotification({
     devotionalId: result.devotional.id,
