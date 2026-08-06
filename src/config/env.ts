@@ -297,6 +297,10 @@ const OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS = toNumber(
 const OPENAI_HOLYVERSO_IMAGE_MODEL = readEnvOptional([
   'OPENAI_HOLYVERSO_IMAGE_MODEL',
 ]);
+const OPENAI_HOLYVERSO_IMAGE_QUALITY = readEnvAny(
+  ['OPENAI_HOLYVERSO_IMAGE_QUALITY'],
+  'medium',
+);
 const OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS = toNumber(
   readEnvAny(['OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS'], '45000'),
   'OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS',
@@ -311,6 +315,25 @@ const HOLYVERSO_USER_PASSWORD = readEnvOptional(['HOLYVERSO_USER_PASSWORD']);
 const HOLYVERSO_USER_BIO = readEnvAny(
   ['HOLYVERSO_USER_BIO'],
   'Devocionales diarios para acompañarte con la Palabra de Dios.',
+);
+const HOLYVERSO_SLOT_TIMES_DEFAULT = '06:00,12:00,20:00';
+const HOLYVERSO_SLOT_TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const parseHolyversoSlotTimes = (raw: string): string[] => {
+  const parsed = Array.from(
+    new Set(
+      raw
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter((entry) => HOLYVERSO_SLOT_TIME_PATTERN.test(entry)),
+    ),
+  ).sort();
+  if (parsed.length === 0) {
+    return Array.from(new Set(HOLYVERSO_SLOT_TIMES_DEFAULT.split(','))).sort();
+  }
+  return parsed;
+};
+const HOLYVERSO_SLOT_TIMES = parseHolyversoSlotTimes(
+  readEnvAny(['HOLYVERSO_SLOT_TIMES'], HOLYVERSO_SLOT_TIMES_DEFAULT),
 );
 
 if (DEVOTIONAL_AUDIO_ENABLED && !OPENAI_API_KEY) {
@@ -390,6 +413,7 @@ export const config = {
     holyversoTextModel: OPENAI_HOLYVERSO_TEXT_MODEL,
     holyversoTextTimeoutMs: OPENAI_HOLYVERSO_TEXT_TIMEOUT_MS,
     holyversoImageModel: OPENAI_HOLYVERSO_IMAGE_MODEL,
+    holyversoImageQuality: OPENAI_HOLYVERSO_IMAGE_QUALITY,
     holyversoImageTimeoutMs: OPENAI_HOLYVERSO_IMAGE_TIMEOUT_MS,
   },
   notifications: {
@@ -436,6 +460,7 @@ export const config = {
       password: HOLYVERSO_USER_PASSWORD,
       bio: HOLYVERSO_USER_BIO,
     },
+    slotTimes: HOLYVERSO_SLOT_TIMES,
     isConfigured: Boolean(
       OPENAI_API_KEY &&
         OPENAI_HOLYVERSO_TEXT_MODEL &&

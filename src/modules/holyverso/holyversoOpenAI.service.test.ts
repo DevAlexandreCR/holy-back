@@ -7,12 +7,14 @@ import {
   HOLYVERSO_BLOCK_MIN_COUNT,
   holyversoGeneratedDevotionalSchema,
 } from './holyversoOpenAI.service'
+import { HOLYVERSO_TONE_LIBRARY } from './holyverso.constants'
 
 test('buildHolyversoTextPrompt requires the short-block editorial cadence', () => {
   const prompt = buildHolyversoTextPrompt({
     topicKey: 'ansiedad',
     excludedTopicKeys: ['gratitud', 'descanso'],
     attemptSeed: '2026-05-01-slot-1',
+    toneKey: 'gentle-teacher',
   })
 
   assert.match(
@@ -35,6 +37,12 @@ test('buildHolyversoTextPrompt requires the short-block editorial cadence', () =
   assert.match(prompt, /generic churchy filler/u)
   assert.match(prompt, /confrontation plus a micro-action for today/u)
   assert.match(prompt, /brief final prayer inside the existing content blocks/u)
+
+  const toneDescription = HOLYVERSO_TONE_LIBRARY.find(
+    (tone) => tone.key === 'gentle-teacher'
+  )?.description
+  assert.ok(toneDescription)
+  assert.ok(prompt.includes(`Voice profile: ${toneDescription}`))
 })
 
 test('holyversoGeneratedDevotionalSchema accepts the new short-block range', () => {

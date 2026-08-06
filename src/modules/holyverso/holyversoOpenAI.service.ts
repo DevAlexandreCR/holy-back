@@ -4,8 +4,10 @@ import { config } from '../../config/env'
 import { DEVOTIONAL_WORDS_PER_MINUTE } from '../devotionals/devotional.policy'
 import {
   HOLYVERSO_STYLE_LIBRARY,
+  HOLYVERSO_TONE_LIBRARY,
   HOLYVERSO_TOPIC_POOL,
   type HolyversoStyleKey,
+  type HolyversoToneKey,
   type HolyversoTopicKey,
 } from './holyverso.constants'
 
@@ -108,6 +110,9 @@ const getStyleDescription = (styleKey: HolyversoStyleKey) =>
   HOLYVERSO_STYLE_LIBRARY.find((style) => style.key === styleKey)?.description ??
   styleKey
 
+const getToneDescription = (toneKey: HolyversoToneKey) =>
+  HOLYVERSO_TONE_LIBRARY.find((tone) => tone.key === toneKey)?.description ?? toneKey
+
 const holyversoGeneratedDevotionalJsonSchema = {
   type: 'object',
   additionalProperties: false,
@@ -157,6 +162,7 @@ export const buildHolyversoTextPrompt = (params: {
   topicKey: HolyversoTopicKey
   excludedTopicKeys: HolyversoTopicKey[]
   attemptSeed: string
+  toneKey: HolyversoToneKey
 }) =>
   [
     'You write Christian devotionals for HolyVerso.',
@@ -195,12 +201,14 @@ export const buildHolyversoTextPrompt = (params: {
     '- Avoid generic churchy filler, sermon-outline exposition, repetitive verse paraphrasing, fake certainty, and promises not grounded in the verse.',
     '- Do not let the call to action sound like motivational content or social-media advice. It must remain pastoral, biblical, and believable.',
     '- End with a concise landing that leaves the reader with clarity, peace, conviction, surrender, or a concrete next step that fits the theme.',
+    '- Let the voice profile shape sentence rhythm and word choice while keeping every other hard requirement above fully intact.',
     '',
     `Main topic key: ${params.topicKey}`,
     `Main topic guidance: ${getTopicDescription(params.topicKey)}`,
     `Other topics already used today and must not be the main topic: ${
       params.excludedTopicKeys.length > 0 ? params.excludedTopicKeys.join(', ') : 'none'
     }`,
+    `Voice profile: ${getToneDescription(params.toneKey)}`,
     `Attempt seed: ${params.attemptSeed}`,
   ].join('\n')
 
@@ -213,12 +221,13 @@ const buildImagePrompt = (params: {
   attemptSeed: string
 }) =>
   [
-    'Create a vertical devotional cover image for a Christian mobile app.',
+    'Create a horizontal devotional cover image for a Christian mobile app.',
     '',
     'Requirements:',
     '- No text, letters, captions, logos, watermarks, UI, or verse typography.',
     '- Safe, reverent, emotionally clear, visually polished.',
     '- The image must feel distinct from previous styles and not generic stock imagery.',
+    '- Keep the main subject centered on both axes with generous margins on all sides, because the image will be cropped both to a wide banner and to a tall vertical header.',
     `- Style direction: ${getStyleDescription(params.styleKey)}`,
     `- Topic key: ${params.topicKey}`,
     `- Attempt seed: ${params.attemptSeed}`,
@@ -243,6 +252,7 @@ export const generateHolyversoDevotional = async (params: {
   topicKey: HolyversoTopicKey
   excludedTopicKeys: HolyversoTopicKey[]
   attemptSeed: string
+  toneKey: HolyversoToneKey
 }) => {
   ensureConfigured()
 
@@ -297,6 +307,7 @@ export const generateHolyversoImage = async (params: {
       model: config.openai.holyversoImageModel,
       prompt: buildImagePrompt(params),
       size: '1536x1024',
+      quality: config.openai.holyversoImageQuality,
     },
     {
       headers: {

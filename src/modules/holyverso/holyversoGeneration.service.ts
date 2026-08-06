@@ -21,8 +21,10 @@ import {
   HOLYVERSO_SLOT_TIMES,
   HOLYVERSO_STYLE_LIBRARY,
   HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT,
+  HOLYVERSO_TONE_LIBRARY,
   HOLYVERSO_TOPIC_POOL,
   type HolyversoStyleKey,
+  type HolyversoToneKey,
   type HolyversoTopicKey,
 } from './holyverso.constants'
 import {
@@ -152,6 +154,9 @@ const buildDailyTopicKeys = (localDate: string) =>
 const buildDailyStyleOrder = (localDate: string) =>
   rotateArray(HOLYVERSO_STYLE_LIBRARY, dateHash(localDate) + 3)
 
+const buildDailyToneOrder = (localDate: string) =>
+  rotateArray(HOLYVERSO_TONE_LIBRARY, dateHash(localDate) + 7)
+
 const resolveStyleKeyForAttempt = (params: {
   localDate: string
   slotIndex: number
@@ -166,15 +171,33 @@ const resolveStyleKeyForAttempt = (params: {
   return orderedStyles[index].key
 }
 
+const resolveToneKeyForAttempt = (params: {
+  localDate: string
+  slotIndex: number
+  retryCount: number
+}): HolyversoToneKey => {
+  const orderedTones = buildDailyToneOrder(params.localDate)
+  const index =
+    (params.slotIndex +
+      params.retryCount * HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT) %
+    orderedTones.length
+
+  return orderedTones[index].key
+}
+
 const buildBatchMetadata = (localDate: string) => {
   const topicKeys = buildDailyTopicKeys(localDate)
   const orderedStyles = buildDailyStyleOrder(localDate)
+  const orderedTones = buildDailyToneOrder(localDate)
 
   return {
     topic_keys: topicKeys,
     style_keys: orderedStyles
       .slice(0, HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT)
       .map((style) => style.key),
+    tone_keys: orderedTones
+      .slice(0, HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT)
+      .map((tone) => tone.key),
     timezone: 'America/Bogota',
   }
 }
@@ -287,6 +310,7 @@ const markSlotResult = async (params: {
 const buildSlotMetadata = (params: {
   attemptSeed: string
   styleKey: HolyversoStyleKey
+  toneKey: HolyversoToneKey
   topicKey: HolyversoTopicKey
   generatedTitle?: string
   failureCode?: string | null
@@ -297,6 +321,7 @@ const buildSlotMetadata = (params: {
     attempt_seed: params.attemptSeed,
     topic_key: params.topicKey,
     style_key: params.styleKey,
+    tone_key: params.toneKey,
     generated_title: params.generatedTitle ?? null,
     failure_code: params.failureCode ?? null,
     failure_message: params.failureMessage ?? null,
@@ -418,6 +443,11 @@ const processSlot = async (params: {
         }),
         topicKey: slot.topicKey as HolyversoTopicKey,
         styleKey: slot.styleKey as HolyversoStyleKey,
+        toneKey: resolveToneKeyForAttempt({
+          localDate: slot.batch.localDate,
+          slotIndex: slot.slotIndex,
+          retryCount: slot.retryCount,
+        }),
         failureCode: slot.failureCode ?? 'RETRY_WINDOW_EXPIRED',
         failureMessage: 'Retry window expired before the slot could be published.',
       }),
@@ -427,6 +457,11 @@ const processSlot = async (params: {
   }
 
   const styleKey = resolveStyleKeyForAttempt({
+    localDate: slot.batch.localDate,
+    slotIndex: slot.slotIndex,
+    retryCount: slot.retryCount,
+  })
+  const toneKey = resolveToneKeyForAttempt({
     localDate: slot.batch.localDate,
     slotIndex: slot.slotIndex,
     retryCount: slot.retryCount,
@@ -450,6 +485,7 @@ const processSlot = async (params: {
         attemptSeed,
         topicKey: slot.topicKey as HolyversoTopicKey,
         styleKey,
+        toneKey,
       }),
     },
   })
@@ -462,6 +498,7 @@ const processSlot = async (params: {
       topicKey: slot.topicKey as HolyversoTopicKey,
       excludedTopicKeys,
       attemptSeed,
+      toneKey,
     })
     const content = buildContentOps(generated.content)
     const contentWordCount = countWords(content)
@@ -518,6 +555,7 @@ const processSlot = async (params: {
         slot_index: slot.slotIndex,
         topic_key: generated.topic_key,
         style_key: styleKey,
+        tone_key: toneKey,
         attempt_seed: attemptSeed,
         word_count: contentWordCount,
         openai_text_model: config.openai.holyversoTextModel,
@@ -542,6 +580,7 @@ const processSlot = async (params: {
         attemptSeed,
         topicKey: generated.topic_key as HolyversoTopicKey,
         styleKey,
+        toneKey,
         generatedTitle: generated.title,
         imageAssetId: imageAsset.asset.id,
       }),
@@ -588,6 +627,7 @@ const processSlot = async (params: {
         attemptSeed,
         topicKey: slot.topicKey as HolyversoTopicKey,
         styleKey,
+        toneKey,
         failureCode,
         failureMessage,
       }),

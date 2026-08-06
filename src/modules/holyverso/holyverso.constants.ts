@@ -2,12 +2,13 @@ import {
   DEVOTIONAL_TAG_DICTIONARY,
   type DevotionalTagKey,
 } from '../devotionals/devotionalTagDictionary'
+import { config } from '../../config/env'
 
 export const HOLYVERSO_TIMEZONE = 'America/Bogota'
-export const HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT = 5
 export const HOLYVERSO_MAX_RETRIES = 2
 export const HOLYVERSO_RETRY_CUTOFF = '22:30'
-export const HOLYVERSO_SLOT_TIMES = ['06:00', '09:00', '12:00', '16:00', '20:00'] as const
+export const HOLYVERSO_SLOT_TIMES: readonly string[] = config.holyverso.slotTimes
+export const HOLYVERSO_TARGET_DAILY_PUBLISH_COUNT = HOLYVERSO_SLOT_TIMES.length
 
 const HOLYVERSO_TOPIC_DESCRIPTIONS: Record<DevotionalTagKey, string> = {
   esperanza:
@@ -112,5 +113,34 @@ export const HOLYVERSO_STYLE_LIBRARY = [
   },
 ] as const
 
+export const HOLYVERSO_TONE_LIBRARY = [
+  {
+    key: 'close-companion',
+    description:
+      'Warm intimate voice of a trusted friend speaking one-on-one, short conversational sentences, everyday household images, feels like a voice note from someone who knows the reader well.',
+  },
+  {
+    key: 'storyteller-shepherd',
+    description:
+      'Narrative voice that opens inside a small concrete scene from daily life, sensory detail, lets the story carry the teaching before naming it.',
+  },
+  {
+    key: 'gentle-teacher',
+    description:
+      'Calm unhurried voice that explains the verse with plain precise words and tender authority, brings brief biblical context naturally, never academic.',
+  },
+  {
+    key: 'poet-psalmist',
+    description:
+      'Lyrical restrained voice with the cadence of a psalm, evocative imagery from creation and scripture, rhythm and silence matter, never ornate for its own sake.',
+  },
+  {
+    key: 'honest-wrestler',
+    description:
+      'Direct raw voice that names doubt, fatigue and struggle bluntly before hope arrives, comfortable sitting in tension, sincerity over polish.',
+  },
+] as const
+
 export type HolyversoTopicKey = DevotionalTagKey
 export type HolyversoStyleKey = (typeof HOLYVERSO_STYLE_LIBRARY)[number]['key']
+export type HolyversoToneKey = (typeof HOLYVERSO_TONE_LIBRARY)[number]['key']
