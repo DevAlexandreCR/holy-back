@@ -5,3 +5,4 @@ dist/
 .env.local
 /storage/devotionals/images/
 /storage/devotionals/tmp/
+.claude/agent-memory/
