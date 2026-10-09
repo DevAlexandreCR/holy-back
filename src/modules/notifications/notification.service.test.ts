@@ -17,6 +17,7 @@ import {
   isWinbackStepMonotonic,
   resolveWinbackStep,
   shouldSendStreakMilestonePush,
+  truncateNotificationText,
 } from './notification.service'
 
 const WINBACK_STEP_DAYS = [3, 7, 14] as const
@@ -326,6 +327,29 @@ test('null daily featured devotional skips the win-back user without advancing t
   assert.equal(hasDailyFeaturedDevotional(null), false)
   assert.equal(hasDailyFeaturedDevotional(undefined), false)
   assert.equal(hasDailyFeaturedDevotional({ devotional: { id: 'dev-1' } }), true)
+})
+
+// truncateNotificationText (task: Winback P2000 hotfix) guards against the
+// DevotionalNotificationSend.title/body VARCHAR(191) column limit, which the
+// step-3 winback copy can exceed once the full verse text is interpolated in.
+
+test('truncateNotificationText leaves text at or under the column limit untouched', () => {
+  assert.equal(truncateNotificationText('short body'), 'short body')
+  assert.equal(truncateNotificationText('a'.repeat(191)), 'a'.repeat(191))
+})
+
+test('truncateNotificationText cuts text over the column limit and ends with an ellipsis', () => {
+  const tooLong = 'a'.repeat(250)
+  const truncated = truncateNotificationText(tooLong)
+
+  assert.equal(truncated.length, 191)
+  assert.equal(truncated.endsWith('…'), true)
+  assert.equal(truncated, `${'a'.repeat(190)}…`)
+})
+
+test('truncateNotificationText respects a custom maxLength', () => {
+  assert.equal(truncateNotificationText('abcdef', 5), 'abcd…')
+  assert.equal(truncateNotificationText('abcde', 5), 'abcde')
 })
 
 test('reset semantics: a cleared state (lastStepSent 0, pausedAt null) makes step 3 eligible again', () => {

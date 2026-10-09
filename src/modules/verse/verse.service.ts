@@ -5,6 +5,7 @@ import { convertBookToApiCode, getBookDisplayName } from '../bible/bookApiMappin
 import { config } from '../../config/env'
 import { isVerseSaved } from './savedVerse.service'
 import { ensureSettings } from '../user/userSettings.service'
+import { AppError } from '../../common/errors'
 
 const prisma = new PrismaClient()
 const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
@@ -14,7 +15,7 @@ const CACHE_THRESHOLD = 2000
 const DEFAULT_GUEST_VERSION_CODE = 'RVR1995'
 const DEFAULT_GUEST_VERSION_NAME = 'Reina Valera 1995'
 
-interface DailyVerseResponse {
+export interface DailyVerseResponse {
   reference: string
   text: string
   theme: string
@@ -23,6 +24,12 @@ interface DailyVerseResponse {
   source: 'cache' | 'api'
   libraryVerseId: number
   is_saved: boolean
+}
+
+export interface CachedVerseMatch {
+  libraryVerse: LibraryVerse
+  cachedText: CachedVerseText
+  version: BibleVersion
 }
 
 interface UserVerseHistoryWithRelations {
@@ -249,21 +256,36 @@ async function tryFindCachedVerse(
     baseWhere.libraryVerseId = { notIn: seenIds }
   }
 
-  // Try preferred themes first (70% of the time)
-  if (preferredThemes && preferredThemes.length > 0 && Math.random() < 0.7) {
-    const preferredOptions = await prisma.cachedVerseText.findMany({
-      where: {
-        ...baseWhere,
-        libraryVerse: {
-          theme: { in: preferredThemes },
-        },
-      },
+  const pickRandom = async (
+    where: any
+  ): Promise<(CachedVerseText & { libraryVerse: LibraryVerse }) | null> => {
+    const count = await prisma.cachedVerseText.count({ where })
+    if (count === 0) {
+      return null
+    }
+
+    const offset = Math.floor(Math.random() * count)
+    const rows = await prisma.cachedVerseText.findMany({
+      where,
+      skip: offset,
+      take: 1,
+      orderBy: { id: 'asc' },
       include: { libraryVerse: true },
     })
 
-    if (preferredOptions.length > 0) {
-      const randomIndex = Math.floor(Math.random() * preferredOptions.length)
-      const selected = preferredOptions[randomIndex]
+    return rows[0] ?? null
+  }
+
+  // Try preferred themes first (70% of the time)
+  if (preferredThemes && preferredThemes.length > 0 && Math.random() < 0.7) {
+    const selected = await pickRandom({
+      ...baseWhere,
+      libraryVerse: {
+        theme: { in: preferredThemes },
+      },
+    })
+
+    if (selected) {
       console.log(`🎯 Found cached verse with preferred theme: ${selected.libraryVerse.theme}`)
       return {
         libraryVerse: selected.libraryVerse,
@@ -273,22 +295,136 @@ async function tryFindCachedVerse(
   }
 
   // Otherwise find any cached verse
-  const cachedOptions = await prisma.cachedVerseText.findMany({
-    where: baseWhere,
-    include: { libraryVerse: true },
-  })
+  const selected = await pickRandom(baseWhere)
 
-  if (cachedOptions.length === 0) {
+  if (!selected) {
     return null
   }
-
-  // Pick random cached verse
-  const randomIndex = Math.floor(Math.random() * cachedOptions.length)
-  const selected = cachedOptions[randomIndex]
 
   return {
     libraryVerse: selected.libraryVerse,
     cachedText: selected,
+  }
+}
+
+/**
+ * Find any cached verse for a version, used when the external Bible API is
+ * unavailable. Retries without the version filter if nothing is cached in
+ * the requested version, so degraded mode still serves a verse when
+ * possible. Returns null only when the cache has nothing at all.
+ */
+async function findAnyCachedVerse(params: {
+  versionId: number
+  excludeLibraryVerseIds?: number[]
+  seed?: number
+}): Promise<CachedVerseMatch | null> {
+  const { versionId, excludeLibraryVerseIds, seed } = params
+
+  const pick = async (where: any): Promise<CachedVerseMatch | null> => {
+    const count = await prisma.cachedVerseText.count({ where })
+    if (count === 0) {
+      return null
+    }
+
+    const offset = seed !== undefined ? seed % count : Math.floor(Math.random() * count)
+
+    const rows = await prisma.cachedVerseText.findMany({
+      where,
+      skip: offset,
+      take: 1,
+      orderBy: { id: 'asc' },
+      include: { libraryVerse: true, version: true },
+    })
+
+    const row = rows[0]
+    if (!row) {
+      return null
+    }
+
+    return {
+      libraryVerse: row.libraryVerse,
+      cachedText: row,
+      version: row.version,
+    }
+  }
+
+  const excludeFilter =
+    excludeLibraryVerseIds && excludeLibraryVerseIds.length > 0
+      ? { libraryVerseId: { notIn: excludeLibraryVerseIds } }
+      : {}
+
+  const matchForVersion = await pick({ versionId, ...excludeFilter })
+  if (matchForVersion) {
+    return matchForVersion
+  }
+
+  return await pick(excludeFilter)
+}
+
+/**
+ * Build the public verse response strictly from one resolved verse/cache
+ * row, so identity fields are never mixed with a different pre-selected
+ * verse or version.
+ */
+export function toDailyVerseResponse(
+  match: CachedVerseMatch,
+  isSaved: boolean,
+  source: 'cache' | 'api'
+): DailyVerseResponse {
+  return {
+    reference: match.cachedText.reference,
+    text: match.cachedText.text,
+    theme: match.libraryVerse.theme,
+    versionCode: match.version.apiCode,
+    versionName: match.version.name,
+    source,
+    libraryVerseId: match.libraryVerse.id,
+    is_saved: isSaved,
+  }
+}
+
+/**
+ * Throws BIBLE_API_UNAVAILABLE (503) when nothing could be found in cache at
+ * all, so callers degrade gracefully instead of surfacing a generic 500 (or
+ * being mistaken for an auth failure).
+ */
+export function assertCacheAvailable(match: CachedVerseMatch | null): CachedVerseMatch {
+  if (!match) {
+    throw new AppError('Bible content temporarily unavailable', 'BIBLE_API_UNAVAILABLE', 503)
+  }
+
+  return match
+}
+
+type VersionChangeNewResult = { match: CachedVerseMatch; source: 'cache' | 'api' }
+
+/**
+ * Decides which version to serve when the user switched their preferred
+ * Bible version. When the fetch/cache lookup for the new version failed
+ * (newResult is null), keeps serving the old version and signals that user
+ * history should NOT be updated, so the version switch is retried on the
+ * user's next request.
+ */
+export function resolveVersionChangeOutcome(params: {
+  oldMatch?: CachedVerseMatch
+  newResult: VersionChangeNewResult | null
+}): { match: CachedVerseMatch; source: 'cache' | 'api'; updateHistoryVersionId: boolean } {
+  if (params.newResult) {
+    return {
+      match: params.newResult.match,
+      source: params.newResult.source,
+      updateHistoryVersionId: true,
+    }
+  }
+
+  if (!params.oldMatch) {
+    throw new Error('resolveVersionChangeOutcome requires oldMatch when newResult is null')
+  }
+
+  return {
+    match: params.oldMatch,
+    source: 'cache',
+    updateHistoryVersionId: false,
   }
 }
 
@@ -504,29 +640,43 @@ export async function getDailyVerseForGuest(): Promise<DailyVerseResponse> {
   const version = await resolveGuestVersion()
   const libraryVerse = await getDeterministicLibraryVerseForDate(today)
 
-  let cachedText = await findCachedVerseText(libraryVerse.id, version.id)
-  let source: 'cache' | 'api' = 'cache'
+  try {
+    let cachedText = await findCachedVerseText(libraryVerse.id, version.id)
+    let source: 'cache' | 'api' = 'cache'
 
-  if (!cachedText) {
-    const apiResult = await fetchVerseFromApi(libraryVerse, version)
-    cachedText = await cacheVerseText(
-      libraryVerse.id,
-      version.id,
-      apiResult.text,
-      apiResult.reference
+    if (!cachedText) {
+      const apiResult = await fetchVerseFromApi(libraryVerse, version)
+      cachedText = await cacheVerseText(
+        libraryVerse.id,
+        version.id,
+        apiResult.text,
+        apiResult.reference
+      )
+      source = 'api'
+    }
+
+    return {
+      reference: cachedText.reference,
+      text: cachedText.text,
+      theme: libraryVerse.theme,
+      versionCode: version.apiCode,
+      versionName: version.name,
+      source,
+      libraryVerseId: libraryVerse.id,
+      is_saved: false,
+    }
+  } catch (error) {
+    console.warn('[Verse] Bible API unavailable, serving cached verse', {
+      scope: 'guest',
+      versionId: version.id,
+      error: error instanceof Error ? error.message : error,
+    })
+
+    const fallback = assertCacheAvailable(
+      await findAnyCachedVerse({ versionId: version.id, seed: hashString(today) })
     )
-    source = 'api'
-  }
 
-  return {
-    reference: cachedText.reference,
-    text: cachedText.text,
-    theme: libraryVerse.theme,
-    versionCode: version.apiCode,
-    versionName: version.name,
-    source,
-    libraryVerseId: libraryVerse.id,
-    is_saved: false,
+    return toDailyVerseResponse(fallback, false, 'cache')
   }
 }
 
@@ -565,24 +715,35 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
         existingVerse.versionId
       )
 
-      if (!cachedText) {
-        throw new Error('Cached verse text not found for today\'s verse')
+      if (cachedText) {
+        console.log(`♻️  Returning today's verse for user ${userId}: ${cachedText.reference}`)
+
+        const isSaved = await isVerseSaved(userId, existingVerse.libraryVerseId)
+
+        return toDailyVerseResponse(
+          {
+            libraryVerse: existingVerse.libraryVerse,
+            cachedText,
+            version: existingVerse.version,
+          },
+          isSaved,
+          'cache'
+        )
       }
 
-      console.log(`♻️  Returning today's verse for user ${userId}: ${cachedText.reference}`)
+      console.warn('[Verse] Bible API unavailable, serving cached verse', {
+        scope: 'user-existing-cache-missing',
+        userId,
+        libraryVerseId: existingVerse.libraryVerseId,
+        versionId: existingVerse.versionId,
+      })
 
-      const isSaved = await isVerseSaved(userId, existingVerse.libraryVerseId)
+      const fallback = assertCacheAvailable(
+        await findAnyCachedVerse({ versionId: version.id })
+      )
+      const isSaved = await isVerseSaved(userId, fallback.libraryVerse.id)
 
-      return {
-        reference: cachedText.reference,
-        text: cachedText.text,
-        theme: existingVerse.libraryVerse.theme,
-        versionCode: existingVerse.version.apiCode,
-        versionName: existingVerse.version.name,
-        source: 'cache',
-        libraryVerseId: existingVerse.libraryVerse.id,
-        is_saved: isSaved,
-      }
+      return toDailyVerseResponse(fallback, isSaved, 'cache')
     }
 
     // User changed their Bible version - get the same verse in the new version
@@ -591,43 +752,71 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
     const libraryVerse = existingVerse.libraryVerse
 
     // Check if this verse already exists in the new version
-    let cachedText = await findCachedVerseText(libraryVerse.id, version.id)
+    const existingCacheForNewVersion = await findCachedVerseText(libraryVerse.id, version.id)
 
-    if (!cachedText) {
-      // Fetch from API and cache it
-      console.log(`📡 Fetching ${libraryVerse.book} ${libraryVerse.chapter}:${libraryVerse.verseFrom} in ${version.apiCode}...`)
-      const apiResult = await fetchVerseFromApi(libraryVerse, version)
+    let newResult: VersionChangeNewResult | null = null
 
-      cachedText = await cacheVerseText(
-        libraryVerse.id,
-        version.id,
-        apiResult.text,
-        apiResult.reference
-      )
+    if (existingCacheForNewVersion) {
+      newResult = {
+        match: { libraryVerse, cachedText: existingCacheForNewVersion, version },
+        source: 'cache',
+      }
+    } else {
+      try {
+        console.log(`📡 Fetching ${libraryVerse.book} ${libraryVerse.chapter}:${libraryVerse.verseFrom} in ${version.apiCode}...`)
+        const apiResult = await fetchVerseFromApi(libraryVerse, version)
+        const cachedText = await cacheVerseText(
+          libraryVerse.id,
+          version.id,
+          apiResult.text,
+          apiResult.reference
+        )
+        newResult = { match: { libraryVerse, cachedText, version }, source: 'api' }
+      } catch (error) {
+        console.warn('[Verse] Bible API unavailable, serving cached verse', {
+          scope: 'user-version-change',
+          userId,
+          libraryVerseId: libraryVerse.id,
+          targetVersionId: version.id,
+          error: error instanceof Error ? error.message : error,
+        })
+        newResult = null
+      }
     }
 
-    // Update the user's verse history with the new version
-    await prisma.userVerseHistory.update({
-      where: { id: existingVerse.id },
-      data: {
-        versionId: version.id,
-      },
-    })
+    let outcome: ReturnType<typeof resolveVersionChangeOutcome>
 
-    console.log(`✅ Returned same verse in new version: ${cachedText.reference}`)
+    if (newResult) {
+      outcome = resolveVersionChangeOutcome({ newResult })
+    } else {
+      // Serve the verse in its OLD version and leave history untouched so the
+      // version switch is retried on the user's next request.
+      const oldCachedText = await findCachedVerseText(libraryVerse.id, existingVerse.versionId)
+      const oldMatch: CachedVerseMatch = oldCachedText
+        ? { libraryVerse, cachedText: oldCachedText, version: existingVerse.version }
+        : assertCacheAvailable(await findAnyCachedVerse({ versionId: existingVerse.versionId }))
+
+      outcome = resolveVersionChangeOutcome({ oldMatch, newResult: null })
+    }
+
+    if (outcome.updateHistoryVersionId) {
+      await prisma.userVerseHistory.update({
+        where: { id: existingVerse.id },
+        data: {
+          versionId: version.id,
+        },
+      })
+    }
+
+    console.log(
+      outcome.updateHistoryVersionId
+        ? `✅ Returned same verse in new version: ${outcome.match.cachedText.reference}`
+        : `⏳ Kept verse in previous version, will retry version switch: ${outcome.match.cachedText.reference}`
+    )
 
     const isSaved = await isVerseSaved(userId, libraryVerse.id)
 
-    return {
-      reference: cachedText.reference,
-      text: cachedText.text,
-      theme: libraryVerse.theme,
-      versionCode: version.apiCode,
-      versionName: version.name,
-      source: cachedText.id === existingVerse.id ? 'cache' : 'api',
-      libraryVerseId: libraryVerse.id,
-      is_saved: isSaved,
-    }
+    return toDailyVerseResponse(outcome.match, isSaved, outcome.source)
   }
 
   // User hasn't received their verse today - generate new one
@@ -662,6 +851,8 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
     }
   }
 
+  let fallbackMatch: CachedVerseMatch | null = null
+
   // 5. If not using cache or cache failed, fetch from API
   if (!useCacheFirst || !libraryVerse) {
     // Find an unseen library verse (considers preferences)
@@ -683,22 +874,58 @@ export async function getDailyVerseForUser(userId: string): Promise<DailyVerseRe
       source = 'cache'
       console.log(`📖 Found existing cache for ${reference}`)
     } else {
-      // Fetch from API
-      const apiResult = await fetchVerseFromApi(libraryVerse, version)
-      verseText = apiResult.text
-      reference = apiResult.reference
-      source = 'api'
+      try {
+        // Fetch from API
+        const apiResult = await fetchVerseFromApi(libraryVerse, version)
+        verseText = apiResult.text
+        reference = apiResult.reference
+        source = 'api'
 
-      // Store in cache
-      await cacheVerseText(
-        libraryVerse.id,
-        version.id,
-        verseText,
-        reference
-      )
+        // Store in cache
+        await cacheVerseText(
+          libraryVerse.id,
+          version.id,
+          verseText,
+          reference
+        )
 
-      console.log(`📡 Fetched and cached: ${reference} (total cached: ${cachedCount + 1})`)
+        console.log(`📡 Fetched and cached: ${reference} (total cached: ${cachedCount + 1})`)
+      } catch (error) {
+        console.warn('[Verse] Bible API unavailable, serving cached verse', {
+          scope: 'user-new-verse',
+          userId,
+          versionId: version.id,
+          error: error instanceof Error ? error.message : error,
+        })
+
+        const cachedFallback = await tryFindCachedVerse(userId, version.id, preferredThemes)
+        fallbackMatch = cachedFallback
+          ? { libraryVerse: cachedFallback.libraryVerse, cachedText: cachedFallback.cachedText, version }
+          : assertCacheAvailable(await findAnyCachedVerse({ versionId: version.id }))
+      }
     }
+  }
+
+  if (fallbackMatch) {
+    // The fallback verse may already have been shown to the user on a
+    // different date. markVerseAsSeen keys on (userId, libraryVerseId), so
+    // replaying it here overwrites that history row's date to today instead
+    // of creating a duplicate - an accepted tradeoff so the verse stays
+    // stable for the rest of the day while the Bible API is down.
+    await markVerseAsSeen(
+      userId,
+      fallbackMatch.libraryVerse.id,
+      fallbackMatch.cachedText.versionId,
+      today
+    )
+
+    const isSaved = await isVerseSaved(userId, fallbackMatch.libraryVerse.id)
+
+    return toDailyVerseResponse(fallbackMatch, isSaved, 'cache')
+  }
+
+  if (!libraryVerse) {
+    throw new Error('Unable to resolve a verse for the user')
   }
 
   // 6. Mark as seen by user (for today)

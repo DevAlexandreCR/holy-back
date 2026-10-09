@@ -1555,6 +1555,22 @@ export const isWinbackSpacingSatisfied = (params: {
   return elapsedHours >= params.minHoursBetweenSends
 }
 
+// DevotionalNotificationSend.title/body are Prisma String columns, which map
+// to VARCHAR(191) in MySQL. Winback step-3 copy can exceed that once the full
+// verse text is interpolated in, so truncate before the create/push use it.
+export const NOTIFICATION_TEXT_COLUMN_LIMIT = 191
+
+export const truncateNotificationText = (
+  text: string,
+  maxLength = NOTIFICATION_TEXT_COLUMN_LIMIT
+): string => {
+  if (text.length <= maxLength) {
+    return text
+  }
+
+  return `${text.slice(0, maxLength - 1)}…`
+}
+
 const computeDaysSinceLastSession = (params: {
   lastSessionAt: Date
   now: Date
@@ -1721,8 +1737,17 @@ export const sendWinbackNotifications = async (now = new Date()) => {
 
       let verseText: string | null = null
       if (step === 3) {
-        const dailyVerse = await getDailyVerseForUser(settingsRow.userId)
-        verseText = `${dailyVerse.text} (${dailyVerse.reference})`
+        try {
+          const dailyVerse = await getDailyVerseForUser(settingsRow.userId)
+          verseText = `${dailyVerse.text} (${dailyVerse.reference})`
+        } catch (error) {
+          console.warn('[Winback] verse unavailable, skipping user', {
+            userId: settingsRow.userId,
+            error,
+          })
+          dailyMetric.skippedCount += 1
+          continue
+        }
       }
 
       const copy = resolveWinbackCopy({
@@ -1730,6 +1755,8 @@ export const sendWinbackNotifications = async (now = new Date()) => {
         name: deviceTokens[0].user.name,
         verseText,
       })
+      const copyTitle = truncateNotificationText(copy.title)
+      const copyBody = truncateNotificationText(copy.body)
 
       for (const deviceToken of deviceTokens) {
         const createdSend = await prisma.devotionalNotificationSend.create({
@@ -1738,13 +1765,13 @@ export const sendWinbackNotifications = async (now = new Date()) => {
             userId: deviceToken.userId,
             deviceTokenId: deviceToken.id,
             type: DevotionalNotificationType.WINBACK,
-            title: copy.title,
-            body: copy.body,
+            title: copyTitle,
+            body: copyBody,
             imageUrl,
             payload: {
               type: DevotionalNotificationType.WINBACK,
-              title: copy.title,
-              body: copy.body,
+              title: copyTitle,
+              body: copyBody,
               devotional_id: devotionalId,
               image_url: imageUrl,
               step,
@@ -1757,13 +1784,13 @@ export const sendWinbackNotifications = async (now = new Date()) => {
 
         const providerResult = await sendPushMessage({
           token: deviceToken.token,
-          title: copy.title,
-          body: copy.body,
+          title: copyTitle,
+          body: copyBody,
           imageUrl,
           data: {
             type: DevotionalNotificationType.WINBACK,
-            title: copy.title,
-            body: copy.body,
+            title: copyTitle,
+            body: copyBody,
             devotional_id: devotionalId,
             ...(imageUrl ? { image_url: imageUrl } : {}),
           },
