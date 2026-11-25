@@ -1,14 +1,34 @@
 import axios, { AxiosInstance } from "axios";
 import { config } from "../../config/env";
 import {
-  BibleVersionApiModel,
   BookApiModel,
   Chapter,
-  ChapterApiModel,
+  ChapterVerse,
   GetChapterParams,
   GetVersesParams,
   VerseApiModel,
 } from "./bible.types";
+import {
+  DEFAULT_BIBLE_VERSION_CODE,
+  findBibleVersionCatalogEntry,
+} from "./bibleVersionCatalog";
+import { getLegacyAbbreviationForBookId, resolveBookId } from "./bookResolver";
+import { BOOK_ENTRIES } from "./bookEntries";
+import { sanitizeVerseText } from "./verseTextSanitizer";
+
+interface BollsChapterVerse {
+  pk: number;
+  verse: number;
+  text: string;
+}
+
+interface BollsBookEntry {
+  bookid: number;
+  name: string;
+  chapters: number;
+}
+
+const BOOKS_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 const logAxiosError = (context: string, error: unknown) => {
   if (axios.isAxiosError(error)) {
@@ -28,135 +48,143 @@ const logAxiosError = (context: string, error: unknown) => {
 
 export class BibleApiClient {
   private client: AxiosInstance;
+  private readonly booksCache = new Map<
+    string,
+    { entries: BollsBookEntry[]; expiresAt: number }
+  >();
 
-  constructor(baseUrl = config.external.bibleApiBaseUrl) {
-    this.client = axios.create({
-      baseURL: baseUrl,
-      timeout: 10000,
-    });
+  constructor(
+    baseUrl = config.external.bibleApiBaseUrl,
+    httpClient?: AxiosInstance,
+  ) {
+    this.client =
+      httpClient ??
+      axios.create({
+        baseURL: baseUrl,
+        timeout: 10000,
+      });
   }
 
-  async getVersions(): Promise<BibleVersionApiModel[]> {
-    const path = "/versions";
-    try {
-      const { data } = await this.client.get<unknown>(path);
-      if (!Array.isArray(data)) {
-        throw new Error("Unexpected versions payload");
-      }
-
-      return data.map((item) => {
-        const record = item as Record<string, unknown>;
-        const code =
-          (record.code as string | undefined) ??
-          (record.version as string | undefined) ??
-          (record.abbrev as string | undefined) ??
-          "";
-        const name =
-          (record.name as string | undefined) ??
-          (record.title as string | undefined) ??
-          "";
-        const language = (record.language as string | undefined) ?? "";
-
-        return { code, name, language };
-      });
-    } catch (error) {
-      logAxiosError(path, error);
-      throw new Error("Failed to fetch bible versions");
+  private async getCachedBooks(providerCode: string): Promise<BollsBookEntry[]> {
+    const cached = this.booksCache.get(providerCode);
+    if (cached && cached.expiresAt > Date.now()) {
+      return cached.entries;
     }
+
+    const path = `/get-books/${providerCode}/`;
+    const { data } = await this.client.get<BollsBookEntry[]>(path);
+
+    if (!Array.isArray(data)) {
+      throw new Error("Unexpected books payload");
+    }
+
+    this.booksCache.set(providerCode, {
+      entries: data,
+      expiresAt: Date.now() + BOOKS_CACHE_TTL_MS,
+    });
+
+    return data;
   }
 
   async getBooks(): Promise<BookApiModel[]> {
-    const path = "/books";
+    const catalogEntry = findBibleVersionCatalogEntry(DEFAULT_BIBLE_VERSION_CODE);
+    const providerCode = catalogEntry?.providerCode ?? "RV1960";
+
     try {
-      const { data } = await this.client.get<unknown>(path);
-      if (!Array.isArray(data)) {
-        throw new Error("Unexpected books payload");
-      }
+      const books = await this.getCachedBooks(providerCode);
 
-      return data.map((item) => {
-        const record = item as Record<string, unknown>;
-        const names = Array.isArray(record.names)
-          ? record.names.filter(
-              (value): value is string => typeof value === "string",
-            )
-          : [];
-
-        return {
-          name: (record.name as string | undefined) ?? names[0] ?? "",
-          abbrev:
-            (record.abbrev as string | undefined) ??
-            (record.abrev as string | undefined) ??
-            "",
-          chapters: Number(record.chapters ?? 0),
-          testament: (record.testament as string | undefined) ?? "",
-        };
-      });
+      return books.map((book) => ({
+        name: book.name,
+        abbrev: getLegacyAbbreviationForBookId(book.bookid) ?? "",
+        chapters: book.chapters,
+        testament: book.bookid <= 39 ? "old" : "new",
+      }));
     } catch (error) {
-      logAxiosError(path, error);
+      logAxiosError(`/get-books/${providerCode}/`, error);
       throw new Error("Failed to fetch bible books");
     }
   }
 
   async getVerses(params: GetVersesParams): Promise<VerseApiModel[]> {
     const { versionCode, book, chapter, fromVerse, toVerse } = params;
-    const range =
-      toVerse && toVerse !== fromVerse
-        ? `${fromVerse}-${toVerse}`
-        : `${fromVerse}`;
-    const encodedBook = encodeURIComponent(book);
-    const encodedVersion = encodeURIComponent(versionCode);
-    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}/${range}`;
+    const chapterData = await this.getChapter({ versionCode, book, chapter });
+    const rangeEnd = toVerse ?? fromVerse;
+
+    return chapterData.verses
+      .filter((verse) => verse.number >= fromVerse && verse.number <= rangeEnd)
+      .map((verse) => ({
+        verse: verse.text,
+        number: verse.number,
+      }));
+  }
+
+  private async getBookMetadata(
+    bookId: number,
+    providerCode: string,
+  ): Promise<{ name: string; numChapters: number }> {
     try {
-      const { data } = await this.client.get<VerseApiModel[] | VerseApiModel>(
-        path,
-      );
-      // API returns an object for a single verse and an array for a range
-      return Array.isArray(data) ? data : [data];
+      const books = await this.getCachedBooks(providerCode);
+      const entry = books.find((book) => book.bookid === bookId);
+      if (entry) {
+        return { name: entry.name, numChapters: entry.chapters };
+      }
     } catch (error) {
-      logAxiosError(path, error);
-      throw new Error("Failed to fetch bible verses");
+      logAxiosError(`/get-books/${providerCode}/`, error);
     }
+
+    const fallback = BOOK_ENTRIES.find((bookEntry) => bookEntry.id === bookId);
+    return { name: fallback?.spanish ?? "", numChapters: fallback?.chapters ?? 0 };
   }
 
   async getChapter(params: GetChapterParams): Promise<Chapter> {
     const { versionCode, book, chapter } = params;
-    const normalizedBook = book.trim();
-    const normalizedVersion = versionCode.trim();
+    const normalizedBook = typeof book === "string" ? book.trim() : "";
+    const normalizedVersion =
+      typeof versionCode === "string" ? versionCode.trim() : "";
+
+    if (!normalizedVersion) {
+      throw new Error("Version code is required to fetch a chapter");
+    }
+
+    const catalogEntry = findBibleVersionCatalogEntry(normalizedVersion);
+    if (!catalogEntry) {
+      throw new Error(`Unsupported bible version code: ${versionCode}`);
+    }
 
     if (!normalizedBook) {
       throw new Error("Book is required to fetch a chapter");
     }
 
-    if (!normalizedVersion) {
-      throw new Error("Version code is required to fetch a chapter");
+    const bookId = resolveBookId(normalizedBook);
+    if (bookId === undefined) {
+      throw new Error(`Unknown bible book: ${book}`);
     }
 
     if (!Number.isInteger(chapter) || chapter <= 0) {
       throw new Error("Chapter must be greater than 0");
     }
 
-    const encodedBook = encodeURIComponent(normalizedBook);
-    const encodedVersion = encodeURIComponent(normalizedVersion);
-    const path = `/read/${encodedVersion}/${encodedBook}/${chapter}`;
+    const path = `/get-text/${catalogEntry.providerCode}/${bookId}/${chapter}/`;
 
     try {
-      const { data } = await this.client.get<ChapterApiModel>(path);
+      const { data } = await this.client.get<BollsChapterVerse[]>(path);
 
-      if (!data || !Array.isArray(data.vers)) {
+      if (!Array.isArray(data)) {
         throw new Error("Unexpected chapter payload");
       }
 
+      const metadata = await this.getBookMetadata(bookId, catalogEntry.providerCode);
+      const verses: ChapterVerse[] = data.map((verse) => ({
+        number: verse.verse,
+        text: sanitizeVerseText(verse.text),
+      }));
+
       return {
-        testament: data.testament,
-        name: data.name,
-        numChapters: data.num_chapters,
-        chapter: data.chapter,
-        verses: data.vers.map((verse) => ({
-          number: verse.number,
-          text: verse.verse,
-          study: verse.study,
-          id: verse.id,
-        })),
+        testament: bookId <= 39 ? "old" : "new",
+        name: metadata.name,
+        numChapters: metadata.numChapters,
+        chapter,
+        verses,
       };
     } catch (error) {
       logAxiosError(path, error);

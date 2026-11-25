@@ -57,8 +57,8 @@ const setCachedChapter = (key: string, payload: ChapterPayload): void => {
 async function resolveUserVersion(userId: string): Promise<BibleVersion> {
   const settings = await ensureSettings(userId);
   if (settings.preferredVersionId) {
-    const preferredVersion = await prisma.bibleVersion.findUnique({
-      where: { id: settings.preferredVersionId },
+    const preferredVersion = await prisma.bibleVersion.findFirst({
+      where: { id: settings.preferredVersionId, isActive: true },
     });
     if (preferredVersion) {
       return preferredVersion;

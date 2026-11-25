@@ -4,6 +4,7 @@ import { BibleVersion, CachedVerseText, LibraryVerse } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import {
   assertCacheAvailable,
+  buildAnyCachedVerseWhere,
   resolveVersionChangeOutcome,
   toDailyVerseResponse,
   type CachedVerseMatch,
@@ -68,7 +69,7 @@ const buildCachedVerseText = (params: {
 
 test('toDailyVerseResponse builds every identity field strictly from the single resolved row (guest fallback)', () => {
   const libraryVerse = buildLibraryVerse({ id: 42, theme: 'Fe' })
-  const version = buildBibleVersion({ id: 7, apiCode: 'RVR1995', name: 'Reina Valera 1995' })
+  const version = buildBibleVersion({ id: 7, apiCode: 'RV1960', name: 'Reina Valera 1960' })
   const cachedText = buildCachedVerseText({
     id: 900,
     libraryVerseId: 42,
@@ -83,8 +84,8 @@ test('toDailyVerseResponse builds every identity field strictly from the single 
     reference: 'Juan 3:16',
     text: 'Porque de tal manera amo Dios al mundo...',
     theme: 'Fe',
-    versionCode: 'RVR1995',
-    versionName: 'Reina Valera 1995',
+    versionCode: 'RV1960',
+    versionName: 'Reina Valera 1960',
     source: 'cache',
     libraryVerseId: 42,
     is_saved: false,
@@ -182,4 +183,36 @@ test('assertCacheAvailable returns the match unchanged when one was found', () =
   }
 
   assert.equal(assertCacheAvailable(match), match)
+})
+
+test('buildAnyCachedVerseWhere always restricts the outage fallback to an active version', () => {
+  assert.deepEqual(buildAnyCachedVerseWhere({}), {
+    version: { isActive: true },
+  })
+})
+
+test('buildAnyCachedVerseWhere keeps the active-version filter alongside a requested versionId', () => {
+  assert.deepEqual(buildAnyCachedVerseWhere({ versionId: 7 }), {
+    version: { isActive: true },
+    versionId: 7,
+  })
+})
+
+test('buildAnyCachedVerseWhere keeps the active-version filter when no versionId is given (global fallback)', () => {
+  const where = buildAnyCachedVerseWhere({ excludeLibraryVerseIds: [1, 2, 3] })
+
+  assert.deepEqual(where, {
+    version: { isActive: true },
+    libraryVerseId: { notIn: [1, 2, 3] },
+  })
+  assert.equal('versionId' in where, false)
+})
+
+test('buildAnyCachedVerseWhere omits the exclusion filter when the exclude list is empty', () => {
+  const where = buildAnyCachedVerseWhere({ versionId: 7, excludeLibraryVerseIds: [] })
+
+  assert.deepEqual(where, {
+    version: { isActive: true },
+    versionId: 7,
+  })
 })

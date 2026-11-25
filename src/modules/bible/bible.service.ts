@@ -1,6 +1,6 @@
 import { prisma } from '../../config/db';
-import BibleApiClient from './bibleApiClient';
-import { BibleVersionApiModel } from './bible.types';
+import { DEFAULT_BIBLE_VERSION_CODE } from './bibleVersionCatalog';
+import { planBibleVersionReconciliation, StoredBibleVersion } from './bibleVersionReconciliation';
 
 export const listActiveBibleVersions = async () => {
   return prisma.bibleVersion.findMany({
@@ -9,66 +9,77 @@ export const listActiveBibleVersions = async () => {
   });
 };
 
-export const syncBibleVersionsFromApi = async (): Promise<{
-  total: number;
+export const reconcileBibleVersionCatalog = async (): Promise<{
   created: number;
   updated: number;
-  skipped: number;
+  deactivated: number;
+  reassignedUsers: number;
 }> => {
-  const apiClient = new BibleApiClient();
-  const versions = await apiClient.getVersions();
-  const result = await upsertBibleVersions(versions);
+  return prisma.$transaction(
+    async (tx) => {
+      const stored: StoredBibleVersion[] = await tx.bibleVersion.findMany();
+      const plan = planBibleVersionReconciliation(stored);
+      const catalogVersionIds = { ...plan.catalogVersionIds };
 
-  return { total: versions.length, ...result };
-};
-
-export const upsertBibleVersions = async (versions: BibleVersionApiModel[]) => {
-  let created = 0;
-  let updated = 0;
-  let skipped = 0;
-
-  if (versions.length === 0) {
-    return { created, updated, skipped };
-  }
-
-  await prisma.$transaction(async (tx) => {
-    for (const version of versions) {
-      const code = version.code?.trim();
-      const name = version.name?.trim();
-      const language = version.language?.trim() ?? '';
-
-      if (!code || !name) {
-        skipped += 1;
-        // eslint-disable-next-line no-console
-        console.warn('[BibleVersionsSync] Skipping version with missing code or name', version);
-        continue;
+      for (const version of plan.toCreate) {
+        const created = await tx.bibleVersion.create({
+          data: {
+            apiCode: version.code,
+            name: version.name,
+            language: version.language,
+            isActive: true,
+          },
+        });
+        catalogVersionIds[version.code] = created.id;
       }
 
-      const existing = await tx.bibleVersion.findUnique({ where: { apiCode: code } });
-
-      if (existing) {
+      for (const version of plan.toUpdate) {
         await tx.bibleVersion.update({
-          where: { id: existing.id },
+          where: { id: version.id },
           data: {
-            name,
-            language,
+            name: version.name,
+            language: version.language,
             isActive: true,
           },
         });
-        updated += 1;
-      } else {
-        await tx.bibleVersion.create({
-          data: {
-            apiCode: code,
-            name,
-            language,
-            isActive: true,
-          },
-        });
-        created += 1;
       }
-    }
-  });
 
-  return { created, updated, skipped };
+      for (const version of plan.toDeactivate) {
+        await tx.bibleVersion.update({
+          where: { id: version.id },
+          data: { isActive: false },
+        });
+      }
+
+      const defaultVersionId = catalogVersionIds[DEFAULT_BIBLE_VERSION_CODE];
+      if (!defaultVersionId) {
+        throw new Error(
+          `Reina-Valera 1960 (${DEFAULT_BIBLE_VERSION_CODE}) catalog version was not found after reconciliation`,
+        );
+      }
+
+      const inactiveVersions = await tx.bibleVersion.findMany({
+        where: { isActive: false },
+        select: { id: true },
+      });
+      const inactiveVersionIds = inactiveVersions.map((version) => version.id);
+
+      let reassignedUsers = 0;
+      if (inactiveVersionIds.length > 0) {
+        const result = await tx.userSettings.updateMany({
+          where: { preferredVersionId: { in: inactiveVersionIds } },
+          data: { preferredVersionId: defaultVersionId },
+        });
+        reassignedUsers = result.count;
+      }
+
+      return {
+        created: plan.toCreate.length,
+        updated: plan.toUpdate.length,
+        deactivated: plan.toDeactivate.length,
+        reassignedUsers,
+      };
+    },
+    { maxWait: 5000, timeout: 30000 },
+  );
 };
