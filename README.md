@@ -25,6 +25,12 @@ Node.js + TypeScript + Express + Prisma backend that powers the HolyVerso app. P
 - The verse-of-the-day cron registers on server start.
   - Schedule configured via `CRON_SCHEDULE` (defaults to `5 0 * * *`, i.e., 00:05 UTC).
 
+## CI/CD
+- On every pull request: `.github/workflows/ci.yml` runs `npm ci`, `prisma generate`, `npm run build`, and `npm test`.
+- On push to `master` (or manual dispatch): `.github/workflows/deploy.yml` reuses `ci.yml` as a gate, then SSHes into the production VPS and runs `scripts/deploy/deploy.sh <sha>`, which builds, runs `prisma migrate deploy`, and reloads the `holyverso-api` PM2 process.
+- To redeploy an older commit or roll back: GitHub → Actions → `Deploy` → Run workflow → set `sha` to the target commit (leave empty to redeploy current `master`).
+- Full server-side runbook, secrets, and rollback details: `docs/back/CD_GITHUB_ACTIONS.md` in the monorepo root.
+
 ## API Quickstart
 - Register:
   ```sh

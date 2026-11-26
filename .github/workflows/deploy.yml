@@ -1,0 +1,83 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: 'Commit SHA to deploy (defaults to the current master HEAD)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.sha || github.sha }}
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    concurrency:
+      group: production-holyverso-api
+      cancel-in-progress: false
+    env:
+      TARGET_SHA: ${{ inputs.sha || github.sha }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ vars.DEPLOY_PORT || 22 }}
+    steps:
+      - name: Validate target SHA
+        run: |
+          if ! [[ "$TARGET_SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::TARGET_SHA is not a 40-char lowercase hex SHA: $TARGET_SHA"
+            exit 1
+          fi
+
+      - name: Prepare SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/.ssh"
+          chmod 700 "$RUNNER_TEMP/.ssh"
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/.ssh/deploy_key"
+          chmod 600 "$RUNNER_TEMP/.ssh/deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/.ssh/known_hosts"
+          chmod 600 "$RUNNER_TEMP/.ssh/known_hosts"
+
+      - name: Deploy over SSH
+        run: |
+          ssh \
+            -i "$RUNNER_TEMP/.ssh/deploy_key" \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "cd /var/www/holyverso && git fetch -q --no-tags origin $TARGET_SHA && git checkout -q $TARGET_SHA -- scripts/deploy/deploy.sh && bash scripts/deploy/deploy.sh $TARGET_SHA"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/.ssh/deploy_key" "$RUNNER_TEMP/.ssh/known_hosts"
+
+      - name: Step summary
+        if: always()
+        run: |
+          {
+            echo "### Deploy holy-back"
+            echo "- SHA: \`$TARGET_SHA\`"
+            echo "- Host: \`$DEPLOY_HOST\`"
+            echo "- Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
