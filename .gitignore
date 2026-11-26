@@ -6,3 +6,4 @@ dist/
 /storage/devotionals/images/
 /storage/devotionals/tmp/
 .claude/agent-memory/
+.impeccable/
