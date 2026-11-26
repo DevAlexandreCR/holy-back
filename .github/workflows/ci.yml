@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        description: 'Git ref to check out (defaults to the triggering commit)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Dummy values for the env vars that src/config/env.ts requires with no
+      # default (JWT_SECRET, BIBLE_API_BASE_URL, plus DATABASE_URL). The test
+      # suite does not connect to MySQL (PrismaClient only connects lazily)
+      # and does not need a live DB (verified locally: all compiled test
+      # files pass with only these three set, no .env, no reachable MySQL).
+      DATABASE_URL: mysql://root:root@localhost:3306/holyverso_ci
+      JWT_SECRET: ci-test-secret
+      BIBLE_API_BASE_URL: https://bolls.life
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test
