@@ -1,13 +1,13 @@
 import { connectToDatabase, disconnectFromDatabase } from '../config/db';
-import { syncBibleVersionsFromApi } from '../modules/bible/bible.service';
+import { reconcileBibleVersionCatalog } from '../modules/bible/bible.service';
 
 const run = async (): Promise<void> => {
   try {
     await connectToDatabase();
-    const { total, created, updated, skipped } = await syncBibleVersionsFromApi();
+    const { created, updated, deactivated, reassignedUsers } = await reconcileBibleVersionCatalog();
     // eslint-disable-next-line no-console
     console.log(
-      `Bible versions sync completed: ${created} created, ${updated} updated, ${skipped} skipped (from ${total} upstream versions)`,
+      `Bible versions reconciliation completed: ${created} created, ${updated} updated, ${deactivated} deactivated, ${reassignedUsers} users reassigned`,
     );
   } catch (error) {
     // eslint-disable-next-line no-console

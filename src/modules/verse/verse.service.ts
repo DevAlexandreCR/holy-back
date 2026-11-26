@@ -2,6 +2,7 @@ import { PrismaClient, LibraryVerse, CachedVerseText, BibleVersion } from '@pris
 import { BibleApiClient } from '../bible/bibleApiClient'
 import { formatReference } from './libraryLoader.service'
 import { convertBookToApiCode, getBookDisplayName } from '../bible/bookApiMapping'
+import { DEFAULT_BIBLE_VERSION_CODE, findBibleVersionCatalogEntry } from '../bible/bibleVersionCatalog'
 import { config } from '../../config/env'
 import { isVerseSaved } from './savedVerse.service'
 import { ensureSettings } from '../user/userSettings.service'
@@ -12,8 +13,8 @@ const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
 
 // Threshold for switching to 50/50 strategy
 const CACHE_THRESHOLD = 2000
-const DEFAULT_GUEST_VERSION_CODE = 'RVR1995'
-const DEFAULT_GUEST_VERSION_NAME = 'Reina Valera 1995'
+const DEFAULT_GUEST_VERSION_CODE = DEFAULT_BIBLE_VERSION_CODE
+const DEFAULT_GUEST_VERSION_NAME = findBibleVersionCatalogEntry(DEFAULT_BIBLE_VERSION_CODE)!.name
 
 export interface DailyVerseResponse {
   reference: string
@@ -70,8 +71,8 @@ function shouldTryCache(cachedCount: number): boolean {
 async function resolveUserVersion(userId: string): Promise<BibleVersion> {
   const settings = await ensureSettings(userId)
   if (settings.preferredVersionId) {
-    const preferredVersion = await prisma.bibleVersion.findUnique({
-      where: { id: settings.preferredVersionId },
+    const preferredVersion = await prisma.bibleVersion.findFirst({
+      where: { id: settings.preferredVersionId, isActive: true },
     })
     if (preferredVersion) {
       return preferredVersion
@@ -105,6 +106,17 @@ async function resolveGuestVersion(): Promise<BibleVersion> {
 
   if (byCode) {
     return byCode
+  }
+
+  const byCodeUpper = await prisma.bibleVersion.findFirst({
+    where: {
+      apiCode: DEFAULT_GUEST_VERSION_CODE.toUpperCase(),
+      isActive: true,
+    },
+  })
+
+  if (byCodeUpper) {
+    return byCodeUpper
   }
 
   const byName = await prisma.bibleVersion.findFirst({
@@ -308,10 +320,37 @@ async function tryFindCachedVerse(
 }
 
 /**
+ * Builds the Prisma `where` clause for the any-cached-verse outage fallback.
+ * Always restricted to verses cached in an active Bible version, so a
+ * retired version's text is never served labelled with its old code.
+ */
+export function buildAnyCachedVerseWhere(params: {
+  versionId?: number
+  excludeLibraryVerseIds?: number[]
+}): any {
+  const { versionId, excludeLibraryVerseIds } = params
+
+  const where: any = {
+    version: { isActive: true },
+  }
+
+  if (versionId !== undefined) {
+    where.versionId = versionId
+  }
+
+  if (excludeLibraryVerseIds && excludeLibraryVerseIds.length > 0) {
+    where.libraryVerseId = { notIn: excludeLibraryVerseIds }
+  }
+
+  return where
+}
+
+/**
  * Find any cached verse for a version, used when the external Bible API is
  * unavailable. Retries without the version filter if nothing is cached in
  * the requested version, so degraded mode still serves a verse when
- * possible. Returns null only when the cache has nothing at all.
+ * possible. Only considers verses cached in an active version. Returns null
+ * only when no such cache exists at all.
  */
 async function findAnyCachedVerse(params: {
   versionId: number
@@ -348,17 +387,14 @@ async function findAnyCachedVerse(params: {
     }
   }
 
-  const excludeFilter =
-    excludeLibraryVerseIds && excludeLibraryVerseIds.length > 0
-      ? { libraryVerseId: { notIn: excludeLibraryVerseIds } }
-      : {}
-
-  const matchForVersion = await pick({ versionId, ...excludeFilter })
+  const matchForVersion = await pick(
+    buildAnyCachedVerseWhere({ versionId, excludeLibraryVerseIds })
+  )
   if (matchForVersion) {
     return matchForVersion
   }
 
-  return await pick(excludeFilter)
+  return await pick(buildAnyCachedVerseWhere({ excludeLibraryVerseIds }))
 }
 
 /**

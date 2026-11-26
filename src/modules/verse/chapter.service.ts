@@ -1,8 +1,10 @@
+import { BibleVersion } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
 import { config } from '../../config/env'
 import { BibleApiClient } from '../bible/bibleApiClient'
 import { convertBookToApiCode, getBookDisplayName } from '../bible/bookApiMapping'
+import { DEFAULT_BIBLE_VERSION_CODE } from '../bible/bibleVersionCatalog'
 import { getDailyVerseForUser } from './verse.service'
 
 const bibleApiClient = new BibleApiClient(config.external.bibleApiBaseUrl)
@@ -36,6 +38,39 @@ const setCachedChapter = (key: string, payload: ChapterPayload): void => {
     payload,
     expiresAt: Date.now() + CHAPTER_CACHE_TTL_MS,
   })
+}
+
+// A stored version that is no longer active (retired from the catalog by
+// reconciliation) cannot be requested from the Bible provider. History and
+// saved verses keep their original stored version untouched; only the
+// chapter actually fetched for display falls back to Reina-Valera 1960.
+export const selectEffectiveVersionCode = (storedVersion: Pick<BibleVersion, 'apiCode' | 'isActive'>): string =>
+  storedVersion.isActive ? storedVersion.apiCode : DEFAULT_BIBLE_VERSION_CODE
+
+const findActiveVersionByCode = async (code: string): Promise<BibleVersion | null> => {
+  const byCode = await prisma.bibleVersion.findFirst({
+    where: { apiCode: code, isActive: true },
+  })
+  if (byCode) return byCode
+
+  return prisma.bibleVersion.findFirst({
+    where: { apiCode: code.toUpperCase(), isActive: true },
+  })
+}
+
+const resolveEffectiveBibleVersion = async (storedVersion: BibleVersion): Promise<BibleVersion> => {
+  if (storedVersion.isActive) {
+    return storedVersion
+  }
+
+  const effectiveCode = selectEffectiveVersionCode(storedVersion)
+  const fallback = await findActiveVersionByCode(effectiveCode)
+
+  if (!fallback) {
+    throw new AppError('Bible version not found', 'BIBLE_VERSION_NOT_FOUND', 404)
+  }
+
+  return fallback
 }
 
 export interface ChapterPayload {
@@ -77,8 +112,10 @@ export const getChapterForDailyVerse = async (userId: string): Promise<ChapterPa
     throw new AppError('Bible version not found', 'BIBLE_VERSION_NOT_FOUND', 404)
   }
 
+  const effectiveVersion = await resolveEffectiveBibleVersion(version)
+
   const apiBook = convertBookToApiCode(libraryVerse.book)
-  const cacheKey = buildCacheKey(version.apiCode, apiBook, libraryVerse.chapter)
+  const cacheKey = buildCacheKey(effectiveVersion.apiCode, apiBook, libraryVerse.chapter)
   const cached = getCachedChapter(cacheKey)
 
   if (cached) {
@@ -87,7 +124,7 @@ export const getChapterForDailyVerse = async (userId: string): Promise<ChapterPa
 
   const chapterData = await bibleApiClient
     .getChapter({
-      versionCode: version.apiCode,
+      versionCode: effectiveVersion.apiCode,
       book: apiBook,
       chapter: libraryVerse.chapter,
     })
@@ -99,7 +136,7 @@ export const getChapterForDailyVerse = async (userId: string): Promise<ChapterPa
     throw new AppError('Chapter content unavailable', 'BIBLE_API_EMPTY', 502)
   }
 
-  const language = version.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
+  const language = effectiveVersion.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
   const bookDisplayName = getBookDisplayName(libraryVerse.book, language === 'en' ? 'en' : 'es')
 
   const payload: ChapterPayload = {
@@ -107,8 +144,8 @@ export const getChapterForDailyVerse = async (userId: string): Promise<ChapterPa
     chapter: libraryVerse.chapter,
     reference: `${bookDisplayName} ${libraryVerse.chapter}`,
     num_chapters: chapterData.numChapters,
-    version_code: version.apiCode,
-    version_name: version.name,
+    version_code: effectiveVersion.apiCode,
+    version_name: effectiveVersion.name,
     verses: chapterData.verses.map(({ number, text, study }) => ({
       number,
       text,
@@ -146,8 +183,10 @@ export const getChapterForSavedVerse = async (
     throw new AppError('Saved verse not found', 'SAVED_VERSE_NOT_FOUND', 404)
   }
 
+  const effectiveVersion = await resolveEffectiveBibleVersion(savedVerse.version)
+
   const apiBook = convertBookToApiCode(savedVerse.libraryVerse.book)
-  const cacheKey = buildCacheKey(savedVerse.version.apiCode, apiBook, savedVerse.libraryVerse.chapter)
+  const cacheKey = buildCacheKey(effectiveVersion.apiCode, apiBook, savedVerse.libraryVerse.chapter)
   const cached = getCachedChapter(cacheKey)
 
   if (cached) {
@@ -156,7 +195,7 @@ export const getChapterForSavedVerse = async (
 
   const chapterData = await bibleApiClient
     .getChapter({
-      versionCode: savedVerse.version.apiCode,
+      versionCode: effectiveVersion.apiCode,
       book: apiBook,
       chapter: savedVerse.libraryVerse.chapter,
     })
@@ -168,7 +207,7 @@ export const getChapterForSavedVerse = async (
     throw new AppError('Chapter content unavailable', 'BIBLE_API_EMPTY', 502)
   }
 
-  const language = savedVerse.version.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
+  const language = effectiveVersion.language?.toLowerCase().startsWith('en') ? 'en' : 'es'
   const bookDisplayName = getBookDisplayName(savedVerse.libraryVerse.book, language === 'en' ? 'en' : 'es')
 
   const payload: ChapterPayload = {
@@ -176,8 +215,8 @@ export const getChapterForSavedVerse = async (
     chapter: savedVerse.libraryVerse.chapter,
     reference: `${bookDisplayName} ${savedVerse.libraryVerse.chapter}`,
     num_chapters: chapterData.numChapters,
-    version_code: savedVerse.version.apiCode,
-    version_name: savedVerse.version.name,
+    version_code: effectiveVersion.apiCode,
+    version_name: effectiveVersion.name,
     verses: chapterData.verses.map(({ number, text, study }) => ({
       number,
       text,

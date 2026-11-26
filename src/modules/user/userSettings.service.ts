@@ -1,9 +1,10 @@
 import { BibleVersion, UserSettings } from '@prisma/client'
 import { AppError } from '../../common/errors'
 import { prisma } from '../../config/db'
+import { DEFAULT_BIBLE_VERSION_CODE, findBibleVersionCatalogEntry } from '../bible/bibleVersionCatalog'
 
-const DEFAULT_PREFERRED_VERSION_CODE = 'rv1960'
-const DEFAULT_PREFERRED_VERSION_NAME = 'Reina-Valera 1960'
+const DEFAULT_PREFERRED_VERSION_CODE = DEFAULT_BIBLE_VERSION_CODE
+const DEFAULT_PREFERRED_VERSION_NAME = findBibleVersionCatalogEntry(DEFAULT_BIBLE_VERSION_CODE)!.name
 const DEFAULT_PREFERRED_VERSION_NAME_ALT = 'Reina Valera 1960'
 
 const findDefaultPreferredVersion = async (): Promise<BibleVersion | null> => {
@@ -37,7 +38,12 @@ export const getSettingsByUserId = async (userId: string): Promise<UserSettings 
 export const ensureSettings = async (userId: string): Promise<UserSettings> => {
   const existing = await getSettingsByUserId(userId)
   if (existing) {
-    if (existing.preferredVersionId) return existing
+    if (existing.preferredVersionId) {
+      const preferredVersion = await prisma.bibleVersion.findFirst({
+        where: { id: existing.preferredVersionId, isActive: true },
+      })
+      if (preferredVersion) return existing
+    }
     const fallback = await findDefaultPreferredVersion()
     if (!fallback) return existing
     return prisma.userSettings.update({

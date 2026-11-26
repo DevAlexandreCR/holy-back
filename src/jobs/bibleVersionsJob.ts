@@ -1,6 +1,6 @@
 import cron, { ScheduledTask } from 'node-cron';
 import { config } from '../config/env';
-import { syncBibleVersionsFromApi } from '../modules/bible/bible.service';
+import { reconcileBibleVersionCatalog } from '../modules/bible/bible.service';
 
 const BIBLE_VERSIONS_CRON_EXPRESSION = config.jobs.bibleVersionsCron; // default daily
 
@@ -9,10 +9,10 @@ export const syncBibleVersionsOnce = async (): Promise<void> => {
   console.log('[BibleVersionsJob] Starting sync');
 
   try {
-    const { total, created, updated, skipped } = await syncBibleVersionsFromApi();
+    const { created, updated, deactivated, reassignedUsers } = await reconcileBibleVersionCatalog();
     // eslint-disable-next-line no-console
     console.log(
-      `[BibleVersionsJob] Sync finished: ${created} created, ${updated} updated, ${skipped} skipped (from ${total} upstream versions)`,
+      `[BibleVersionsJob] Reconciliation finished: ${created} created, ${updated} updated, ${deactivated} deactivated, ${reassignedUsers} users reassigned`,
     );
   } catch (error) {
     // eslint-disable-next-line no-console

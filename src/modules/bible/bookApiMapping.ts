@@ -4,9 +4,8 @@ import { translateBookName } from './bookTranslations'
  * Map from normalized database book names to Bible API book codes
  * Database uses: "2_peter", "second_kings", etc.
  * API expects abbreviations: "2P", "2R", etc.
- * Based on https://bible-api.deno.dev/api/books
  */
-const BOOK_API_CODE_MAP: Record<string, string> = {
+export const BOOK_API_CODE_MAP: Record<string, string> = {
   // Old Testament
   'genesis': 'GN',
   'exodus': 'EX',

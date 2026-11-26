@@ -1,6 +1,6 @@
 # Holyverso Backend (HolyVerso)
 
-Node.js + TypeScript + Express + Prisma backend that powers the HolyVerso app. Provides auth, user settings, Bible versions, and daily verse endpoints backed by MySQL and the external bible-api.deno.dev service.
+Node.js + TypeScript + Express + Prisma backend that powers the HolyVerso app. Provides auth, user settings, Bible versions, and daily verse endpoints backed by MySQL and the external bolls.life service.
 
 ## Setup
 - Install dependencies: `npm install`

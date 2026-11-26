@@ -38,15 +38,31 @@ const resolveUserVersion = async (userId: string): Promise<BibleVersion> => {
     include: { preferredVersion: true },
   })
 
-  if (userSettings?.preferredVersion) {
+  if (userSettings?.preferredVersion?.isActive) {
     return userSettings.preferredVersion
   }
 
-  throw new AppError(
-    'No Bible version selected. Please select a Bible version in settings.',
-    'NO_VERSION_SELECTED',
-    400
-  )
+  const fallback = await prisma.bibleVersion.findFirst({
+    where: { isActive: true },
+    orderBy: { id: 'asc' },
+  })
+
+  if (!fallback) {
+    throw new AppError(
+      'No Bible version selected. Please select a Bible version in settings.',
+      'NO_VERSION_SELECTED',
+      400
+    )
+  }
+
+  if (userSettings) {
+    await prisma.userSettings.update({
+      where: { userId },
+      data: { preferredVersionId: fallback.id },
+    })
+  }
+
+  return fallback
 }
 
 const ensureLibraryVerse = async (libraryVerseId: number): Promise<LibraryVerse> => {
