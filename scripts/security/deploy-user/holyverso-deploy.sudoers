@@ -1,0 +1,17 @@
+# Sudoers policy for the unprivileged `deploy` user used by GitHub Actions CD.
+# See docs/back/CD_GITHUB_ACTIONS.md for the full design and the server runbook.
+#
+# Install:
+#   install -m 0440 scripts/security/deploy-user/holyverso-deploy.sudoers /etc/sudoers.d/holyverso-deploy
+#   visudo -cf /etc/sudoers.d/holyverso-deploy
+#
+# `pm2 jlist` is required (not just `pm2 reload`): the PM2 daemon runs as
+# root, so scripts/deploy/deploy.sh reads post-reload process status
+# (online/restarts/version) via `sudo pm2 jlist | jq` for its health/summary
+# step — `deploy` itself cannot read root's PM2 state any other way.
+
+Defaults:deploy !requiretty
+
+Cmnd_Alias HOLYVERSO_PM2 = /usr/bin/pm2 reload holyverso-api, /usr/bin/pm2 jlist
+
+deploy ALL=(root) NOPASSWD: HOLYVERSO_PM2
