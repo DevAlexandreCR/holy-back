@@ -5,6 +5,7 @@ const STORAGE_KEY = 'holyverso.landing.context'
 const SESSION_KEY = 'holyverso.landing.session_id'
 const INAPP_BROWSER_PATTERN = /Instagram|FBAN|FBAV/i
 const INAPP_HINT_DELAY_MS = 2000
+const STORE_TAP_DEDUPE_MS = 2000
 
 function trackEvent(name, params = {}) {
   if (typeof window.gtag === 'function') {
@@ -334,9 +335,16 @@ function wireInAppHintDismiss() {
 }
 
 function wireStoreTaps() {
+  const lastTapAt = new WeakMap()
+
   document.querySelectorAll('a[data-store]').forEach((anchor) => {
     anchor.addEventListener('click', () => {
       if (anchor.hasAttribute('data-deeplink-cta')) return
+
+      const now = Date.now()
+      const previous = lastTapAt.get(anchor)
+      if (previous !== undefined && now - previous < STORE_TAP_DEDUPE_MS) return
+      lastTapAt.set(anchor, now)
 
       const store = anchor.dataset.store
       const placement = anchor.closest('[data-store-pair]')?.dataset.placement || 'unknown'

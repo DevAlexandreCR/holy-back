@@ -77,14 +77,14 @@ Every store anchor points at `/out/app-store` or `/out/google-play` (handled in 
 When `hv-meta-pixel-id` is set:
 
 - `PageView` — fired once on load, from `initMetaPixel()`.
-- `Lead` — fired on every store-anchor tap, from `wireStoreTaps()`, with `content_name` set to the store (`app-store` / `google-play`), `content_category` set to the placement, and a per-tap unique `eventID`. The tap handler never calls `preventDefault` and never awaits the pixel call, so the store redirect always proceeds.
+- `Lead` — fired on a store-anchor tap, from `wireStoreTaps()` (a repeat tap on the same anchor within `STORE_TAP_DEDUPE_MS`, 2 s, is ignored so an impatient double tap doesn't count as two leads), with `content_name` set to the store (`app-store` / `google-play`), `content_category` set to the placement, and a per-tap unique `eventID`. The tap handler never calls `preventDefault` and never awaits the pixel call, so the store redirect always proceeds.
 
 ### `dataLayer` / `gtag` events
 
 `trackEvent(name, params)` sends to `window.gtag` when present, otherwise pushes to `window.dataLayer`. Events fired by `script.js`:
 
 - `landing_view` — once, after all setup runs.
-- `store_redirect` — on every store-anchor tap.
+- `store_redirect` — on every store-anchor tap (same 2 s repeat-tap guard as `Lead`).
 - `store_open_stalled` — when the in-app browser hint is shown.
 - `deep_link_attempt` / `deep_link_fallback` — around the open-in-app flow described below.
 
@@ -128,3 +128,7 @@ Two ways to preview, either serves the static files correctly over HTTP (never o
   ```
 
   Then open `http://localhost:3000/` (the `backend` service publishes container port 3000 to `127.0.0.1:3000`, per `docker-compose.yml`).
+
+## Caching
+
+Production nginx serves `.css`/`.js` with `expires 1y` and `Cache-Control: public, immutable`, while `index.html` is not long-cached. Whenever `script.js` or `styles.css` changes, bump its `?v=` query in `index.html` (e.g. `/script.js?v=2` → `?v=3`) so returning visitors fetch the new file.
